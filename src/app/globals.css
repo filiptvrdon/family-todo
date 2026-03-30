@@ -1,26 +1,207 @@
 @import "tailwindcss";
 
+r/* ============================================================
+   Family Todo — Design System
+   Visual guidelines: docs/design-visual-guidelines.md
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* --- Background --- */
+  --background: #FAF6EE; /* Sun-bleached Sand — warm, low-saturation base */
+
+  /* --- Primary: Azure Ocean palette --- */
+  --color-primary:       #0077B6; /* Azure Ocean — buttons, links, active states */
+  --color-primary-light: #90E0EF; /* Shallow Water — hover accents, progress fills */
+  --color-primary-dark:  #023E8A; /* Deep Ocean — pressed states, heavy headings */
+
+  /* --- Text --- */
+  --color-text:          #1A1A2E; /* Charcoal — primary body text */
+  --color-text-secondary:#5C5C7A; /* Driftwood — captions, metadata */
+  --color-text-disabled: #ADB5BD; /* Sea Mist — placeholders, disabled */
+  --foreground: var(--color-text);
+
+  /* --- Accents --- */
+  --color-sand:          #F4D58D; /* Warm Sand — highlights, tags, streaks */
+  --color-foam:          #E8F4F8; /* Surf Foam — card fills, subtle backgrounds */
+  --color-completion:    #52B788; /* Tide Green — completed tasks, success */
+  --color-alert:         #FF9F7F; /* Sunset Coral — overdue (warm, not alarming) */
+
+  /* --- Spacing scale (base 4px) --- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* --- Shape --- */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-pill: 999px;
+
+  /* --- Shadows (tinted with primary, not grey) --- */
+  --shadow-card: 0 2px 8px rgba(0, 119, 182, 0.08);
+  --shadow-elevated: 0 4px 16px rgba(0, 119, 182, 0.12);
+
+  /* --- Typography --- */
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
 }
+
+/* No dark mode auto-switch — consistent experience is important for ADHD users.
+   See design-visual-guidelines.md#what-not-to-do */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ============================================================
+   Base styles
+   ============================================================ */
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Max line width for readability */
+p, li {
+  max-width: 65ch;
+}
+
+/* ============================================================
+   Utility classes — design tokens as classes
+   ============================================================ */
+
+/* Buttons */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+  min-height: 44px; /* ADHD-friendly touch target */
+}
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+  box-shadow: var(--shadow-elevated);
+}
+.btn-primary:active {
+  background-color: var(--color-primary-dark);
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background-color: var(--color-foam);
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border: 1px solid var(--color-primary-light);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  min-height: 44px;
+}
+.btn-secondary:hover {
+  background-color: var(--color-primary-light);
+}
+
+/* Cards — white so they lift off the sand background */
+.card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
+  border: 1px solid var(--color-foam);
+}
+
+/* Badges / Pills */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-2);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.badge-sand    { background: var(--color-sand);    color: var(--color-text); }
+.badge-ocean   { background: var(--color-primary); color: #ffffff; }
+.badge-foam    { background: var(--color-foam);    color: var(--color-text-secondary); }
+.badge-done    { background: var(--color-completion); color: #ffffff; }
+.badge-alert   { background: var(--color-alert);   color: var(--color-text); }
+
+/* Task completion state */
+.task-completed {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+  transition: color 250ms ease;
+}
+.task-completed-indicator {
+  color: var(--color-completion);
+}
+
+/* Overdue — warm, not alarming */
+.task-overdue {
+  border-left: 3px solid var(--color-alert);
+}
+
+/* ============================================================
+   Motion
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Completion celebration
+   ============================================================ */
+
+@keyframes todo-complete {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.028); background-color: #E8F9F1; box-shadow: 0 4px 16px rgba(82, 183, 136, 0.28); }
+  100% { transform: scale(1); }
+}
+
+@keyframes check-pop {
+  0%   { transform: scale(0.4); opacity: 0.6; }
+  55%  { transform: scale(1.45); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes celebration-fade {
+  0%   { opacity: 0; transform: translateY(-5px); }
+  12%  { opacity: 1; transform: translateY(0); }
+  72%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.completing-card {
+  animation: todo-complete 320ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.completing-check {
+  animation: check-pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.celebration-message {
+  animation: celebration-fade 2s ease-out forwards;
+  pointer-events: none;
+  user-select: none;
 }
