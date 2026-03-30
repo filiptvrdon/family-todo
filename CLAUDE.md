@@ -8,7 +8,9 @@ You are allowed and **required** to update this file (`CLAUDE.md`) and its linke
 
 A shared task manager for a couple (2 users). The goal is to help both partners organize and share responsibilities as a team — not just track tasks, but actually make it easier to collaborate and stay aligned day-to-day.
 
-Core design constraint: the app must be **ADHD/neurodivergent-friendly** — this is a first-class requirement, not an afterthought. See [docs/design-adhd-principles.md](./docs/design-adhd-principles.md).
+Core design constraints — both are first-class requirements, not afterthoughts:
+- **ADHD/neurodivergent-friendly** — see [docs/design-adhd-principles.md](./docs/design-adhd-principles.md)
+- **Mobile-first PWA** — designed for phone use first; desktop is an enhancement. See [docs/engineering-conventions.md](./docs/engineering-conventions.md#mobile-first-pwa)
 
 ## Key References
 

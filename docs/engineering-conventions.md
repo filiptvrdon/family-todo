@@ -111,6 +111,33 @@ Primitives live in `components/ui/`. They must have no imports from `lib/` (no S
 
 ---
 
+## Mobile-First PWA
+
+This app is built as a **Progressive Web App (PWA)**, designed primarily for mobile use. Treat desktop as an enhancement, not the baseline.
+
+### Layout & interaction
+
+- Design every screen for a 390px viewport first (iPhone 14 baseline), then scale up
+- Use `min-h-[44px]` / `min-w-[44px]` touch targets on all interactive elements (already in `globals.css` for `.btn-*`)
+- No hover-only affordances — any interactive hint that relies on `:hover` must have a visible equivalent on touch
+- Avoid fixed pixel widths; use `w-full`, `max-w-*`, and fluid grids
+- Bottom navigation / actions within thumb reach — primary actions should not live at the top of the screen on mobile
+
+### PWA requirements
+
+- `manifest.json` must define: `name`, `short_name`, `start_url`, `display: standalone`, `background_color`, `theme_color` (use `--color-primary: #0077B6`), and icons at 192px + 512px
+- Service worker for offline support — at minimum, cache the app shell so it loads without a network connection
+- `<meta name="viewport" content="width=device-width, initial-scale=1">` must be present in layout (verify in `app/layout.tsx`)
+- Add to home screen prompt should be handled gracefully — don't suppress the browser default
+
+### Performance expectations
+
+- Target Lighthouse PWA score ≥ 90
+- First Contentful Paint < 2s on a mid-tier mobile device
+- No layout shift during auth/data load — use skeleton states, not spinners that shift content
+
+---
+
 ## Component Checklist
 
 Before committing a component, verify:
