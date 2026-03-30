@@ -111,6 +111,25 @@ Primitives live in `components/ui/`. They must have no imports from `lib/` (no S
 
 ---
 
+## Layout Width System
+
+Three canonical widths are defined as CSS variables in `globals.css` and must be used consistently:
+
+| Variable | Value | Used for |
+|----------|-------|----------|
+| `--width-content` | `1024px` | Page content max-width — wrap all page `<main>` and `<header>` content |
+| `--width-panel` | `480px` | Modals, drawers, bottom sheets, side panels |
+| `--width-form` | `400px` | Standalone auth/settings forms |
+
+### Rules
+
+- **Page containers** use the `.layout-container` utility class (centered, horizontally padded, `max-width: --width-content`). Never manually repeat `max-w-5xl mx-auto px-4`.
+- **Auth/settings pages** use `.form-page` + `.form-card` (centered card, `max-width: --width-form`).
+- **Bottom sheets / drawers** use the `.detail-panel-popup` class — full-width bottom sheet on mobile, `--width-panel` centered (vertically + horizontally) on `≥768px`.
+- **Hard rule:** panels and modals must never be full viewport width on desktop. Use `--width-panel` with `left: calc(50% - var(--width-panel) / 2)`.
+
+---
+
 ## Mobile-First PWA
 
 This app is built as a **Progressive Web App (PWA)**, designed primarily for mobile use. Treat desktop as an enhancement, not the baseline.
@@ -125,7 +144,7 @@ This app is built as a **Progressive Web App (PWA)**, designed primarily for mob
 
 ### PWA requirements
 
-- `manifest.json` must define: `name`, `short_name`, `start_url`, `display: standalone`, `background_color`, `theme_color` (use `--color-primary: #0077B6`), and icons at 192px + 512px
+- `manifest.json` must define: `name`, `short_name`, `start_url`, `display: standalone`, `background_color`, `theme_color` (use `--color-primary: #00B5C8`), and icons at 192px + 512px
 - Service worker for offline support — at minimum, cache the app shell so it loads without a network connection
 - `<meta name="viewport" content="width=device-width, initial-scale=1">` must be present in layout (verify in `app/layout.tsx`)
 - Add to home screen prompt should be handled gracefully — don't suppress the browser default

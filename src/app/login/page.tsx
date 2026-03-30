@@ -19,7 +19,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
 
-  async function handleMagicLink(e: React.FormEvent) {
+  async function handleMagicLink(e: { preventDefault(): void }) {
     e.preventDefault()
     setLoading(true)
     setSubmitError(null)
@@ -39,7 +39,7 @@ export default function LoginPage() {
     setLoading(false)
   }
 
-  async function handlePassword(e: React.FormEvent) {
+  async function handlePassword(e: { preventDefault(): void }) {
     e.preventDefault()
     setLoading(true)
     setSubmitError(null)
@@ -52,96 +52,112 @@ export default function LoginPage() {
     setLoading(false)
   }
 
+  const inputStyle = {
+    width: '100%',
+    border: '1.5px solid var(--color-border)',
+    borderRadius: 'var(--radius-sm)',
+    padding: '10px 14px',
+    fontSize: '0.875rem',
+    color: 'var(--color-text)',
+    background: '#fff',
+    outline: 'none',
+    minHeight: '44px',
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-indigo-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
+    <div className="form-page">
+      <div className="form-card">
         <div className="flex flex-col items-center mb-8">
-          <Heart className="text-rose-500 mb-2" size={36} fill="currentColor" />
-          <h1 className="text-2xl font-bold text-gray-800">Family Todo</h1>
-          <p className="text-gray-500 text-sm mt-1">Stay organised together</p>
+          <Heart size={36} fill="currentColor" style={{ color: 'var(--color-completion)', marginBottom: '8px' }} />
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>Family Todo</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Stay organised together</p>
         </div>
 
         {(error || submitError) && (
-          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">
+          <div
+            className="mb-4 text-sm rounded-lg px-3 py-2 text-center"
+            style={{
+              color: 'var(--color-alert)',
+              background: 'rgba(255,159,127,0.1)',
+              border: '1px solid rgba(255,159,127,0.3)',
+            }}
+          >
             {submitError ?? (error === 'profile_missing' ? 'Account setup incomplete — please try signing in again.' : 'That link has expired. Please request a new one.')}
           </div>
         )}
 
         {sent ? (
           <div className="text-center">
-            <p className="text-gray-700 font-medium">Check your email!</p>
-            <p className="text-gray-500 text-sm mt-2">
+            <p className="font-medium" style={{ color: 'var(--color-text)' }}>Check your email!</p>
+            <p className="text-sm mt-2" style={{ color: 'var(--color-text-secondary)' }}>
               We sent a magic link to <span className="font-medium">{email}</span>
             </p>
           </div>
         ) : (
           <>
-            <div className="flex rounded-lg bg-gray-100 p-1 mb-4 gap-1">
-              <button
-                onClick={() => { setMode('magic'); setSubmitError(null) }}
-                className={`flex-1 text-sm py-1.5 rounded-md font-medium transition ${mode === 'magic' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Magic link
-              </button>
-              <button
-                onClick={() => { setMode('password'); setSubmitError(null) }}
-                className={`flex-1 text-sm py-1.5 rounded-md font-medium transition ${mode === 'password' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Password
-              </button>
+            <div
+              className="flex rounded-lg p-1 mb-6 gap-1"
+              style={{ background: 'var(--color-foam)' }}
+            >
+              {(['magic', 'password'] as Mode[]).map(m => (
+                <button
+                  key={m}
+                  onClick={() => { setMode(m); setSubmitError(null) }}
+                  className="flex-1 text-sm py-1.5 rounded-md font-medium transition"
+                  style={
+                    mode === m
+                      ? { background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', color: 'var(--color-text)', minHeight: '36px' }
+                      : { color: 'var(--color-text-secondary)', minHeight: '36px' }
+                  }
+                >
+                  {m === 'magic' ? 'Magic link' : 'Password'}
+                </button>
+              ))}
             </div>
 
             {mode === 'magic' ? (
               <form onSubmit={handleMagicLink} className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Email address</label>
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={e => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                    style={inputStyle}
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-rose-500 hover:bg-rose-600 text-white font-medium py-2 rounded-lg transition disabled:opacity-50"
-                >
-                  {loading ? 'Sending...' : 'Send magic link'}
+                <button type="submit" disabled={loading} className="btn-primary w-full transition disabled:opacity-50">
+                  {loading ? 'Sending…' : 'Send magic link'}
                 </button>
               </form>
             ) : (
               <form onSubmit={handlePassword} className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Email address</label>
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={e => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                    style={inputStyle}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Password</label>
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                    style={inputStyle}
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-rose-500 hover:bg-rose-600 text-white font-medium py-2 rounded-lg transition disabled:opacity-50"
-                >
-                  {loading ? 'Signing in...' : 'Sign in'}
+                <button type="submit" disabled={loading} className="btn-primary w-full transition disabled:opacity-50">
+                  {loading ? 'Signing in…' : 'Sign in'}
                 </button>
               </form>
             )}

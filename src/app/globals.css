@@ -9,12 +9,12 @@
 
 :root {
   /* --- Background --- */
-  --background: #FAF6EE; /* Sun-bleached Sand */
+  --background: #FAF7F2; /* Warm Linen */
 
-  /* --- Primary: Azure Ocean palette --- */
-  --color-primary:       #0077B6;
-  --color-primary-light: #90E0EF;
-  --color-primary-dark:  #023E8A;
+  /* --- Primary: Coastal Teal palette --- */
+  --color-primary:       #00B5C8; /* Shallow Water — bright cyan */
+  --color-primary-light: #7DD6D1; /* Soft Aqua */
+  --color-primary-dark:  #0099AA; /* Deep Tidal */
 
   /* --- Text --- */
   --color-text:          #1A1A2E;
@@ -23,10 +23,10 @@
   --foreground: #1A1A2E;
 
   /* --- Accents --- */
-  --color-sand:          #F4D58D;
-  --color-foam:          #E8F4F8;
-  --color-completion:    #52B788;
-  --color-alert:         #FF9F7F;
+  --color-sand:          #DEC9A8; /* Warm Sand */
+  --color-foam:          #D6EFE4; /* Pale Seafoam */
+  --color-completion:    #10BBAA; /* Ocean Teal */
+  --color-alert:         #FF9F7F; /* Sunset Coral — never red */
 
   /* --- Spacing scale (base 4px) --- */
   --space-1:  4px;
@@ -38,9 +38,14 @@
   --space-12: 48px;
   --space-16: 64px;
 
+  /* --- Layout widths --- */
+  --width-content: 1024px; /* max page content width */
+  --width-panel:    480px; /* modals, drawers, bottom sheets */
+  --width-form:     400px; /* standalone auth/settings forms */
+
   /* --- Shadows (tinted with primary, not grey) --- */
-  --shadow-card:     0 2px 8px rgba(0, 119, 182, 0.08);
-  --shadow-elevated: 0 4px 16px rgba(0, 119, 182, 0.12);
+  --shadow-card:     0 2px 8px rgba(0, 181, 200, 0.08);
+  --shadow-elevated: 0 4px 16px rgba(0, 181, 200, 0.14);
 
   /* --- Typography --- */
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
@@ -53,36 +58,36 @@
   --card-foreground:     #1A1A2E;
   --popover:             #ffffff;
   --popover-foreground:  #1A1A2E;
-  --primary:             #0077B6;
+  --primary:             #00B5C8;
   --primary-foreground:  #ffffff;
-  --secondary:           #E8F4F8;
+  --secondary:           #D6EFE4;
   --secondary-foreground:#1A1A2E;
-  --muted:               #E8F4F8;
+  --muted:               #D6EFE4;
   --muted-foreground:    #5C5C7A;
-  --accent:              #90E0EF;
+  --accent:              #7DD6D1;
   --accent-foreground:   #1A1A2E;
   --destructive:         #FF9F7F; /* Sunset Coral — never red */
-  --border:              #E8F4F8;
-  --input:               #E8F4F8;
-  --ring:                #0077B6;
+  --border:              #D6EFE4;
+  --input:               #D6EFE4;
+  --ring:                #00B5C8;
   --radius:              0.75rem; /* 12px — matches --radius-md */
 
   /* Chart tokens mapped to our palette */
-  --chart-1: #0077B6;
-  --chart-2: #52B788;
-  --chart-3: #90E0EF;
-  --chart-4: #F4D58D;
+  --chart-1: #00B5C8;
+  --chart-2: #10BBAA;
+  --chart-3: #7DD6D1;
+  --chart-4: #DEC9A8;
   --chart-5: #FF9F7F;
 
   /* Sidebar (mapped conservatively) */
   --sidebar:                    #ffffff;
   --sidebar-foreground:         #1A1A2E;
-  --sidebar-primary:            #0077B6;
+  --sidebar-primary:            #00B5C8;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent:             #E8F4F8;
+  --sidebar-accent:             #D6EFE4;
   --sidebar-accent-foreground:  #1A1A2E;
-  --sidebar-border:             #E8F4F8;
-  --sidebar-ring:               #0077B6;
+  --sidebar-border:             #D6EFE4;
+  --sidebar-ring:               #00B5C8;
 }
 
 /* No dark mode auto-switch — consistent experience is important for ADHD users.
@@ -130,6 +135,72 @@
   --radius-lg:  calc(var(--radius) * 1.333); /* ~16px */
   --radius-xl:  calc(var(--radius) * 1.667); /* ~20px */
   --radius-2xl: calc(var(--radius) * 2);     /* 24px */
+}
+
+/* ============================================================
+   Layout width system
+   ============================================================ */
+
+/* Page content container — centered, horizontally padded */
+.layout-container {
+  width: 100%;
+  max-width: var(--width-content);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+}
+
+/* Standalone form pages (login, settings) — vertically + horizontally centered card */
+.form-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--background);
+}
+
+.form-card {
+  width: 100%;
+  max-width: var(--width-form);
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+  padding: var(--space-8);
+}
+
+/* Detail panel / bottom sheet
+   Mobile  : full-width bottom sheet
+   ≥768px  : vertically + horizontally centered modal, 480px wide */
+.detail-panel-popup {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 88vh;
+  overflow-y: auto;
+  z-index: 50;
+  background: var(--background);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--shadow-elevated);
+  outline: none;
+  transform: translateY(var(--drawer-offset, 0px));
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (min-width: 768px) {
+  .detail-panel-popup {
+    top: 50%;
+    bottom: auto;
+    left: calc(50% - (var(--width-panel) / 2));
+    right: auto;
+    width: var(--width-panel);
+    max-height: 85vh;
+    border-radius: var(--radius-xl);
+    /* Combine vertical centering with drawer drag offset */
+    transform: translateY(calc(-50% + var(--drawer-offset, 0px)));
+  }
 }
 
 /* ============================================================

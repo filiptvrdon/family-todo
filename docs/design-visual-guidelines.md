@@ -8,7 +8,7 @@ This document is the source of truth for the visual identity of Family Todo. All
 
 The design is dedicated to someone who finds the world a bit overwhelming — so everything visual should feel **calm, warm, and inviting**, never clinical or demanding.
 
-**Mood board:** Portuguese Atlantic coastline. Crashing azure waves, white-washed walls with hand-painted azulejo tiles, sun-bleached sand, a faded VW Transporter parked on a cliff road, salt in the air. Think Cascais or Ericeira on a golden afternoon.
+**Mood board:** Coastal beach at golden hour. Turquoise shallow water, soft aqua waves breaking on warm sand, pale seafoam on the shore. The palette comes directly from a coastal beach color reference — teal and cyan primaries grounded by sandy warm neutrals.
 
 This aesthetic should feel:
 - **Calming** — not stimulating or chaotic
@@ -24,10 +24,10 @@ This aesthetic should feel:
 
 | Role | Name | Hex | Usage |
 |------|------|-----|-------|
-| Background | Sun-bleached Sand | `#FAF6EE` | Page background — warm, low-saturation base |
-| Primary | Azure Ocean | `#0077B6` | Buttons, links, active states, key highlights |
-| Primary Light | Shallow Water | `#90E0EF` | Hover states, soft accents, progress fills |
-| Primary Dark | Deep Ocean | `#023E8A` | Pressed states, headings that need weight |
+| Background | Warm Linen | `#FAF7F2` | Page background — warm, low-saturation base |
+| Primary | Shallow Water | `#00B5C8` | Buttons, links, active states, key highlights |
+| Primary Light | Soft Aqua | `#7DD6D1` | Hover states, soft accents, progress fills |
+| Primary Dark | Deep Tidal | `#0099AA` | Pressed states, headings that need weight |
 
 ### Text Colors
 
@@ -41,9 +41,9 @@ This aesthetic should feel:
 
 | Role | Name | Hex | Usage |
 |------|------|-----|-------|
-| Sand | Warm Sand | `#F4D58D` | Highlights, tags, streaks, "today" badge |
-| Surf Foam | Foam White | `#E8F4F8` | Card backgrounds, subtle section fills |
-| Completion | Tide Green | `#52B788` | Completed task states, success feedback |
+| Sand | Warm Sand | `#DEC9A8` | Highlights, tags, streaks, "today" badge |
+| Seafoam | Pale Seafoam | `#D6EFE4` | Card backgrounds, subtle section fills |
+| Completion | Ocean Teal | `#10BBAA` | Completed task states, success feedback |
 | Gentle Alert | Sunset Coral | `#FF9F7F` | Overdue tasks — warm, not alarming |
 
 > **Hard rule:** Never use red for overdue or missed tasks. Sunset Coral communicates urgency without shame.
@@ -88,8 +88,8 @@ This aesthetic should feel:
 ## Shape & Depth
 
 - Border radius: **12px** for cards, **8px** for buttons, **999px` for pills/badges
-- Shadows: soft and low — `0 2px 8px rgba(0, 119, 182, 0.08)` (tinted with primary, not grey)
-- No harsh borders — use `1px solid #E8F4F8` (Foam White) for card outlines when needed
+- Shadows: soft and low — `0 2px 8px rgba(0, 181, 200, 0.08)` (tinted with primary, not grey)
+- No harsh borders — use `1px solid #D6EFE4` (Pale Seafoam) for card outlines when needed
 
 ---
 

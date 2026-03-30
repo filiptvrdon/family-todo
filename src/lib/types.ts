@@ -12,6 +12,7 @@ export interface Todo {
   description: string | null
   completed: boolean
   due_date: string | null
+  recurrence: 'daily' | 'weekly' | 'monthly' | null
   created_at: string
 }
 
