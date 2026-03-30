@@ -2,33 +2,31 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
-
-r/* ============================================================
+/* ============================================================
    Family Todo — Design System
    Visual guidelines: docs/design-visual-guidelines.md
    ============================================================ */
 
 :root {
   /* --- Background --- */
-  --background: #FAF6EE; /* Sun-bleached Sand — warm, low-saturation base */
+  --background: #FAF6EE; /* Sun-bleached Sand */
 
   /* --- Primary: Azure Ocean palette --- */
-  --color-primary:       #0077B6; /* Azure Ocean — buttons, links, active states */
-  --color-primary-light: #90E0EF; /* Shallow Water — hover accents, progress fills */
-  --color-primary-dark:  #023E8A; /* Deep Ocean — pressed states, heavy headings */
+  --color-primary:       #0077B6;
+  --color-primary-light: #90E0EF;
+  --color-primary-dark:  #023E8A;
 
   /* --- Text --- */
-  --color-text:          #1A1A2E; /* Charcoal — primary body text */
-  --color-text-secondary:#5C5C7A; /* Driftwood — captions, metadata */
-  --color-text-disabled: #ADB5BD; /* Sea Mist — placeholders, disabled */
-  --foreground: var(--color-text);
+  --color-text:          #1A1A2E;
+  --color-text-secondary:#5C5C7A;
+  --color-text-disabled: #ADB5BD;
+  --foreground: #1A1A2E;
 
   /* --- Accents --- */
-  --color-sand:          #F4D58D; /* Warm Sand — highlights, tags, streaks */
-  --color-foam:          #E8F4F8; /* Surf Foam — card fills, subtle backgrounds */
-  --color-completion:    #52B788; /* Tide Green — completed tasks, success */
-  --color-alert:         #FF9F7F; /* Sunset Coral — overdue (warm, not alarming) */
+  --color-sand:          #F4D58D;
+  --color-foam:          #E8F4F8;
+  --color-completion:    #52B788;
+  --color-alert:         #FF9F7F;
 
   /* --- Spacing scale (base 4px) --- */
   --space-1:  4px;
@@ -40,77 +38,115 @@ r/* ============================================================
   --space-12: 48px;
   --space-16: 64px;
 
-  /* --- Shape --- */
-  --radius-sm:   8px;
-  --radius-md:   12px;
-  --radius-pill: 999px;
-
   /* --- Shadows (tinted with primary, not grey) --- */
-  --shadow-card: 0 2px 8px rgba(0, 119, 182, 0.08);
+  --shadow-card:     0 2px 8px rgba(0, 119, 182, 0.08);
   --shadow-elevated: 0 4px 16px rgba(0, 119, 182, 0.12);
 
   /* --- Typography --- */
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
+
+  /* ============================================================
+     shadcn/ui token mapping — design tokens as the source of truth
+     ============================================================ */
+  --card:                #ffffff;
+  --card-foreground:     #1A1A2E;
+  --popover:             #ffffff;
+  --popover-foreground:  #1A1A2E;
+  --primary:             #0077B6;
+  --primary-foreground:  #ffffff;
+  --secondary:           #E8F4F8;
+  --secondary-foreground:#1A1A2E;
+  --muted:               #E8F4F8;
+  --muted-foreground:    #5C5C7A;
+  --accent:              #90E0EF;
+  --accent-foreground:   #1A1A2E;
+  --destructive:         #FF9F7F; /* Sunset Coral — never red */
+  --border:              #E8F4F8;
+  --input:               #E8F4F8;
+  --ring:                #0077B6;
+  --radius:              0.75rem; /* 12px — matches --radius-md */
+
+  /* Chart tokens mapped to our palette */
+  --chart-1: #0077B6;
+  --chart-2: #52B788;
+  --chart-3: #90E0EF;
+  --chart-4: #F4D58D;
+  --chart-5: #FF9F7F;
+
+  /* Sidebar (mapped conservatively) */
+  --sidebar:                    #ffffff;
+  --sidebar-foreground:         #1A1A2E;
+  --sidebar-primary:            #0077B6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent:             #E8F4F8;
+  --sidebar-accent-foreground:  #1A1A2E;
+  --sidebar-border:             #E8F4F8;
+  --sidebar-ring:               #0077B6;
 }
 
 /* No dark mode auto-switch — consistent experience is important for ADHD users.
    See design-visual-guidelines.md#what-not-to-do */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
+  --color-background:    var(--background);
+  --color-foreground:    var(--foreground);
+  --font-sans:           var(--font-sans);
+  --font-mono:           var(--font-mono);
+
+  /* shadcn tokens exposed as Tailwind color utilities */
+  --color-card:                  var(--card);
+  --color-card-foreground:       var(--card-foreground);
+  --color-popover:               var(--popover);
+  --color-popover-foreground:    var(--popover-foreground);
+  --color-primary:               var(--primary);
+  --color-primary-foreground:    var(--primary-foreground);
+  --color-secondary:             var(--secondary);
+  --color-secondary-foreground:  var(--secondary-foreground);
+  --color-muted:                 var(--muted);
+  --color-muted-foreground:      var(--muted-foreground);
+  --color-accent:                var(--accent);
+  --color-accent-foreground:     var(--accent-foreground);
+  --color-destructive:           var(--destructive);
+  --color-border:                var(--border);
+  --color-input:                 var(--input);
+  --color-ring:                  var(--ring);
+  --color-chart-1:               var(--chart-1);
+  --color-chart-2:               var(--chart-2);
+  --color-chart-3:               var(--chart-3);
+  --color-chart-4:               var(--chart-4);
+  --color-chart-5:               var(--chart-5);
+  --color-sidebar:               var(--sidebar);
+  --color-sidebar-foreground:    var(--sidebar-foreground);
+  --color-sidebar-primary:       var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-sidebar-accent:        var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border:        var(--sidebar-border);
+  --color-sidebar-ring:          var(--sidebar-ring);
+
+  --radius-sm:  calc(var(--radius) * 0.667); /* ~8px */
+  --radius-md:  var(--radius);               /* 12px */
+  --radius-lg:  calc(var(--radius) * 1.333); /* ~16px */
+  --radius-xl:  calc(var(--radius) * 1.667); /* ~20px */
+  --radius-2xl: calc(var(--radius) * 2);     /* 24px */
 }
 
 /* ============================================================
    Base styles
    ============================================================ */
 
-body {
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
 /* Max line width for readability */
@@ -133,7 +169,7 @@ p, li {
   border: none;
   cursor: pointer;
   transition: background-color 150ms ease, box-shadow 150ms ease;
-  min-height: 44px; /* ADHD-friendly touch target */
+  min-height: 44px;
 }
 .btn-primary:hover {
   background-color: var(--color-primary-dark);
@@ -160,7 +196,7 @@ p, li {
   background-color: var(--color-primary-light);
 }
 
-/* Cards — white so they lift off the sand background */
+/* Cards */
 .card {
   background: #ffffff;
   border-radius: var(--radius-md);
@@ -173,17 +209,17 @@ p, li {
 .badge {
   display: inline-flex;
   align-items: center;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   padding: 2px var(--space-2);
   font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.4;
 }
-.badge-sand    { background: var(--color-sand);    color: var(--color-text); }
-.badge-ocean   { background: var(--color-primary); color: #ffffff; }
-.badge-foam    { background: var(--color-foam);    color: var(--color-text-secondary); }
-.badge-done    { background: var(--color-completion); color: #ffffff; }
-.badge-alert   { background: var(--color-alert);   color: var(--color-text); }
+.badge-sand    { background: var(--color-sand);        color: var(--color-text); }
+.badge-ocean   { background: var(--color-primary);     color: #ffffff; }
+.badge-foam    { background: var(--color-foam);        color: var(--color-text-secondary); }
+.badge-done    { background: var(--color-completion);  color: #ffffff; }
+.badge-alert   { background: var(--color-alert);       color: var(--color-text); }
 
 /* Task completion state */
 .task-completed {
@@ -244,85 +280,4 @@ p, li {
   animation: celebration-fade 2s ease-out forwards;
   pointer-events: none;
   user-select: none;
-}
-
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
 }

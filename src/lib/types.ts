@@ -1,5 +1,3 @@
-export type Priority = 'low' | 'medium' | 'high'
-
 export interface Profile {
   id: string
   email: string
@@ -13,7 +11,6 @@ export interface Todo {
   title: string
   description: string | null
   completed: boolean
-  priority: Priority
   due_date: string | null
   created_at: string
 }
