@@ -32,9 +32,10 @@ interface Props {
   myColor: string
   partnerColor: string
   onRefresh: () => void
+  calendarHeight?: number
 }
 
-export default function SharedCalendar({ events, myUserId, partnerUserId, myColor, partnerColor, onRefresh }: Props) {
+export default function SharedCalendar({ events, myUserId, partnerUserId, myColor, partnerColor, onRefresh, calendarHeight = 500 }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [newEvent, setNewEvent] = useState({ title: '', start: '', end: '', allDay: false })
   const supabase = createClient()
@@ -142,7 +143,7 @@ export default function SharedCalendar({ events, myUserId, partnerUserId, myColo
         </div>
       )}
 
-      <div style={{ height: 500 }}>
+      <div style={{ height: calendarHeight }}>
         <Calendar
           localizer={localizer}
           events={calEvents}
