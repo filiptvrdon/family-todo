@@ -32,9 +32,9 @@ function DraggableTimelineTodo({ todo, onComplete }: { todo: Todo; onComplete: (
       style={{
         background: 'var(--color-foam)',
         border: '1px solid var(--color-border)',
-        borderRadius: 4,
-        padding: '2px 6px',
-        fontSize: 11,
+        borderRadius: 6,
+        padding: '5px 8px',
+        fontSize: 13,
         color: 'var(--color-text)',
         display: 'flex',
         alignItems: 'center',
@@ -92,7 +92,7 @@ function HourRow({ hour, isCurrent, events, todos, onTodoComplete }: HourRowProp
       style={{
         display: 'flex',
         alignItems: 'flex-start',
-        minHeight: 32,
+        minHeight: 40,
         background: isOver
           ? 'rgba(0,181,200,0.1)'
           : isCurrent
@@ -104,11 +104,11 @@ function HourRow({ hour, isCurrent, events, todos, onTodoComplete }: HourRowProp
     >
       <span
         style={{
-          width: 44,
-          fontSize: 10,
+          width: 52,
+          fontSize: 12,
           fontWeight: isCurrent ? 600 : 400,
           color: isCurrent ? 'var(--color-primary)' : 'var(--color-text-disabled)',
-          paddingTop: 7,
+          paddingTop: 10,
           flexShrink: 0,
           letterSpacing: '0.01em',
         }}
@@ -120,12 +120,12 @@ function HourRow({ hour, isCurrent, events, todos, onTodoComplete }: HourRowProp
         style={{
           flex: 1,
           borderTop: `1px solid ${isOver ? 'var(--color-primary)' : isCurrent ? 'var(--color-primary)' : 'var(--color-border)'}`,
-          marginTop: 7,
-          paddingTop: hasItems ? 4 : 0,
-          paddingBottom: hasItems ? 6 : 0,
+          marginTop: 10,
+          paddingTop: hasItems ? 5 : 0,
+          paddingBottom: hasItems ? 7 : 0,
           display: 'flex',
           flexDirection: 'column',
-          gap: 2,
+          gap: 4,
         }}
       >
         {events.map((e) => (
@@ -133,9 +133,9 @@ function HourRow({ hour, isCurrent, events, todos, onTodoComplete }: HourRowProp
             key={e.id}
             style={{
               background: 'var(--color-primary)',
-              borderRadius: 4,
-              padding: '2px 8px',
-              fontSize: 11,
+              borderRadius: 6,
+              padding: '5px 8px',
+              fontSize: 13,
               color: '#fff',
               display: 'flex',
               alignItems: 'center',
@@ -147,7 +147,7 @@ function HourRow({ hour, isCurrent, events, todos, onTodoComplete }: HourRowProp
             <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {e.title}
             </span>
-            <span style={{ opacity: 0.75, flexShrink: 0, fontSize: 10 }}>
+            <span style={{ opacity: 0.75, flexShrink: 0, fontSize: 11 }}>
               {format(new Date(e.start_time), 'h:mm')}–{format(new Date(e.end_time), 'h:mma')}
             </span>
           </div>
@@ -184,7 +184,7 @@ export default function DayTimeline({ events, todos, onTodoComplete, expand = fa
   }, [currentHour])
 
   return (
-    <div ref={containerRef} style={{ overflowY: 'auto', ...(expand ? { flex: 1 } : { height: 192 }) }}>
+    <div ref={containerRef} style={{ overflowY: 'auto', padding: '0 12px', ...(expand ? { flex: 1 } : { height: 192 }) }}>
       {hours.map((hour) => {
         const hourEvents = todayEvents.filter((e) => new Date(e.start_time).getHours() === hour)
         const hourTodos = todos.filter((t) => t.scheduled_time && parseInt(t.scheduled_time.split(':')[0]) === hour)
