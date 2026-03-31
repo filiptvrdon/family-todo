@@ -308,14 +308,14 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(26,26,46,0.5)', backdropFilter: 'blur(4px)' }}
     >
       <div
         className="w-full flex flex-col"
         style={{
           maxWidth: '440px',
-          maxHeight: '90vh',
+          height: 'calc(100vh - 2rem)',
           background: 'var(--background)',
           borderRadius: '20px',
           border: '1px solid var(--color-border)',

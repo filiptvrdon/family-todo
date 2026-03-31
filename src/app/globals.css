@@ -171,21 +171,21 @@
 }
 
 /* Detail panel / bottom sheet
-   Mobile  : full-width bottom sheet
+   Mobile  : vertically centered modal with padding, fills available height
    ≥768px  : vertically + horizontally centered modal, 480px wide */
 .detail-panel-popup {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-height: 88vh;
+  top: 50%;
+  left: 1rem;
+  right: 1rem;
+  height: calc(100vh - 2rem);
   overflow-y: auto;
   z-index: 50;
   background: var(--background);
-  border-radius: 20px 20px 0 0;
+  border-radius: 20px;
   box-shadow: var(--shadow-elevated);
   outline: none;
-  transform: translateY(var(--drawer-offset, 0px));
+  transform: translateY(calc(-50% + var(--drawer-offset, 0px)));
   transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
