@@ -14,6 +14,10 @@ Core design constraints — both are first-class requirements, not afterthoughts
 - **ADHD/neurodivergent-friendly** — see [docs/design-adhd-principles.md](./docs/design-adhd-principles.md)
 - **Mobile-first PWA** — designed for phone use first; desktop is an enhancement. See [docs/engineering-conventions.md](./docs/engineering-conventions.md#mobile-first-pwa)
 
+## Working Style
+
+- **Commit after each completed task.** When given a list of tasks, create a git commit as soon as each one is done — before moving to the next.
+
 ## Key References
 
 - Next.js internals: read `node_modules/next/dist/docs/` before writing Next.js code (see AGENTS.md)
