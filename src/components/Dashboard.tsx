@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import TodoColumn from '@/components/TodoColumn'
 import SharedCalendar from '@/components/SharedCalendar'
+import FocusView from '@/components/FocusView'
+import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import PartnerConnect from '@/components/PartnerConnect'
 import { Heart, LogOut, Settings, X } from 'lucide-react'
 
@@ -17,15 +20,40 @@ interface Props {
   allEvents: CalendarEvent[]
 }
 
-type Tab = 'todos' | 'calendar'
+type Tab = 'todos' | 'calendar' | 'focus'
 
 export default function Dashboard({ profile, partner, myTodos, partnerTodos, allEvents }: Props) {
   const [tab, setTab] = useState<Tab>('todos')
   const [showConnect, setShowConnect] = useState(false)
+  const [showCheckin, setShowCheckin] = useState(false)
+  // Local copies so client-side mutations are visible immediately without waiting for router.refresh()
+  const [localMyTodos, setLocalMyTodos] = useState<Todo[]>(myTodos)
+  const [localPartnerTodos, setLocalPartnerTodos] = useState<Todo[]>(partnerTodos)
   const router = useRouter()
   const supabase = createClient()
 
+  // Keep local state in sync when server re-renders push new props (e.g. after router.refresh())
+  useEffect(() => { setLocalMyTodos(myTodos) }, [myTodos])
+  useEffect(() => { setLocalPartnerTodos(partnerTodos) }, [partnerTodos])
+
+  // Fast client-side fetch — updates local state immediately, then router.refresh() syncs the server
+  const refreshLocal = useCallback(async () => {
+    const [{ data: mine }, { data: theirs }] = await Promise.all([
+      supabase.from('todos').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }),
+      partner?.id
+        ? supabase.from('todos').select('*').eq('user_id', partner.id).order('created_at', { ascending: false })
+        : Promise.resolve({ data: [] as Todo[] }),
+    ])
+    if (mine) setLocalMyTodos(mine)
+    if (theirs) setLocalPartnerTodos(theirs ?? [])
+  }, [supabase, profile.id, partner?.id])
+
   const refresh = useCallback(() => router.refresh(), [router])
+
+  // Show check-in once per day, after mount (localStorage is client-only)
+  useEffect(() => {
+    if (!hasCheckedInToday()) setShowCheckin(true)
+  }, [])
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -34,6 +62,10 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
 
   const myName = profile?.display_name || profile?.email?.split('@')[0] || 'You'
   const partnerName = partner?.display_name || partner?.email?.split('@')[0] || 'Partner'
+
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const overdueTodos = localMyTodos
+    .filter((t): t is typeof t & { due_date: string } => !t.completed && !!t.due_date && t.due_date < today)
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
@@ -56,7 +88,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
             className="flex items-center rounded-lg p-1 gap-1"
             style={{ background: 'var(--color-foam)' }}
           >
-            {(['todos', 'calendar'] as Tab[]).map(t => (
+            {(['todos', 'calendar', 'focus'] as Tab[]).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -129,7 +161,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="rounded-2xl p-4" style={{ background: '#fff', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
               <TodoColumn
-                todos={myTodos}
+                todos={localMyTodos}
                 ownerName={myName}
                 isOwner={true}
                 userId={profile.id}
@@ -139,7 +171,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
             <div className="rounded-2xl p-4" style={{ background: '#fff', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
               {partner ? (
                 <TodoColumn
-                  todos={partnerTodos}
+                  todos={localPartnerTodos}
                   ownerName={partnerName}
                   isOwner={false}
                   userId={partner.id}
@@ -165,7 +197,32 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
             onRefresh={refresh}
           />
         )}
+
+        {tab === 'focus' && (
+          <FocusView
+            myTodos={localMyTodos}
+            partnerTodos={localPartnerTodos}
+            myName={myName}
+            partnerName={partnerName}
+            myUserId={profile.id}
+            onRefresh={refresh}
+          />
+        )}
       </main>
+      {showCheckin && (
+        <CheckIn
+          userName={myName}
+          overdueTodos={overdueTodos}
+          pendingTodos={localMyTodos.filter(t => !t.completed).map(t => ({ title: t.title, due_date: t.due_date }))}
+          onDone={() => {
+            setShowCheckin(false)
+            // Fetch from Supabase immediately so new tasks appear without waiting for the server render
+            refreshLocal()
+            // Also kick off a server re-render in the background for full consistency
+            refresh()
+          }}
+        />
+      )}
     </div>
   )
 }

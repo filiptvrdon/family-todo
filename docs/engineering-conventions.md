@@ -157,6 +157,55 @@ This app is built as a **Progressive Web App (PWA)**, designed primarily for mob
 
 ---
 
+## Local State + Background Sync Pattern
+
+Use this pattern whenever a user action creates or mutates server data and the UI must reflect it **immediately** — without waiting for `router.refresh()` to complete a full server re-render.
+
+### The problem
+
+`router.refresh()` triggers a server-side re-fetch and re-render, but the new props only arrive after a round-trip. If a background process (e.g. the daily check-in creating tasks via an API route) has just written to the DB, the user will see stale data for a noticeable moment.
+
+### The pattern
+
+```tsx
+// 1. Mirror server-provided props into local state
+const [localMyTodos, setLocalMyTodos] = useState<Todo[]>(myTodos)
+
+// 2. Keep local state in sync when server re-renders push new props
+useEffect(() => { setLocalMyTodos(myTodos) }, [myTodos])
+
+// 3. Client-side fetch — hits Supabase directly, updates local state instantly
+const refreshLocal = useCallback(async () => {
+  const { data } = await supabase
+    .from('todos')
+    .select('*')
+    .eq('user_id', profile.id)
+    .order('created_at', { ascending: false })
+  if (data) setLocalMyTodos(data)
+}, [supabase, profile.id])
+
+// 4. On mutation completion: refresh local immediately, server in background
+onDone={() => {
+  refreshLocal()   // instant — Supabase client, updates UI now
+  router.refresh() // background — re-renders server component for full consistency
+}}
+```
+
+### When to use it
+
+- After any operation that writes to the DB outside the normal optimistic-update flow (e.g. AI check-in creating tasks, bulk imports)
+- Wherever `router.refresh()` alone causes a visible stale-data flash
+
+### Pass local state down, not raw props
+
+Once you hold local state, pass it to child components instead of the original props. Children that do their own optimistic updates (e.g. `TodoColumn`, `FocusView`) already handle their own local state — they just need an accurate starting point from the parent.
+
+### Rule
+
+Every component that is the authoritative owner of a resource list should follow this pattern. Do not rely on `router.refresh()` alone for UI immediacy.
+
+---
+
 ## Component Checklist
 
 Before committing a component, verify:
