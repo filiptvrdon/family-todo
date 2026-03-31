@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
+import { LayoutDashboard, CalendarDays } from 'lucide-react'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import TodoColumn from '@/components/TodoColumn'
 import DayTimeline from '@/components/DayTimeline'
 import SharedCalendar from '@/components/SharedCalendar'
+
+type View = 'dashboard' | 'calendar'
 
 interface Props {
   profile: Profile
@@ -20,118 +23,194 @@ interface Props {
 }
 
 export default function DesktopLayout({
-  profile, partner, myTodos, partnerTodos, allEvents,
-  myName, partnerName, onRefresh, onTodoComplete,
+  profile, partner, myTodos, allEvents, myName, onRefresh, onTodoComplete,
 }: Props) {
-  const row2Ref = useRef<HTMLDivElement>(null)
-  const [calendarHeight, setCalendarHeight] = useState(420)
+  const [view, setView] = useState<View>('dashboard')
+  const calendarContainerRef = useRef<HTMLDivElement>(null)
+  const [calendarHeight, setCalendarHeight] = useState(500)
 
-  // Measure row-2 height so the calendar can fill it (minus header + form area)
   useEffect(() => {
-    if (!row2Ref.current) return
+    if (!calendarContainerRef.current) return
     const observer = new ResizeObserver(() => {
-      if (row2Ref.current) {
-        // Subtract inner padding (16px top + 16px bottom) and the SharedCalendar header (~52px)
-        setCalendarHeight(Math.max(300, row2Ref.current.clientHeight - 84))
+      if (calendarContainerRef.current) {
+        setCalendarHeight(Math.max(300, calendarContainerRef.current.clientHeight - 84))
       }
     })
-    observer.observe(row2Ref.current)
+    observer.observe(calendarContainerRef.current)
     return () => observer.disconnect()
-  }, [])
+  }, [view])
 
   const scheduledTodos = myTodos.filter((t) => !t.completed && !!t.scheduled_time)
 
-  return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '16px 24px 24px',
-        gap: 16,
-        overflow: 'hidden',
-        minHeight: 0,
-      }}
-    >
-      {/* ── Row 1: Day timeline (left) + Tasks (right) ── */}
-      <div style={{ display: 'flex', gap: 16, flex: '0 0 45%', minHeight: 0 }}>
+  const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={15} /> },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarDays size={15} /> },
+  ]
 
-        {/* Left — Day timeline */}
-        <div
-          style={{
-            flex: '0 0 calc(50% - 8px)',
-            display: 'flex',
-            flexDirection: 'column',
-            background: '#fff',
-            borderRadius: 16,
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-card)',
-            overflow: 'hidden',
-          }}
-        >
-          <div
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+
+      {/* ── View switcher ── */}
+      <div
+        style={{
+          flexShrink: 0,
+          display: 'flex',
+          gap: 4,
+          padding: '10px 24px 0',
+        }}
+      >
+        {navItems.map(({ id, label, icon }) => (
+          <button
+            key={id}
+            onClick={() => setView(id)}
             style={{
-              padding: '10px 16px 8px',
-              borderBottom: '1px solid var(--color-border)',
-              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 14px',
+              borderRadius: '8px 8px 0 0',
+              fontSize: 13,
+              fontWeight: 500,
+              border: '1px solid var(--color-border)',
+              borderBottom: view === id ? '1px solid #fff' : '1px solid var(--color-border)',
+              background: view === id ? '#fff' : 'transparent',
+              color: view === id ? 'var(--color-text)' : 'var(--color-text-secondary)',
+              cursor: 'pointer',
+              transition: 'background 150ms, color 150ms',
+              marginBottom: view === id ? -1 : 0,
+              position: 'relative',
+              zIndex: view === id ? 1 : 0,
             }}
           >
-            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
-              {format(new Date(), 'EEEE, MMMM d')}
-            </p>
-          </div>
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <DayTimeline
-              events={allEvents}
-              todos={scheduledTodos}
-              onTodoComplete={onTodoComplete}
-              expand
-            />
-          </div>
-        </div>
+            {icon}
+            {label}
+          </button>
+        ))}
+        <div style={{ flex: 1, borderBottom: '1px solid var(--color-border)' }} />
+      </div>
 
-        {/* Right — My tasks */}
+      {/* ── Dashboard view: task list (left) + day timeline (right) ── */}
+      {view === 'dashboard' && (
         <div
           style={{
-            flex: '0 0 calc(50% - 8px)',
-            background: '#fff',
-            borderRadius: 16,
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-card)',
-            overflowY: 'auto',
-            padding: 16,
+            flex: 1,
+            display: 'flex',
+            gap: 16,
+            padding: '16px 24px 24px',
+            overflow: 'hidden',
             minHeight: 0,
           }}
         >
-          <TodoColumn
-            todos={myTodos}
-            ownerName={myName}
-            isOwner={true}
-            userId={profile.id}
-            onRefresh={onRefresh}
-          />
-        </div>
-      </div>
+          {/* Left — Task list */}
+          <div
+            style={{
+              flex: 1,
+              background: '#fff',
+              borderRadius: 16,
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-card)',
+              overflowY: 'auto',
+              padding: 16,
+            }}
+          >
+            <TodoColumn
+              todos={myTodos}
+              ownerName={myName}
+              isOwner={true}
+              userId={profile.id}
+              onRefresh={onRefresh}
+            />
+          </div>
 
-      {/* ── Row 2: Full-width calendar ── */}
-      <div
-        ref={row2Ref}
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        <SharedCalendar
-          events={allEvents}
-          myUserId={profile.id}
-          partnerUserId={partner?.id ?? null}
-          myColor="var(--color-primary)"
-          partnerColor="var(--color-completion)"
-          onRefresh={onRefresh}
-          calendarHeight={calendarHeight}
-        />
-      </div>
+          {/* Right — Day timeline */}
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#fff',
+              borderRadius: 16,
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-card)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '10px 16px 8px',
+                borderBottom: '1px solid var(--color-border)',
+                flexShrink: 0,
+              }}
+            >
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
+                {format(new Date(), 'EEEE, MMMM d')}
+              </p>
+            </div>
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <DayTimeline
+                events={allEvents}
+                todos={scheduledTodos}
+                onTodoComplete={onTodoComplete}
+                expand
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Calendar view: calendar (66%) + task list (33%) ── */}
+      {view === 'calendar' && (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            gap: 16,
+            padding: '16px 24px 24px',
+            overflow: 'hidden',
+            minHeight: 0,
+          }}
+        >
+          {/* Left 66% — Calendar */}
+          <div
+            ref={calendarContainerRef}
+            style={{
+              flex: '0 0 calc(66.666% - 8px)',
+              overflow: 'hidden',
+            }}
+          >
+            <SharedCalendar
+              events={allEvents}
+              myUserId={profile.id}
+              partnerUserId={partner?.id ?? null}
+              myColor="var(--color-primary)"
+              partnerColor="var(--color-completion)"
+              onRefresh={onRefresh}
+              calendarHeight={calendarHeight}
+            />
+          </div>
+
+          {/* Right 33% — Task list */}
+          <div
+            style={{
+              flex: 1,
+              background: '#fff',
+              borderRadius: 16,
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-card)',
+              overflowY: 'auto',
+              padding: 16,
+            }}
+          >
+            <TodoColumn
+              todos={myTodos}
+              ownerName={myName}
+              isOwner={true}
+              userId={profile.id}
+              onRefresh={onRefresh}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
