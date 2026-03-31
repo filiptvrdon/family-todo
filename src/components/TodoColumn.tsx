@@ -132,9 +132,6 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
     onRefresh()
   }
 
-  const pending = localTodos.filter(t => !t.completed)
-  const done = localTodos.filter(t => t.completed)
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -193,27 +190,12 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
       )}
 
       <div className="flex flex-col gap-2">
-        {pending.length === 0 && done.length === 0 && (
+        {localTodos.length === 0 && (
           <p className="text-sm text-center py-6" style={{ color: 'var(--color-text-disabled)' }}>
             No tasks yet
           </p>
         )}
-        {pending.map(todo => (
-          <TodoCard
-            key={todo.id}
-            todo={todo}
-            isOwner={isOwner}
-            onToggle={toggleTodo}
-            onDelete={deleteTodo}
-            onOpen={openDetail}
-          />
-        ))}
-        {done.length > 0 && (
-          <p className="text-xs uppercase tracking-wide mt-2 mb-1" style={{ color: 'var(--color-text-disabled)' }}>
-            Done ({done.length})
-          </p>
-        )}
-        {done.map(todo => (
+        {localTodos.map(todo => (
           <TodoCard
             key={todo.id}
             todo={todo}
