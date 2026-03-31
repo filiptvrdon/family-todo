@@ -59,8 +59,7 @@ export default function DesktopLayout({
         {/* Left — Day timeline */}
         <div
           style={{
-            width: 300,
-            flexShrink: 0,
+            flex: '0 0 calc(50% - 8px)',
             display: 'flex',
             flexDirection: 'column',
             background: '#fff',
@@ -94,7 +93,7 @@ export default function DesktopLayout({
         {/* Right — My tasks */}
         <div
           style={{
-            flex: 1,
+            flex: '0 0 calc(50% - 8px)',
             background: '#fff',
             borderRadius: 16,
             border: '1px solid var(--color-border)',
