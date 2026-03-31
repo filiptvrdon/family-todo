@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/lib/types'
-import { X, User, Camera, CalendarDays, Loader2 } from 'lucide-react'
+import { X, User, Camera, CalendarDays, Loader2, LogOut } from 'lucide-react'
 
 interface Props {
   profile: Profile
@@ -11,9 +11,10 @@ interface Props {
   onClose: () => void
   onSaved: () => void
   onGoogleDisconnected: () => void
+  onSignOut: () => void
 }
 
-export default function ProfileModal({ profile, googleConnected, onClose, onSaved, onGoogleDisconnected }: Props) {
+export default function ProfileModal({ profile, googleConnected, onClose, onSaved, onGoogleDisconnected, onSignOut }: Props) {
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -326,6 +327,16 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm font-medium transition mt-1"
+            style={{ color: 'var(--color-text-disabled)' }}
+          >
+            <LogOut size={14} />
+            Sign out
+          </button>
         </form>
       </div>
     </div>

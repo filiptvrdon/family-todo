@@ -8,7 +8,7 @@ import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import ProfileModal from '@/components/ProfileModal'
 import MobileLayout from '@/components/MobileLayout'
 import DesktopLayout from '@/components/DesktopLayout'
-import { Heart, LogOut, UserCircle } from 'lucide-react'
+import { Heart, UserCircle } from 'lucide-react'
 
 interface Props {
   profile: Profile
@@ -110,13 +110,6 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
                 <UserCircle size={24} style={{ color: 'var(--color-text-disabled)' }} />
               )}
             </button>
-            <button
-              onClick={signOut}
-              className="transition"
-              style={{ color: 'var(--color-text-disabled)' }}
-            >
-              <LogOut size={18} />
-            </button>
           </div>
         </div>
       </header>
@@ -141,6 +134,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
           onClose={() => setShowProfile(false)}
           onSaved={refresh}
           onGoogleDisconnected={refresh}
+          onSignOut={signOut}
         />
       )}
 
