@@ -13,6 +13,7 @@ export interface Todo {
   completed: boolean
   due_date: string | null
   recurrence: 'daily' | 'weekly' | 'monthly' | null
+  scheduled_time: string | null  // HH:MM:SS — time slot assigned via drag-and-drop
   created_at: string
 }
 

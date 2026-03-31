@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { CalendarEvent } from '@/lib/types'
+import { useDroppable } from '@dnd-kit/core'
+import { CalendarEvent, Todo } from '@/lib/types'
 import { format } from 'date-fns'
+import { Check } from 'lucide-react'
 
 const START_HOUR = 5
 const END_HOUR = 20
@@ -13,18 +15,140 @@ function formatHour(h: number): string {
   return `${h - 12} PM`
 }
 
-interface Props {
+interface HourRowProps {
+  hour: number
+  isCurrent: boolean
   events: CalendarEvent[]
+  todos: Todo[]
+  onTodoComplete: (todoId: string) => void
 }
 
-export default function DayTimeline({ events }: Props) {
+function HourRow({ hour, isCurrent, events, todos, onTodoComplete }: HourRowProps) {
+  const { setNodeRef, isOver } = useDroppable({ id: `hour-${hour}` })
+  const hasItems = events.length > 0 || todos.length > 0
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-hour={hour}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        minHeight: 32,
+        background: isOver
+          ? 'rgba(0,181,200,0.1)'
+          : isCurrent
+            ? 'rgba(0,181,200,0.05)'
+            : 'transparent',
+        borderRadius: isOver ? 6 : 0,
+        transition: 'background 0.15s',
+      }}
+    >
+      <span
+        style={{
+          width: 44,
+          fontSize: 10,
+          fontWeight: isCurrent ? 600 : 400,
+          color: isCurrent ? 'var(--color-primary)' : 'var(--color-text-disabled)',
+          paddingTop: 7,
+          flexShrink: 0,
+          letterSpacing: '0.01em',
+        }}
+      >
+        {formatHour(hour)}
+      </span>
+
+      <div
+        style={{
+          flex: 1,
+          borderTop: `1px solid ${isOver ? 'var(--color-primary)' : isCurrent ? 'var(--color-primary)' : 'var(--color-border)'}`,
+          marginTop: 7,
+          paddingTop: hasItems ? 4 : 0,
+          paddingBottom: hasItems ? 6 : 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+        }}
+      >
+        {events.map((e) => (
+          <div
+            key={e.id}
+            style={{
+              background: 'var(--color-primary)',
+              borderRadius: 4,
+              padding: '2px 8px',
+              fontSize: 11,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+              overflow: 'hidden',
+            }}
+          >
+            <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {e.title}
+            </span>
+            <span style={{ opacity: 0.75, flexShrink: 0, fontSize: 10 }}>
+              {format(new Date(e.start_time), 'h:mm')}–{format(new Date(e.end_time), 'h:mma')}
+            </span>
+          </div>
+        ))}
+
+        {todos.map((t) => (
+          <div
+            key={t.id}
+            style={{
+              background: 'var(--color-foam)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 4,
+              padding: '2px 6px',
+              fontSize: 11,
+              color: 'var(--color-text)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              overflow: 'hidden',
+            }}
+          >
+            <button
+              onClick={() => onTodoComplete(t.id)}
+              style={{
+                flexShrink: 0,
+                width: 14,
+                height: 14,
+                border: '1.5px solid var(--color-border)',
+                borderRadius: 3,
+                background: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Check size={9} strokeWidth={3} style={{ color: 'var(--color-completion)', opacity: 0 }} />
+            </button>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {t.title}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface Props {
+  events: CalendarEvent[]
+  todos: Todo[]
+  onTodoComplete: (todoId: string) => void
+}
+
+export default function DayTimeline({ events, todos, onTodoComplete }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const today = format(new Date(), 'yyyy-MM-dd')
   const currentHour = new Date().getHours()
 
-  const todayEvents = events.filter(
-    (e) => format(new Date(e.start_time), 'yyyy-MM-dd') === today,
-  )
+  const todayEvents = events.filter((e) => format(new Date(e.start_time), 'yyyy-MM-dd') === today)
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => i + START_HOUR)
 
   useEffect(() => {
@@ -38,78 +162,17 @@ export default function DayTimeline({ events }: Props) {
     <div ref={containerRef} style={{ overflowY: 'auto', height: 192 }}>
       {hours.map((hour) => {
         const hourEvents = todayEvents.filter((e) => new Date(e.start_time).getHours() === hour)
-        const isCurrent = hour === currentHour
+        const hourTodos = todos.filter((t) => t.scheduled_time && parseInt(t.scheduled_time.split(':')[0]) === hour)
 
         return (
-          <div
+          <HourRow
             key={hour}
-            data-hour={hour}
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              minHeight: 32,
-              background: isCurrent ? 'rgba(0,181,200,0.05)' : 'transparent',
-            }}
-          >
-            <span
-              style={{
-                width: 44,
-                fontSize: 10,
-                fontWeight: isCurrent ? 600 : 400,
-                color: isCurrent ? 'var(--color-primary)' : 'var(--color-text-disabled)',
-                paddingTop: 7,
-                flexShrink: 0,
-                letterSpacing: '0.01em',
-              }}
-            >
-              {formatHour(hour)}
-            </span>
-
-            <div
-              style={{
-                flex: 1,
-                borderTop: `1px solid ${isCurrent ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                marginTop: 7,
-                paddingTop: hourEvents.length ? 4 : 0,
-                paddingBottom: hourEvents.length ? 6 : 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-              }}
-            >
-              {hourEvents.map((e) => (
-                <div
-                  key={e.id}
-                  style={{
-                    background: 'var(--color-primary)',
-                    borderRadius: 4,
-                    padding: '2px 8px',
-                    fontSize: 11,
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontWeight: 500,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {e.title}
-                  </span>
-                  <span style={{ opacity: 0.75, flexShrink: 0, fontSize: 10 }}>
-                    {format(new Date(e.start_time), 'h:mm')}–{format(new Date(e.end_time), 'h:mma')}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+            hour={hour}
+            isCurrent={hour === currentHour}
+            events={hourEvents}
+            todos={hourTodos}
+            onTodoComplete={onTodoComplete}
+          />
         )
       })}
     </div>

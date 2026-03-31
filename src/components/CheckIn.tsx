@@ -1,11 +1,23 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, Send, Check } from 'lucide-react'
+import { X, Send, Check, GripVertical } from 'lucide-react'
 import { format } from 'date-fns'
 import { Todo, CalendarEvent } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import DayTimeline from '@/components/DayTimeline'
+import {
+  DndContext,
+  DragOverlay,
+  DragStartEvent,
+  DragEndEvent,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import { useDraggable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
@@ -14,6 +26,75 @@ interface Props {
   myTodos: Todo[]
   allEvents: CalendarEvent[]
   onDone: () => void
+}
+
+interface DraggableTodoItemProps {
+  todo: Todo
+  isOverdue: boolean
+  today: string
+  onCheck: (id: string) => void
+}
+
+function DraggableTodoItem({ todo, isOverdue, today, onCheck }: DraggableTodoItemProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: todo.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        opacity: isDragging ? 0.4 : 1,
+        transform: CSS.Translate.toString(transform),
+      }}
+    >
+      <button
+        onClick={() => onCheck(todo.id)}
+        style={{
+          flexShrink: 0,
+          width: 20,
+          height: 20,
+          border: `1.5px solid ${isOverdue ? 'var(--color-alert)' : 'var(--color-border)'}`,
+          borderRadius: 4,
+          background: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Check size={11} strokeWidth={3} style={{ color: 'var(--color-completion)', opacity: 0 }} />
+      </button>
+      <span
+        style={{
+          flex: 1,
+          fontSize: 13,
+          lineHeight: 1.3,
+          color: isOverdue ? 'var(--color-alert)' : 'var(--color-text)',
+        }}
+      >
+        {todo.title}
+      </span>
+      {isOverdue && (
+        <span style={{ fontSize: 11, color: 'var(--color-alert)', opacity: 0.7, flexShrink: 0 }}>
+          overdue
+        </span>
+      )}
+      <button
+        {...listeners}
+        {...attributes}
+        style={{
+          flexShrink: 0,
+          cursor: 'grab',
+          color: 'var(--color-text-disabled)',
+          display: 'flex',
+          alignItems: 'center',
+          touchAction: 'none',
+        }}
+      >
+        <GripVertical size={14} />
+      </button>
+    </div>
+  )
 }
 
 const CHECKIN_KEY = 'checkin_last_date'
@@ -47,12 +128,22 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
   const today = format(new Date(), 'yyyy-MM-dd')
   const supabase = createClient()
 
-  // Local copy of todos so inline completions are reflected immediately
-  const [localTodos, setLocalTodos] = useState<Todo[]>(myTodos)
-
-  const checklistTodos = localTodos.filter(
-    (t) => !t.completed && !!t.due_date && t.due_date <= today,
+  const sensors = useSensors(
+    useSensor(MouseSensor),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
   )
+
+  // Local copy of todos so inline completions and schedule changes are reflected immediately
+  const [localTodos, setLocalTodos] = useState<Todo[]>(myTodos)
+  const [activeDragTodo, setActiveDragTodo] = useState<Todo | null>(null)
+
+  // Checklist: due/overdue, not completed, not yet scheduled on the timeline
+  const checklistTodos = localTodos.filter(
+    (t) => !t.completed && !!t.due_date && t.due_date <= today && !t.scheduled_time,
+  )
+
+  // Todos placed on the timeline
+  const scheduledTodos = localTodos.filter((t) => !t.completed && !!t.scheduled_time)
 
   // Derived shapes used in API calls
   const overdueTodos = localTodos
@@ -114,6 +205,27 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
   async function handleTodoCheck(todoId: string) {
     setLocalTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, completed: true } : t)))
     await supabase.from('todos').update({ completed: true }).eq('id', todoId)
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    const todo = localTodos.find((t) => t.id === event.active.id)
+    setActiveDragTodo(todo ?? null)
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    setActiveDragTodo(null)
+    const { active, over } = event
+    if (!over) return
+
+    const todoId = active.id as string
+    const hour = parseInt((over.id as string).replace('hour-', ''))
+    if (isNaN(hour)) return
+
+    const scheduledTime = `${hour.toString().padStart(2, '0')}:00:00`
+    setLocalTodos((prev) =>
+      prev.map((t) => (t.id === todoId ? { ...t, scheduled_time: scheduledTime } : t)),
+    )
+    await supabase.from('todos').update({ scheduled_time: scheduledTime }).eq('id', todoId)
   }
 
   async function sendMessage() {
@@ -194,6 +306,7 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
   const canWrapUp = userMessageCount >= 1 && !isBusy
 
   return (
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(26,26,46,0.5)', backdropFilter: 'blur(4px)' }}
@@ -301,40 +414,15 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
               {overdueTodos.length > 0 ? 'Overdue & due today' : 'Due today'}
             </p>
             <div className="flex flex-col gap-1.5">
-              {checklistTodos.map((todo) => {
-                const isOverdue = todo.due_date! < today
-                return (
-                  <div key={todo.id} className="flex items-center gap-2.5">
-                    <button
-                      onClick={() => handleTodoCheck(todo.id)}
-                      className="shrink-0 flex items-center justify-center rounded-md transition"
-                      style={{
-                        width: 20,
-                        height: 20,
-                        border: `1.5px solid ${isOverdue ? 'var(--color-alert)' : 'var(--color-border)'}`,
-                        background: '#fff',
-                        color: 'var(--color-completion)',
-                      }}
-                    >
-                      <Check size={11} strokeWidth={3} style={{ opacity: 0 }} />
-                    </button>
-                    <span
-                      className="text-sm leading-snug"
-                      style={{ color: isOverdue ? 'var(--color-alert)' : 'var(--color-text)' }}
-                    >
-                      {todo.title}
-                    </span>
-                    {isOverdue && (
-                      <span
-                        className="text-xs ml-auto shrink-0"
-                        style={{ color: 'var(--color-alert)', opacity: 0.7 }}
-                      >
-                        overdue
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
+              {checklistTodos.map((todo) => (
+                <DraggableTodoItem
+                  key={todo.id}
+                  todo={todo}
+                  isOverdue={todo.due_date! < today}
+                  today={today}
+                  onCheck={handleTodoCheck}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -350,7 +438,11 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
           >
             Today
           </p>
-          <DayTimeline events={allEvents} />
+          <DayTimeline
+            events={allEvents}
+            todos={scheduledTodos}
+            onTodoComplete={handleTodoCheck}
+          />
         </div>
 
         {/* Wrap up */}
@@ -419,5 +511,25 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
         }
       `}</style>
     </div>
+
+    <DragOverlay>
+      {activeDragTodo && (
+        <div
+          style={{
+            background: '#fff',
+            border: '1.5px solid var(--color-primary)',
+            borderRadius: 8,
+            padding: '8px 12px',
+            fontSize: 13,
+            color: 'var(--color-text)',
+            boxShadow: '0 4px 16px rgba(0,181,200,0.2)',
+            maxWidth: 280,
+          }}
+        >
+          {activeDragTodo.title}
+        </div>
+      )}
+    </DragOverlay>
+    </DndContext>
   )
 }
