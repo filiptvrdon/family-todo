@@ -1,17 +1,18 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, Send } from 'lucide-react'
+import { X, Send, Check } from 'lucide-react'
 import { format } from 'date-fns'
+import { Todo, CalendarEvent } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
+import DayTimeline from '@/components/DayTimeline'
 
 type Message = { role: 'user' | 'assistant'; content: string }
-type OverdueTodo = { id: string; title: string; due_date: string }
-type PendingTodo = { title: string; due_date: string | null }
 
 interface Props {
   userName: string
-  overdueTodos: OverdueTodo[]
-  pendingTodos: PendingTodo[]
+  myTodos: Todo[]
+  allEvents: CalendarEvent[]
   onDone: () => void
 }
 
@@ -31,7 +32,6 @@ export function markCheckedIn(): void {
   } catch {}
 }
 
-// Reads a streaming plain-text response, calling onToken for each chunk.
 async function readStream(res: Response, onToken: (t: string) => void): Promise<void> {
   if (!res.body) throw new Error('No response body')
   const reader = res.body.getReader()
@@ -43,11 +43,28 @@ async function readStream(res: Response, onToken: (t: string) => void): Promise<
   }
 }
 
-export default function CheckIn({ userName, overdueTodos, pendingTodos, onDone }: Props) {
+export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props) {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const supabase = createClient()
+
+  // Local copy of todos so inline completions are reflected immediately
+  const [localTodos, setLocalTodos] = useState<Todo[]>(myTodos)
+
+  const checklistTodos = localTodos.filter(
+    (t) => !t.completed && !!t.due_date && t.due_date <= today,
+  )
+
+  // Derived shapes used in API calls
+  const overdueTodos = localTodos
+    .filter((t): t is Todo & { due_date: string } => !t.completed && !!t.due_date && t.due_date < today)
+    .map((t) => ({ id: t.id, title: t.title, due_date: t.due_date }))
+
+  const pendingTodos = localTodos
+    .filter((t) => !t.completed)
+    .map((t) => ({ title: t.title, due_date: t.due_date }))
+
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  // waiting = true while no tokens have arrived yet (show dots)
-  // responding = true while tokens are streaming (disable input)
   const [waiting, setWaiting] = useState(true)
   const [responding, setResponding] = useState(false)
   const [userMessageCount, setUserMessageCount] = useState(0)
@@ -55,8 +72,6 @@ export default function CheckIn({ userName, overdueTodos, pendingTodos, onDone }
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // AbortController ensures that when React Strict Mode re-runs this effect (or the
-  // component unmounts mid-stream), the first fetch is cancelled before the second starts.
   useEffect(() => {
     const controller = new AbortController()
 
@@ -76,7 +91,7 @@ export default function CheckIn({ userName, overdueTodos, pendingTodos, onDone }
           setWaiting(false)
           setMessages(([msg]) => [{ ...msg, content: msg.content + token }])
         })
-      } catch (e) {
+      } catch {
         if (controller.signal.aborted) return
         setMessages([{ role: 'assistant', content: `Hey ${userName}! What's on your mind today?` }])
       } finally {
@@ -96,6 +111,11 @@ export default function CheckIn({ userName, overdueTodos, pendingTodos, onDone }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, waiting])
 
+  async function handleTodoCheck(todoId: string) {
+    setLocalTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, completed: true } : t)))
+    await supabase.from('todos').update({ completed: true }).eq('id', todoId)
+  }
+
   async function sendMessage() {
     if (!input.trim() || waiting || responding || wrappingUp) return
 
@@ -107,11 +127,9 @@ export default function CheckIn({ userName, overdueTodos, pendingTodos, onDone }
 
     const history: Message[] = [...messages, { role: 'user', content: text }]
     setMessages(history)
-
     setWaiting(true)
     setResponding(true)
 
-    // Append empty placeholder for the incoming reply
     const withPlaceholder: Message[] = [...history, { role: 'assistant', content: '' }]
     setMessages(withPlaceholder)
 
@@ -184,7 +202,7 @@ export default function CheckIn({ userName, overdueTodos, pendingTodos, onDone }
         className="w-full flex flex-col"
         style={{
           maxWidth: '440px',
-          maxHeight: '88vh',
+          maxHeight: '90vh',
           background: 'var(--background)',
           borderRadius: '20px',
           border: '1px solid var(--color-border)',
@@ -212,7 +230,7 @@ export default function CheckIn({ userName, overdueTodos, pendingTodos, onDone }
           </button>
         </div>
 
-        {/* Messages */}
+        {/* Chat messages */}
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3 min-h-0">
           {messages.map((msg, i) => {
             const isLastAssistant = msg.role === 'assistant' && i === messages.length - 1
@@ -251,9 +269,7 @@ export default function CheckIn({ userName, overdueTodos, pendingTodos, onDone }
                       maxWidth: '85%',
                       padding: '10px 16px',
                       borderRadius:
-                        msg.role === 'user'
-                          ? '18px 18px 4px 18px'
-                          : '18px 18px 18px 4px',
+                        msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                       ...(msg.role === 'user'
                         ? { background: 'var(--color-primary)', color: '#fff' }
                         : {
@@ -270,6 +286,71 @@ export default function CheckIn({ userName, overdueTodos, pendingTodos, onDone }
             )
           })}
           <div ref={bottomRef} />
+        </div>
+
+        {/* Task checklist — overdue + due today */}
+        {checklistTodos.length > 0 && (
+          <div
+            className="shrink-0 px-5 py-3"
+            style={{ borderTop: '1px solid var(--color-border)' }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-wide mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {overdueTodos.length > 0 ? 'Overdue & due today' : 'Due today'}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {checklistTodos.map((todo) => {
+                const isOverdue = todo.due_date! < today
+                return (
+                  <div key={todo.id} className="flex items-center gap-2.5">
+                    <button
+                      onClick={() => handleTodoCheck(todo.id)}
+                      className="shrink-0 flex items-center justify-center rounded-md transition"
+                      style={{
+                        width: 20,
+                        height: 20,
+                        border: `1.5px solid ${isOverdue ? 'var(--color-alert)' : 'var(--color-border)'}`,
+                        background: '#fff',
+                        color: 'var(--color-completion)',
+                      }}
+                    >
+                      <Check size={11} strokeWidth={3} style={{ opacity: 0 }} />
+                    </button>
+                    <span
+                      className="text-sm leading-snug"
+                      style={{ color: isOverdue ? 'var(--color-alert)' : 'var(--color-text)' }}
+                    >
+                      {todo.title}
+                    </span>
+                    {isOverdue && (
+                      <span
+                        className="text-xs ml-auto shrink-0"
+                        style={{ color: 'var(--color-alert)', opacity: 0.7 }}
+                      >
+                        overdue
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Day timeline */}
+        <div
+          className="shrink-0 px-5 pt-3 pb-2"
+          style={{ borderTop: '1px solid var(--color-border)' }}
+        >
+          <p
+            className="text-xs font-semibold uppercase tracking-wide mb-2"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            Today
+          </p>
+          <DayTimeline events={allEvents} />
         </div>
 
         {/* Wrap up */}

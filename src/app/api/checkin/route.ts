@@ -185,9 +185,9 @@ export async function POST(req: NextRequest) {
         content: `You are a warm daily planning companion for ${userName}.
 Today is ${today} (${timeOfDay}).
 ${hasTodos ? `${userName}'s current pending tasks:\n${formatTodoList(pendingTodos, today)}\n` : ''}
-Generate a brief ${timeOfDay} greeting. Ask what's on their mind — new tasks, thoughts, anything.
-1–2 sentences, warm and casual. Don't say "How can I help you today?". Be personal and inviting.
-You already know their tasks above, so you can reference them if asked — but don't list them unprompted in the greeting.`,
+Generate a brief ${timeOfDay} greeting. Their tasks and schedule are already displayed — don't list or summarize them.
+Ask what else is on their mind — new tasks, thoughts, plans, anything.
+1–2 sentences max, warm and casual. Don't say "How can I help you today?". Be personal and inviting.`,
       },
       { role: 'user', content: 'start' },
     ])

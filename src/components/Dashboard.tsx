@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import TodoColumn from '@/components/TodoColumn'
@@ -62,10 +61,6 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
 
   const myName = profile?.display_name || profile?.email?.split('@')[0] || 'You'
   const partnerName = partner?.display_name || partner?.email?.split('@')[0] || 'Partner'
-
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const overdueTodos = localMyTodos
-    .filter((t): t is typeof t & { due_date: string } => !t.completed && !!t.due_date && t.due_date < today)
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
@@ -212,13 +207,11 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
       {showCheckin && (
         <CheckIn
           userName={myName}
-          overdueTodos={overdueTodos}
-          pendingTodos={localMyTodos.filter(t => !t.completed).map(t => ({ title: t.title, due_date: t.due_date }))}
+          myTodos={localMyTodos}
+          allEvents={allEvents}
           onDone={() => {
             setShowCheckin(false)
-            // Fetch from Supabase immediately so new tasks appear without waiting for the server render
             refreshLocal()
-            // Also kick off a server re-render in the background for full consistency
             refresh()
           }}
         />
