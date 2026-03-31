@@ -343,8 +343,10 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
           </button>
         </div>
 
-        {/* Chat messages */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3 min-h-0">
+        {/* Chat messages — flex-1 when tasks present, capped when timeline expands */}
+        <div
+          className={`overflow-y-auto px-5 py-4 flex flex-col gap-3 min-h-0 ${checklistTodos.length > 0 ? 'flex-1' : 'shrink-0 max-h-[30vh]'}`}
+        >
           {messages.map((msg, i) => {
             const isLastAssistant = msg.role === 'assistant' && i === messages.length - 1
             const showDots = isLastAssistant && waiting && msg.content === ''
@@ -427,13 +429,13 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
           </div>
         )}
 
-        {/* Day timeline */}
+        {/* Day timeline — expands to fill remaining space when no checklist items */}
         <div
-          className="shrink-0 px-5 pt-3 pb-2"
+          className={`px-5 pt-3 pb-2 ${checklistTodos.length === 0 ? 'flex-1 flex flex-col min-h-0' : 'shrink-0'}`}
           style={{ borderTop: '1px solid var(--color-border)' }}
         >
           <p
-            className="text-xs font-semibold uppercase tracking-wide mb-2"
+            className="text-xs font-semibold uppercase tracking-wide mb-2 shrink-0"
             style={{ color: 'var(--color-text-secondary)' }}
           >
             Today
@@ -442,6 +444,7 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
             events={allEvents}
             todos={scheduledTodos}
             onTodoComplete={handleTodoCheck}
+            expand={checklistTodos.length === 0}
           />
         </div>
 

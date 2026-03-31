@@ -165,9 +165,10 @@ interface Props {
   events: CalendarEvent[]
   todos: Todo[]
   onTodoComplete: (todoId: string) => void
+  expand?: boolean
 }
 
-export default function DayTimeline({ events, todos, onTodoComplete }: Props) {
+export default function DayTimeline({ events, todos, onTodoComplete, expand = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const today = format(new Date(), 'yyyy-MM-dd')
   const currentHour = new Date().getHours()
@@ -183,7 +184,7 @@ export default function DayTimeline({ events, todos, onTodoComplete }: Props) {
   }, [currentHour])
 
   return (
-    <div ref={containerRef} style={{ overflowY: 'auto', height: 192 }}>
+    <div ref={containerRef} style={{ overflowY: 'auto', ...(expand ? { flex: 1 } : { height: 192 }) }}>
       {hours.map((hour) => {
         const hourEvents = todayEvents.filter((e) => new Date(e.start_time).getHours() === hour)
         const hourTodos = todos.filter((t) => t.scheduled_time && parseInt(t.scheduled_time.split(':')[0]) === hour)
