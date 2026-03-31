@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
-import { Heart } from 'lucide-react'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import TodoColumn from '@/components/TodoColumn'
 import DayTimeline from '@/components/DayTimeline'
@@ -92,65 +91,26 @@ export default function DesktopLayout({
           </div>
         </div>
 
-        {/* Right — Task columns */}
-        <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0 }}>
-          {/* My tasks */}
-          <div
-            style={{
-              flex: 1,
-              background: '#fff',
-              borderRadius: 16,
-              border: '1px solid var(--color-border)',
-              boxShadow: 'var(--shadow-card)',
-              overflowY: 'auto',
-              padding: 16,
-            }}
-          >
-            <TodoColumn
-              todos={myTodos}
-              ownerName={myName}
-              isOwner={true}
-              userId={profile.id}
-              onRefresh={onRefresh}
-            />
-          </div>
-
-          {/* Partner tasks */}
-          <div
-            style={{
-              flex: 1,
-              background: '#fff',
-              borderRadius: 16,
-              border: '1px solid var(--color-border)',
-              boxShadow: 'var(--shadow-card)',
-              overflowY: 'auto',
-              padding: 16,
-            }}
-          >
-            {partner ? (
-              <TodoColumn
-                todos={partnerTodos}
-                ownerName={partnerName}
-                isOwner={false}
-                userId={partner.id}
-                onRefresh={onRefresh}
-              />
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  color: 'var(--color-text-disabled)',
-                }}
-              >
-                <Heart size={32} />
-                <p style={{ fontSize: 14, marginTop: 8 }}>Partner's tasks will appear here</p>
-              </div>
-            )}
-          </div>
+        {/* Right — My tasks */}
+        <div
+          style={{
+            flex: 1,
+            background: '#fff',
+            borderRadius: 16,
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-card)',
+            overflowY: 'auto',
+            padding: 16,
+            minHeight: 0,
+          }}
+        >
+          <TodoColumn
+            todos={myTodos}
+            ownerName={myName}
+            isOwner={true}
+            userId={profile.id}
+            onRefresh={onRefresh}
+          />
         </div>
       </div>
 

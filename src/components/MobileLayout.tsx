@@ -6,7 +6,7 @@ import TodoColumn from '@/components/TodoColumn'
 import SharedCalendar from '@/components/SharedCalendar'
 import FocusView from '@/components/FocusView'
 import PartnerConnect from '@/components/PartnerConnect'
-import { Heart, X } from 'lucide-react'
+import { X } from 'lucide-react'
 
 type Tab = 'todos' | 'calendar' | 'focus'
 
@@ -83,20 +83,8 @@ export default function MobileLayout({
         )}
 
         {tab === 'todos' && (
-          <div className="grid grid-cols-1 gap-6">
-            <div className="rounded-2xl p-4" style={{ background: '#fff', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
-              <TodoColumn todos={myTodos} ownerName={myName} isOwner={true} userId={profile.id} onRefresh={onRefresh} />
-            </div>
-            <div className="rounded-2xl p-4" style={{ background: '#fff', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
-              {partner ? (
-                <TodoColumn todos={partnerTodos} ownerName={partnerName} isOwner={false} userId={partner.id} onRefresh={onRefresh} />
-              ) : (
-                <div className="flex flex-col items-center justify-center min-h-48" style={{ color: 'var(--color-text-disabled)' }}>
-                  <Heart size={32} />
-                  <p className="text-sm mt-2">Partner's tasks will appear here</p>
-                </div>
-              )}
-            </div>
+          <div className="rounded-2xl p-4" style={{ background: '#fff', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+            <TodoColumn todos={myTodos} ownerName={myName} isOwner={true} userId={profile.id} onRefresh={onRefresh} />
           </div>
         )}
 
