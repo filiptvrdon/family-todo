@@ -2,6 +2,8 @@ export interface Profile {
   id: string
   email: string
   display_name: string
+  username: string | null
+  customization_prompt: string | null
   partner_id: string | null
   google_refresh_token: string | null
 }

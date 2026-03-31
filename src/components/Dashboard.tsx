@@ -6,9 +6,10 @@ import { createClient } from '@/lib/supabase/client'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import GoogleCalendarConnect from '@/components/GoogleCalendarConnect'
+import ProfileModal from '@/components/ProfileModal'
 import MobileLayout from '@/components/MobileLayout'
 import DesktopLayout from '@/components/DesktopLayout'
-import { Heart, LogOut } from 'lucide-react'
+import { Heart, LogOut, UserCircle } from 'lucide-react'
 
 interface Props {
   profile: Profile
@@ -23,6 +24,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
   const [localMyTodos, setLocalMyTodos] = useState<Todo[]>(myTodos)
   const [localPartnerTodos, setLocalPartnerTodos] = useState<Todo[]>(partnerTodos)
   const [showCheckin, setShowCheckin] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -94,6 +96,14 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
           <div className="flex items-center gap-3">
             <GoogleCalendarConnect connected={googleConnected} onDisconnected={refresh} />
             <button
+              onClick={() => setShowProfile(true)}
+              className="transition"
+              style={{ color: 'var(--color-text-disabled)' }}
+              title="Your profile"
+            >
+              <UserCircle size={18} />
+            </button>
+            <button
               onClick={signOut}
               className="transition"
               style={{ color: 'var(--color-text-disabled)' }}
@@ -116,6 +126,14 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
       >
         <DesktopLayout {...sharedProps} onTodoComplete={completeTodo} />
       </div>
+
+      {showProfile && (
+        <ProfileModal
+          profile={profile}
+          onClose={() => setShowProfile(false)}
+          onSaved={refresh}
+        />
+      )}
 
       {showCheckin && (
         <CheckIn
