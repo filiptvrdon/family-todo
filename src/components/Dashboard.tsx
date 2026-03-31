@@ -68,7 +68,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
     allEvents,
     myName,
     partnerName,
-    onRefresh: refresh,
+    onRefresh: () => { refreshLocal(); refresh() },
   }
 
   return (
