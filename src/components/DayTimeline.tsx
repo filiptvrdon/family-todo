@@ -25,58 +25,61 @@ interface HourRowProps {
 }
 
 function DraggableTimelineTodo({ todo, onComplete }: { todo: Todo; onComplete: (id: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: todo.id })
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: todo.id, disabled: todo.completed })
   return (
     <div
       ref={setNodeRef}
       style={{
-        background: 'var(--color-foam)',
-        border: '1px solid var(--color-border)',
+        background: todo.completed ? 'transparent' : 'var(--color-foam)',
+        border: `1px solid ${todo.completed ? 'transparent' : 'var(--color-border)'}`,
         borderRadius: 6,
         padding: '5px 8px',
         fontSize: 13,
-        color: 'var(--color-text)',
+        color: todo.completed ? 'var(--color-text-disabled)' : 'var(--color-text)',
         display: 'flex',
         alignItems: 'center',
         gap: 6,
         overflow: 'hidden',
-        opacity: isDragging ? 0.4 : 1,
+        opacity: isDragging ? 0.4 : todo.completed ? 0.6 : 1,
         transform: CSS.Translate.toString(transform),
       }}
     >
       <button
-        onClick={() => onComplete(todo.id)}
+        onClick={() => !todo.completed && onComplete(todo.id)}
         style={{
           flexShrink: 0,
           width: 14,
           height: 14,
-          border: '1.5px solid var(--color-border)',
+          border: `1.5px solid ${todo.completed ? 'var(--color-completion)' : 'var(--color-border)'}`,
           borderRadius: 3,
-          background: '#fff',
+          background: todo.completed ? 'var(--color-completion)' : '#fff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          cursor: todo.completed ? 'default' : 'pointer',
         }}
       >
-        <Check size={9} strokeWidth={3} style={{ color: 'var(--color-completion)', opacity: 0 }} />
+        <Check size={9} strokeWidth={3} style={{ color: '#fff', opacity: todo.completed ? 1 : 0 }} />
       </button>
-      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span style={{ flex: 1, wordBreak: 'break-word', textDecoration: todo.completed ? 'line-through' : 'none' }}>
         {todo.title}
       </span>
-      <button
-        {...listeners}
-        {...attributes}
-        style={{
-          flexShrink: 0,
-          cursor: 'grab',
-          color: 'var(--color-text-disabled)',
-          display: 'flex',
-          alignItems: 'center',
-          touchAction: 'none',
-        }}
-      >
-        <GripVertical size={12} />
-      </button>
+      {!todo.completed && (
+        <button
+          {...listeners}
+          {...attributes}
+          style={{
+            flexShrink: 0,
+            cursor: 'grab',
+            color: 'var(--color-text-disabled)',
+            display: 'flex',
+            alignItems: 'center',
+            touchAction: 'none',
+          }}
+        >
+          <GripVertical size={12} />
+        </button>
+      )}
     </div>
   )
 }

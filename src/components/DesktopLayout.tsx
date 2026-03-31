@@ -7,6 +7,8 @@ import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import TodoColumn from '@/components/TodoColumn'
 import DayTimeline from '@/components/DayTimeline'
 import SharedCalendar from '@/components/SharedCalendar'
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, Modifier } from '@dnd-kit/core'
+import { createClient } from '@/lib/supabase/client'
 
 type View = 'dashboard' | 'calendar'
 
@@ -28,6 +30,25 @@ export default function DesktopLayout({
   const [view, setView] = useState<View>('dashboard')
   const calendarContainerRef = useRef<HTMLDivElement>(null)
   const [calendarHeight, setCalendarHeight] = useState(500)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  const restrictToVerticalAxis: Modifier = ({ transform }) => ({
+    ...transform,
+    x: 0,
+  })
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over) return
+    const todoId = active.id as string
+    const hourMatch = String(over.id).match(/^hour-(\d+)$/)
+    if (!hourMatch) return
+    const hour = parseInt(hourMatch[1])
+    const scheduledTime = `${String(hour).padStart(2, '0')}:00:00`
+    const supabase = createClient()
+    await supabase.from('todos').update({ scheduled_time: scheduledTime }).eq('id', todoId)
+    onRefresh()
+  }
 
   useEffect(() => {
     if (!calendarContainerRef.current) return
@@ -40,7 +61,7 @@ export default function DesktopLayout({
     return () => observer.disconnect()
   }, [view])
 
-  const scheduledTodos = myTodos.filter((t) => !t.completed && !!t.scheduled_time)
+  const scheduledTodos = myTodos.filter((t) => !!t.scheduled_time)
 
   const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={15} /> },
@@ -147,12 +168,14 @@ export default function DesktopLayout({
               </p>
             </div>
             <div style={{ flex: 1, minHeight: 0 }}>
-              <DayTimeline
-                events={allEvents}
-                todos={scheduledTodos}
-                onTodoComplete={onTodoComplete}
-                expand
-              />
+              <DndContext sensors={sensors} modifiers={[restrictToVerticalAxis]} onDragEnd={handleDragEnd}>
+                <DayTimeline
+                  events={allEvents}
+                  todos={scheduledTodos}
+                  onTodoComplete={onTodoComplete}
+                  expand
+                />
+              </DndContext>
             </div>
           </div>
         </div>
