@@ -4,6 +4,7 @@ export interface Profile {
   display_name: string
   username: string | null
   customization_prompt: string | null
+  avatar_url: string | null
   partner_id: string | null
   google_refresh_token: string | null
 }

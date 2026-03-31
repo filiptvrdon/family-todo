@@ -97,11 +97,20 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
             <GoogleCalendarConnect connected={googleConnected} onDisconnected={refresh} />
             <button
               onClick={() => setShowProfile(true)}
-              className="transition"
-              style={{ color: 'var(--color-text-disabled)' }}
+              className="transition hover:opacity-80"
               title="Your profile"
             >
-              <UserCircle size={18} />
+              {profile.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatar_url}
+                  alt="Profile"
+                  className="rounded-full object-cover"
+                  style={{ width: 28, height: 28, border: '2px solid #D6EFE4' }}
+                />
+              ) : (
+                <UserCircle size={24} style={{ color: 'var(--color-text-disabled)' }} />
+              )}
             </button>
             <button
               onClick={signOut}

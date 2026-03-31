@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/lib/types'
-import { X, User } from 'lucide-react'
+import { X, User, Camera } from 'lucide-react'
 
 interface Props {
   profile: Profile
@@ -13,16 +13,47 @@ interface Props {
 
 export default function ProfileModal({ profile, onClose, onSaved }: Props) {
   const supabase = createClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const [displayName, setDisplayName] = useState(profile.display_name || '')
   const [username, setUsername] = useState(profile.username || '')
   const [customizationPrompt, setCustomizationPrompt] = useState(profile.customization_prompt || '')
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatar_url || null)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setSaving(true)
+
+    let avatarUrl = profile.avatar_url
+
+    if (avatarFile) {
+      const ext = avatarFile.name.split('.').pop()
+      const path = `${profile.id}/avatar.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type })
+
+      if (uploadError) {
+        setError('Failed to upload avatar. Please try again.')
+        setSaving(false)
+        return
+      }
+
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+      // Bust cache by appending a timestamp
+      avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`
+    }
 
     const { error: updateError } = await supabase
       .from('profiles')
@@ -30,6 +61,7 @@ export default function ProfileModal({ profile, onClose, onSaved }: Props) {
         display_name: displayName.trim(),
         username: username.trim() || null,
         customization_prompt: customizationPrompt.trim() || null,
+        avatar_url: avatarUrl,
       })
       .eq('id', profile.id)
 
@@ -51,7 +83,7 @@ export default function ProfileModal({ profile, onClose, onSaved }: Props) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="w-full max-w-md rounded-2xl p-6"
+        className="w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
         style={{
           background: '#fff',
           boxShadow: '0 8px 32px rgba(0, 181, 200, 0.12)',
@@ -76,6 +108,49 @@ export default function ProfileModal({ profile, onClose, onSaved }: Props) {
         </div>
 
         <form onSubmit={save} className="flex flex-col gap-4">
+          {/* Avatar */}
+          <div className="flex flex-col items-center gap-2 mb-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="relative group"
+              title="Change profile picture"
+            >
+              <div
+                className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center"
+                style={{ background: '#D6EFE4', border: '2px solid #D6EFE4' }}
+              >
+                {avatarPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarPreview}
+                    alt="Profile picture"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={36} style={{ color: 'var(--color-primary)' }} />
+                )}
+              </div>
+              {/* Hover overlay */}
+              <div
+                className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ background: 'rgba(0, 181, 200, 0.5)' }}
+              >
+                <Camera size={20} color="#fff" />
+              </div>
+            </button>
+            <p className="text-xs" style={{ color: 'var(--color-text-disabled)' }}>
+              Click to change photo
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+          </div>
+
           {/* Email (read-only) */}
           <div>
             <label
