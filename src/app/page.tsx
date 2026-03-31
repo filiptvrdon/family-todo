@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
+import { refreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar'
+import { CalendarEvent } from '@/lib/types'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -53,13 +55,28 @@ export default async function Home() {
     ? await supabase.from('calendar_events').select('*').eq('user_id', profile.partner_id)
     : { data: [] }
 
+  // Fetch Google Calendar events if the user has connected their account
+  let googleEvents: CalendarEvent[] = []
+  const googleRefreshToken = profile.google_refresh_token
+  if (googleRefreshToken) {
+    try {
+      const accessToken = await refreshAccessToken(googleRefreshToken)
+      const now = new Date()
+      const twoWeeksOut = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+      googleEvents = await fetchGoogleCalendarEvents(accessToken, user.id, now, twoWeeksOut)
+    } catch (err) {
+      console.error('[google calendar] failed to fetch events', err)
+    }
+  }
+
   return (
     <Dashboard
       profile={profile}
       partner={partner}
       myTodos={myTodos ?? []}
       partnerTodos={partnerTodos ?? []}
-      allEvents={[...(myEvents ?? []), ...(partnerEvents ?? [])]}
+      allEvents={[...(myEvents ?? []), ...(partnerEvents ?? []), ...googleEvents]}
+      googleConnected={!!googleRefreshToken}
     />
   )
 }

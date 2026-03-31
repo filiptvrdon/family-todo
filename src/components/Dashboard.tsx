@@ -9,6 +9,7 @@ import SharedCalendar from '@/components/SharedCalendar'
 import FocusView from '@/components/FocusView'
 import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import PartnerConnect from '@/components/PartnerConnect'
+import GoogleCalendarConnect from '@/components/GoogleCalendarConnect'
 import { Heart, LogOut, Settings, X } from 'lucide-react'
 
 interface Props {
@@ -17,11 +18,12 @@ interface Props {
   myTodos: Todo[]
   partnerTodos: Todo[]
   allEvents: CalendarEvent[]
+  googleConnected: boolean
 }
 
 type Tab = 'todos' | 'calendar' | 'focus'
 
-export default function Dashboard({ profile, partner, myTodos, partnerTodos, allEvents }: Props) {
+export default function Dashboard({ profile, partner, myTodos, partnerTodos, allEvents, googleConnected }: Props) {
   const [tab, setTab] = useState<Tab>('todos')
   const [showConnect, setShowConnect] = useState(false)
   const [showCheckin, setShowCheckin] = useState(false)
@@ -99,7 +101,11 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <GoogleCalendarConnect
+              connected={googleConnected}
+              onDisconnected={refresh}
+            />
             {!partner && (
               <button
                 onClick={() => setShowConnect(!showConnect)}

@@ -3,6 +3,7 @@ export interface Profile {
   email: string
   display_name: string
   partner_id: string | null
+  google_refresh_token: string | null
 }
 
 export interface Todo {
