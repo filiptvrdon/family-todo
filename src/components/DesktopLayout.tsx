@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { format } from 'date-fns'
-import { LayoutDashboard, CalendarDays } from 'lucide-react'
+import { useState } from 'react'
+import { format, addDays, subDays, isSameDay } from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Views } from 'react-big-calendar'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import TodoColumn from '@/components/TodoColumn'
 import DayTimeline from '@/components/DayTimeline'
@@ -10,7 +11,7 @@ import SharedCalendar from '@/components/SharedCalendar'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, Modifier } from '@dnd-kit/core'
 import { createClient } from '@/lib/supabase/client'
 
-type View = 'dashboard' | 'calendar'
+type RightTab = 'day' | 'week' | 'month'
 
 interface Props {
   profile: Profile
@@ -27,9 +28,8 @@ interface Props {
 export default function DesktopLayout({
   profile, partner, myTodos, allEvents, myName, onRefresh, onTodoComplete,
 }: Props) {
-  const [view, setView] = useState<View>('dashboard')
-  const calendarContainerRef = useRef<HTMLDivElement>(null)
-  const [calendarHeight, setCalendarHeight] = useState(500)
+  const [rightTab, setRightTab] = useState<RightTab>('day')
+  const [dayDate, setDayDate] = useState<Date>(new Date())
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const restrictToVerticalAxis: Modifier = ({ transform }) => ({
@@ -50,190 +50,159 @@ export default function DesktopLayout({
     onRefresh()
   }
 
-  useEffect(() => {
-    if (!calendarContainerRef.current) return
-    const observer = new ResizeObserver(() => {
-      if (calendarContainerRef.current) {
-        setCalendarHeight(Math.max(300, calendarContainerRef.current.clientHeight - 84))
-      }
-    })
-    observer.observe(calendarContainerRef.current)
-    return () => observer.disconnect()
-  }, [view])
-
   const scheduledTodos = myTodos.filter((t) => !!t.scheduled_time)
 
-  const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={15} /> },
-    { id: 'calendar', label: 'Calendar', icon: <CalendarDays size={15} /> },
+  const tabs: { id: RightTab; label: string }[] = [
+    { id: 'day', label: 'Day' },
+    { id: 'week', label: 'Week' },
+    { id: 'month', label: 'Month' },
   ]
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+    <div style={{ flex: 1, display: 'flex', gap: 16, padding: '16px 24px 24px', overflow: 'hidden', minHeight: 0 }}>
 
-      {/* ── View switcher ── */}
+      {/* Left — Task list */}
       <div
         style={{
-          flexShrink: 0,
-          display: 'flex',
-          gap: 4,
-          padding: '10px 24px 0',
+          flex: 1,
+          background: '#fff',
+          borderRadius: 16,
+          border: '1px solid var(--color-border)',
+          boxShadow: 'var(--shadow-card)',
+          overflowY: 'auto',
+          padding: 16,
         }}
       >
-        {navItems.map(({ id, label, icon }) => (
-          <button
-            key={id}
-            onClick={() => setView(id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '6px 14px',
-              borderRadius: '8px 8px 0 0',
-              fontSize: 13,
-              fontWeight: 500,
-              border: '1px solid var(--color-border)',
-              borderBottom: view === id ? '1px solid #fff' : '1px solid var(--color-border)',
-              background: view === id ? '#fff' : 'transparent',
-              color: view === id ? 'var(--color-text)' : 'var(--color-text-secondary)',
-              cursor: 'pointer',
-              transition: 'background 150ms, color 150ms',
-              marginBottom: view === id ? -1 : 0,
-              position: 'relative',
-              zIndex: view === id ? 1 : 0,
-            }}
-          >
-            {icon}
-            {label}
-          </button>
-        ))}
-        <div style={{ flex: 1, borderBottom: '1px solid var(--color-border)' }} />
+        <TodoColumn
+          todos={myTodos}
+          ownerName={myName}
+          isOwner={true}
+          userId={profile.id}
+          onRefresh={onRefresh}
+        />
       </div>
 
-      {/* ── Dashboard view: task list (left) + day timeline (right) ── */}
-      {view === 'dashboard' && (
+      {/* Right — Tabbed panel */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#fff',
+          borderRadius: 16,
+          border: '1px solid var(--color-border)',
+          boxShadow: 'var(--shadow-card)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Tab bar */}
         <div
           style={{
-            flex: 1,
+            flexShrink: 0,
             display: 'flex',
-            gap: 16,
-            padding: '16px 24px 24px',
-            overflow: 'hidden',
-            minHeight: 0,
+            alignItems: 'flex-end',
+            padding: '10px 16px 0',
+            borderBottom: '1px solid var(--color-border)',
+            gap: 2,
           }}
         >
-          {/* Left — Task list */}
-          <div
-            style={{
-              flex: 1,
-              background: '#fff',
-              borderRadius: 16,
-              border: '1px solid var(--color-border)',
-              boxShadow: 'var(--shadow-card)',
-              overflowY: 'auto',
-              padding: 16,
-            }}
-          >
-            <TodoColumn
-              todos={myTodos}
-              ownerName={myName}
-              isOwner={true}
-              userId={profile.id}
-              onRefresh={onRefresh}
-            />
-          </div>
-
-          {/* Right — Day timeline */}
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              background: '#fff',
-              borderRadius: 16,
-              border: '1px solid var(--color-border)',
-              boxShadow: 'var(--shadow-card)',
-              overflow: 'hidden',
-            }}
-          >
-            <div
+          {tabs.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setRightTab(id)}
               style={{
-                padding: '10px 16px 8px',
-                borderBottom: '1px solid var(--color-border)',
-                flexShrink: 0,
+                padding: '5px 14px',
+                borderRadius: '8px 8px 0 0',
+                fontSize: 13,
+                fontWeight: 500,
+                border: '1px solid var(--color-border)',
+                borderBottom: rightTab === id ? '1px solid #fff' : '1px solid var(--color-border)',
+                background: rightTab === id ? '#fff' : 'transparent',
+                color: rightTab === id ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                cursor: 'pointer',
+                transition: 'background 150ms, color 150ms',
+                marginBottom: rightTab === id ? -1 : 0,
+                position: 'relative',
+                zIndex: rightTab === id ? 1 : 0,
               }}
             >
-              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
-                {format(new Date(), 'EEEE, MMMM d')}
-              </p>
-            </div>
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <DndContext sensors={sensors} modifiers={[restrictToVerticalAxis]} onDragEnd={handleDragEnd}>
-                <DayTimeline
-                  events={allEvents}
-                  todos={scheduledTodos}
-                  onTodoComplete={onTodoComplete}
-                  expand
-                />
-              </DndContext>
-            </div>
-          </div>
+              {label}
+            </button>
+          ))}
         </div>
-      )}
 
-      {/* ── Calendar view: calendar (66%) + task list (33%) ── */}
-      {view === 'calendar' && (
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            gap: 16,
-            padding: '16px 24px 24px',
-            overflow: 'hidden',
-            minHeight: 0,
-          }}
-        >
-          {/* Left 66% — Calendar */}
-          <div
-            ref={calendarContainerRef}
-            style={{
-              flex: '0 0 calc(66.666% - 8px)',
-              overflow: 'hidden',
-            }}
-          >
-            <SharedCalendar
-              events={allEvents}
-              myUserId={profile.id}
-              partnerUserId={partner?.id ?? null}
-              myColor="var(--color-primary)"
-              partnerColor="var(--color-completion)"
-              onRefresh={onRefresh}
-              calendarHeight={calendarHeight}
-            />
+        {/* Day navigation header */}
+        {rightTab === 'day' && (
+          <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => setDayDate(subDays(dayDate, 1))}
+              style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-secondary)' }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              onClick={() => setDayDate(addDays(dayDate, 1))}
+              style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-secondary)' }}
+            >
+              <ChevronRight size={14} />
+            </button>
+            {!isSameDay(dayDate, new Date()) && (
+              <button
+                onClick={() => setDayDate(new Date())}
+                style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)' }}
+              >
+                Today
+              </button>
+            )}
+            <p style={{ fontSize: 13, fontWeight: 600, color: isSameDay(dayDate, new Date()) ? 'var(--color-text)' : 'var(--color-primary)', marginLeft: 4 }}>
+              {format(dayDate, 'EEEE, MMMM d')}
+            </p>
           </div>
+        )}
 
-          {/* Right 33% — Task list */}
-          <div
-            style={{
-              flex: 1,
-              background: '#fff',
-              borderRadius: 16,
-              border: '1px solid var(--color-border)',
-              boxShadow: 'var(--shadow-card)',
-              overflowY: 'auto',
-              padding: 16,
-            }}
-          >
-            <TodoColumn
-              todos={myTodos}
-              ownerName={myName}
-              isOwner={true}
-              userId={profile.id}
-              onRefresh={onRefresh}
-            />
-          </div>
+        {/* Panel content */}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          {rightTab === 'day' && (
+            <DndContext sensors={sensors} modifiers={[restrictToVerticalAxis]} onDragEnd={handleDragEnd}>
+              <DayTimeline
+                events={allEvents}
+                todos={scheduledTodos}
+                onTodoComplete={onTodoComplete}
+                date={dayDate}
+                expand
+              />
+            </DndContext>
+          )}
+
+          {rightTab === 'week' && (
+            <div style={{ padding: 16, height: '100%', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <SharedCalendar
+                events={allEvents}
+                myUserId={profile.id}
+                partnerUserId={partner?.id ?? null}
+                myColor="var(--color-primary)"
+                partnerColor="var(--color-completion)"
+                onRefresh={onRefresh}
+                defaultView={Views.WEEK}
+              />
+            </div>
+          )}
+
+          {rightTab === 'month' && (
+            <div style={{ padding: 16, height: '100%', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <SharedCalendar
+                events={allEvents}
+                myUserId={profile.id}
+                partnerUserId={partner?.id ?? null}
+                myColor="var(--color-primary)"
+                partnerColor="var(--color-completion)"
+                onRefresh={onRefresh}
+                defaultView={Views.MONTH}
+              />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

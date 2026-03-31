@@ -169,14 +169,17 @@ interface Props {
   todos: Todo[]
   onTodoComplete: (todoId: string) => void
   expand?: boolean
+  date?: Date
 }
 
-export default function DayTimeline({ events, todos, onTodoComplete, expand = false }: Props) {
+export default function DayTimeline({ events, todos, onTodoComplete, expand = false, date = new Date() }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const dateKey = format(date, 'yyyy-MM-dd')
+  const todayKey = format(new Date(), 'yyyy-MM-dd')
   const currentHour = new Date().getHours()
+  const isToday = dateKey === todayKey
 
-  const todayEvents = events.filter((e) => format(new Date(e.start_time), 'yyyy-MM-dd') === today)
+  const todayEvents = events.filter((e) => format(new Date(e.start_time), 'yyyy-MM-dd') === dateKey)
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => i + START_HOUR)
 
   useEffect(() => {
@@ -196,7 +199,7 @@ export default function DayTimeline({ events, todos, onTodoComplete, expand = fa
           <HourRow
             key={hour}
             hour={hour}
-            isCurrent={hour === currentHour}
+            isCurrent={isToday && hour === currentHour}
             events={hourEvents}
             todos={hourTodos}
             onTodoComplete={onTodoComplete}
