@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { format, addDays } from 'date-fns'
-import { ollamaJSON, ollamaStream, OllamaMsg } from '@/lib/ai'
+import { aiJSON, aiStream, AIMessage } from '@/lib/ai'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 type OverdueTodo = { id: string; title: string; due_date: string }
@@ -56,7 +56,7 @@ async function extractTasks(brainDump: string, today: string) {
   const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd')
   const nextWeek = format(addDays(new Date(), 7), 'yyyy-MM-dd')
   try {
-    const raw = await ollamaJSON([
+    const raw = await aiJSON([
       {
         role: 'system',
         content: `Extract tasks from the user's text. Return ONLY a JSON array.
@@ -82,7 +82,7 @@ async function extractOverdueDecisions(messages: Message[], overdueTodos: Overdu
     .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
     .join('\n')
   try {
-    const raw = await ollamaJSON([
+    const raw = await aiJSON([
       {
         role: 'system',
         content: `Analyze this conversation. Which overdue tasks did the user say are done, completed, or no longer needed?
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
     const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
 
     const hasTodos = pendingTodos.length > 0
-    const stream = await ollamaStream([
+    const stream = await aiStream([
       {
         role: 'system',
         content: `You are a warm daily planning companion for ${userName}.
@@ -147,8 +147,8 @@ Ask what else is on their mind — new tasks, thoughts, plans, anything.
 
     const systemPrompt = buildChatSystem(userName, overdueTodos, pendingTodos, isFirstUserMessage, today)
 
-    // Ollama requires first message to be from user
-    const ollamaHistory: OllamaMsg[] =
+    // AI provider requires first message to be from user
+    const history: AIMessage[] =
       messages[0]?.role === 'assistant'
         ? [{ role: 'user', content: '.' }, ...messages]
         : messages
@@ -173,7 +173,7 @@ Ask what else is on their mind — new tasks, thoughts, plans, anything.
       })
     }
 
-    const stream = await ollamaStream([{ role: 'system', content: systemPrompt }, ...ollamaHistory])
+    const stream = await aiStream([{ role: 'system', content: systemPrompt }, ...history])
 
     return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
   }

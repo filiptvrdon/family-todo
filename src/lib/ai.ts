@@ -1,28 +1,28 @@
-const OLLAMA_URL = 'http://localhost:11434/api/chat'
-const MODEL = 'qwen3.5:latest'
+const AI_URL = 'http://localhost:11434/api/chat'
+const AI_MODEL = 'qwen3.5:latest'
 
-export type OllamaMsg = { role: 'system' | 'user' | 'assistant'; content: string }
+export type AIMessage = { role: 'system' | 'user' | 'assistant'; content: string }
 
 // Non-streaming JSON call — used for structured extraction tasks
-export async function ollamaJSON(messages: OllamaMsg[]): Promise<string> {
-  const res = await fetch(OLLAMA_URL, {
+export async function aiJSON(messages: AIMessage[]): Promise<string> {
+  const res = await fetch(AI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, messages, stream: false, think: false, format: 'json' }),
+    body: JSON.stringify({ model: AI_MODEL, messages, stream: false, think: false, format: 'json' }),
   })
-  if (!res.ok) throw new Error(`Ollama ${res.status}`)
+  if (!res.ok) throw new Error(`AI request failed: ${res.status}`)
   const data = await res.json()
   return data.message?.content ?? ''
 }
 
 // Streaming call — returns a ReadableStream of raw text tokens
-export async function ollamaStream(messages: OllamaMsg[]): Promise<ReadableStream<Uint8Array>> {
-  const res = await fetch(OLLAMA_URL, {
+export async function aiStream(messages: AIMessage[]): Promise<ReadableStream<Uint8Array>> {
+  const res = await fetch(AI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, messages, stream: true, think: false }),
+    body: JSON.stringify({ model: AI_MODEL, messages, stream: true, think: false }),
   })
-  if (!res.ok) throw new Error(`Ollama ${res.status}: ${await res.text()}`)
+  if (!res.ok) throw new Error(`AI request failed: ${res.status} ${await res.text()}`)
 
   const encoder = new TextEncoder()
   const reader = res.body!.getReader()
