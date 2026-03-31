@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useDroppable } from '@dnd-kit/core'
+import { useDroppable, useDraggable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { CalendarEvent, Todo } from '@/lib/types'
 import { format } from 'date-fns'
-import { Check } from 'lucide-react'
+import { Check, GripVertical } from 'lucide-react'
 
 const START_HOUR = 5
 const END_HOUR = 20
@@ -21,6 +22,63 @@ interface HourRowProps {
   events: CalendarEvent[]
   todos: Todo[]
   onTodoComplete: (todoId: string) => void
+}
+
+function DraggableTimelineTodo({ todo, onComplete }: { todo: Todo; onComplete: (id: string) => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: todo.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        background: 'var(--color-foam)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 4,
+        padding: '2px 6px',
+        fontSize: 11,
+        color: 'var(--color-text)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        overflow: 'hidden',
+        opacity: isDragging ? 0.4 : 1,
+        transform: CSS.Translate.toString(transform),
+      }}
+    >
+      <button
+        onClick={() => onComplete(todo.id)}
+        style={{
+          flexShrink: 0,
+          width: 14,
+          height: 14,
+          border: '1.5px solid var(--color-border)',
+          borderRadius: 3,
+          background: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Check size={9} strokeWidth={3} style={{ color: 'var(--color-completion)', opacity: 0 }} />
+      </button>
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {todo.title}
+      </span>
+      <button
+        {...listeners}
+        {...attributes}
+        style={{
+          flexShrink: 0,
+          cursor: 'grab',
+          color: 'var(--color-text-disabled)',
+          display: 'flex',
+          alignItems: 'center',
+          touchAction: 'none',
+        }}
+      >
+        <GripVertical size={12} />
+      </button>
+    </div>
+  )
 }
 
 function HourRow({ hour, isCurrent, events, todos, onTodoComplete }: HourRowProps) {
@@ -96,41 +154,7 @@ function HourRow({ hour, isCurrent, events, todos, onTodoComplete }: HourRowProp
         ))}
 
         {todos.map((t) => (
-          <div
-            key={t.id}
-            style={{
-              background: 'var(--color-foam)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 4,
-              padding: '2px 6px',
-              fontSize: 11,
-              color: 'var(--color-text)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              overflow: 'hidden',
-            }}
-          >
-            <button
-              onClick={() => onTodoComplete(t.id)}
-              style={{
-                flexShrink: 0,
-                width: 14,
-                height: 14,
-                border: '1.5px solid var(--color-border)',
-                borderRadius: 3,
-                background: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Check size={9} strokeWidth={3} style={{ color: 'var(--color-completion)', opacity: 0 }} />
-            </button>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {t.title}
-            </span>
-          </div>
+          <DraggableTimelineTodo key={t.id} todo={t} onComplete={onTodoComplete} />
         ))}
       </div>
     </div>
