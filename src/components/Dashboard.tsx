@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
-import GoogleCalendarConnect from '@/components/GoogleCalendarConnect'
 import ProfileModal from '@/components/ProfileModal'
 import MobileLayout from '@/components/MobileLayout'
 import DesktopLayout from '@/components/DesktopLayout'
@@ -94,7 +93,6 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
           </div>
 
           <div className="flex items-center gap-3">
-            <GoogleCalendarConnect connected={googleConnected} onDisconnected={refresh} />
             <button
               onClick={() => setShowProfile(true)}
               className="transition hover:opacity-80"
@@ -139,8 +137,10 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
       {showProfile && (
         <ProfileModal
           profile={profile}
+          googleConnected={googleConnected}
           onClose={() => setShowProfile(false)}
           onSaved={refresh}
+          onGoogleDisconnected={refresh}
         />
       )}
 

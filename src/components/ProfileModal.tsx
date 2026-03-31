@@ -3,15 +3,17 @@
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/lib/types'
-import { X, User, Camera } from 'lucide-react'
+import { X, User, Camera, CalendarDays, Loader2 } from 'lucide-react'
 
 interface Props {
   profile: Profile
+  googleConnected: boolean
   onClose: () => void
   onSaved: () => void
+  onGoogleDisconnected: () => void
 }
 
-export default function ProfileModal({ profile, onClose, onSaved }: Props) {
+export default function ProfileModal({ profile, googleConnected, onClose, onSaved, onGoogleDisconnected }: Props) {
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -22,6 +24,17 @@ export default function ProfileModal({ profile, onClose, onSaved }: Props) {
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [disconnecting, setDisconnecting] = useState(false)
+
+  async function disconnectGoogle() {
+    setDisconnecting(true)
+    try {
+      await fetch('/api/auth/google/disconnect', { method: 'POST' })
+      onGoogleDisconnected()
+    } finally {
+      setDisconnecting(false)
+    }
+  }
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -247,6 +260,42 @@ export default function ProfileModal({ profile, onClose, onSaved }: Props) {
             <p className="text-xs mt-0.5 text-right" style={{ color: 'var(--color-text-disabled)' }}>
               {customizationPrompt.length}/500
             </p>
+          </div>
+
+          {/* Google Calendar */}
+          <div
+            className="flex items-center justify-between rounded-xl px-4 py-3"
+            style={{ background: '#FAF7F2', border: '1px solid #D6EFE4' }}
+          >
+            <div className="flex items-center gap-2">
+              <CalendarDays size={16} style={{ color: googleConnected ? 'var(--color-completion)' : 'var(--color-text-disabled)' }} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Google Calendar</p>
+                <p className="text-xs" style={{ color: 'var(--color-text-disabled)' }}>
+                  {googleConnected ? 'Connected' : 'Not connected'}
+                </p>
+              </div>
+            </div>
+            {googleConnected ? (
+              <button
+                type="button"
+                onClick={disconnectGoogle}
+                disabled={disconnecting}
+                className="text-xs font-medium transition flex items-center gap-1 disabled:opacity-50"
+                style={{ color: '#FF9F7F' }}
+              >
+                {disconnecting && <Loader2 size={12} className="animate-spin" />}
+                Disconnect
+              </button>
+            ) : (
+              <a
+                href="/api/auth/google"
+                className="text-xs font-medium transition"
+                style={{ color: 'var(--color-primary)' }}
+              >
+                Connect
+              </a>
+            )}
           </div>
 
           {error && (
