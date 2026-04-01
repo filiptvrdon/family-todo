@@ -59,20 +59,10 @@ export default function DesktopLayout({
   ]
 
   return (
-    <div style={{ flex: 1, display: 'flex', gap: 16, padding: '16px 24px 24px', overflow: 'hidden', minHeight: 0 }}>
+    <div className="flex gap-4 px-6 pt-4 pb-6 overflow-hidden min-h-0 flex-1">
 
       {/* Left — Task list */}
-      <div
-        style={{
-          flex: 1,
-          background: '#fff',
-          borderRadius: 16,
-          border: '1px solid var(--color-border)',
-          boxShadow: 'var(--shadow-card)',
-          overflowY: 'auto',
-          padding: 16,
-        }}
-      >
+      <div className="flex-1 bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-y-auto p-4">
         <TodoColumn
           todos={myTodos}
           ownerName={myName}
@@ -83,44 +73,22 @@ export default function DesktopLayout({
       </div>
 
       {/* Right — Tabbed panel */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          background: '#fff',
-          borderRadius: 16,
-          border: '1px solid var(--color-border)',
-          boxShadow: 'var(--shadow-card)',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Tab bar */}
-        <div
-          style={{
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'flex-end',
-            padding: '10px 16px 0',
-            borderBottom: '1px solid var(--color-border)',
-            gap: 2,
-          }}
-        >
+      <div className="flex-1 flex flex-col bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
+        {/* Tab bar — active tab uses negative margin + z-index trick to merge with border;
+            these dynamic values must stay inline */}
+        <div className="shrink-0 flex items-end px-4 pt-[10px] border-b border-border gap-0.5">
           {tabs.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setRightTab(id)}
+              className="text-[13px] font-medium cursor-pointer transition-[background,color] duration-150"
               style={{
                 padding: '5px 14px',
                 borderRadius: '8px 8px 0 0',
-                fontSize: 13,
-                fontWeight: 500,
                 border: '1px solid var(--color-border)',
-                borderBottom: rightTab === id ? '1px solid #fff' : '1px solid var(--color-border)',
-                background: rightTab === id ? '#fff' : 'transparent',
+                borderBottom: rightTab === id ? '1px solid var(--card)' : '1px solid var(--color-border)',
+                background: rightTab === id ? 'var(--card)' : 'transparent',
                 color: rightTab === id ? 'var(--color-text)' : 'var(--color-text-secondary)',
-                cursor: 'pointer',
-                transition: 'background 150ms, color 150ms',
                 marginBottom: rightTab === id ? -1 : 0,
                 position: 'relative',
                 zIndex: rightTab === id ? 1 : 0,
@@ -133,35 +101,39 @@ export default function DesktopLayout({
 
         {/* Day navigation header */}
         {rightTab === 'day' && (
-          <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border">
             <button
               onClick={() => setDayDate(subDays(dayDate, 1))}
-              style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-secondary)' }}
+              className="flex items-center border border-border rounded-md px-1.5 py-0.5 text-muted-foreground"
             >
               <ChevronLeft size={14} />
             </button>
             <button
               onClick={() => setDayDate(addDays(dayDate, 1))}
-              style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-secondary)' }}
+              className="flex items-center border border-border rounded-md px-1.5 py-0.5 text-muted-foreground"
             >
               <ChevronRight size={14} />
             </button>
             {!isSameDay(dayDate, new Date()) && (
               <button
                 onClick={() => setDayDate(new Date())}
-                style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)' }}
+                className="text-[11px] font-medium border border-border rounded-md px-2 py-0.5 text-muted-foreground"
               >
                 Today
               </button>
             )}
-            <p style={{ fontSize: 13, fontWeight: 600, color: isSameDay(dayDate, new Date()) ? 'var(--color-text)' : 'var(--color-primary)', marginLeft: 4 }}>
+            {/* Date label — color depends on whether it's today */}
+            <p
+              className="text-[13px] font-semibold ml-1"
+              style={{ color: isSameDay(dayDate, new Date()) ? 'var(--color-text)' : 'var(--color-primary)' }}
+            >
               {format(dayDate, 'EEEE, MMMM d')}
             </p>
           </div>
         )}
 
         {/* Panel content */}
-        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex-1 min-h-0 overflow-hidden">
           {rightTab === 'day' && (
             <DndContext sensors={sensors} modifiers={[restrictToVerticalAxis]} onDragEnd={handleDragEnd}>
               <DayTimeline
@@ -175,7 +147,7 @@ export default function DesktopLayout({
           )}
 
           {rightTab === 'week' && (
-            <div style={{ padding: 16, height: '100%', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div className="p-4 h-full overflow-hidden flex flex-col box-border">
               <SharedCalendar
                 events={allEvents}
                 myUserId={profile.id}
@@ -189,7 +161,7 @@ export default function DesktopLayout({
           )}
 
           {rightTab === 'month' && (
-            <div style={{ padding: 16, height: '100%', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div className="p-4 h-full overflow-hidden flex flex-col box-border">
               <SharedCalendar
                 events={allEvents}
                 myUserId={profile.id}
