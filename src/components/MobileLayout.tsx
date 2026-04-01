@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import TodoColumn from '@/components/TodoColumn'
-import SharedCalendar from '@/components/SharedCalendar'
+import MonthCalendar from '@/components/calendar/MonthCalendar'
 import FocusView from '@/components/FocusView'
 import PartnerConnect from '@/components/PartnerConnect'
 import { X } from 'lucide-react'
+import { DndContext } from '@dnd-kit/core'
 
 type Tab = 'todos' | 'calendar' | 'focus'
 
@@ -82,14 +83,20 @@ export default function MobileLayout({
         )}
 
         {tab === 'calendar' && (
-          <SharedCalendar
-            events={allEvents}
-            myUserId={profile.id}
-            partnerUserId={partner?.id ?? null}
-            myColor="var(--color-primary)"
-            partnerColor="var(--color-completion)"
-            onRefresh={onRefresh}
-          />
+          <DndContext>
+            <MonthCalendar
+              events={allEvents}
+              todos={myTodos}
+              myUserId={profile.id}
+              partnerUserId={partner?.id ?? null}
+              myColor="var(--color-primary)"
+              partnerColor="var(--color-completion)"
+              date={new Date()}
+              onNavigate={() => {}}
+              isDragging={false}
+              onRefresh={onRefresh}
+            />
+          </DndContext>
         )}
 
         {tab === 'focus' && (

@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { format, addDays, subDays, isSameDay, startOfWeek, startOfMonth, endOfMonth, endOfWeek, differenceInDays } from 'date-fns'
+import { useState } from 'react'
+import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Views } from 'react-big-calendar'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import TodoColumn from '@/components/TodoColumn'
 import DayTimeline from '@/components/DayTimeline'
-import SharedCalendar from '@/components/SharedCalendar'
+import WeekCalendar from '@/components/calendar/WeekCalendar'
+import MonthCalendar from '@/components/calendar/MonthCalendar'
 import {
   DndContext,
   DragEndEvent,
@@ -16,7 +16,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  useDroppable,
 } from '@dnd-kit/core'
 import { createClient } from '@/lib/supabase/client'
 
@@ -34,38 +33,6 @@ interface Props {
   onTodoComplete: (todoId: string) => void
 }
 
-// Transparent droppable overlay for week/month calendar panels.
-// Activates pointer events only while a todo is being dragged.
-function CalendarDropZone({
-  id,
-  isActive,
-  children,
-}: {
-  id: string
-  isActive: boolean
-  children: React.ReactNode
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id })
-  return (
-    <div className="relative flex-1 min-h-0 overflow-hidden">
-      {/* Drop capture layer — invisible, sits above children */}
-      <div
-        ref={setNodeRef}
-        className="absolute inset-0 z-10"
-        style={{ pointerEvents: isActive ? 'auto' : 'none' }}
-      />
-      {/* Drop highlight */}
-      {isOver && isActive && (
-        <div
-          className="absolute inset-0 z-20 pointer-events-none rounded-xl border-2 border-dashed"
-          style={{ borderColor: 'var(--color-primary)', background: 'rgba(0,181,200,0.04)' }}
-        />
-      )}
-      {children}
-    </div>
-  )
-}
-
 export default function DesktopLayout({
   profile, partner, myTodos, allEvents, myName, onRefresh, onTodoComplete,
 }: Props) {
@@ -75,20 +42,7 @@ export default function DesktopLayout({
   const [monthCalDate, setMonthCalDate] = useState<Date>(new Date())
   const [draggingTodoId, setDraggingTodoId] = useState<string | null>(null)
 
-  const weekCalRef = useRef<HTMLDivElement>(null)
-  const monthCalRef = useRef<HTMLDivElement>(null)
-  const lastMousePos = useRef({ x: 0, y: 0 })
-
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
-
-  // Track pointer position so we can detect which calendar cell was dropped on
-  useEffect(() => {
-    function onMove(e: PointerEvent) {
-      lastMousePos.current = { x: e.clientX, y: e.clientY }
-    }
-    document.addEventListener('pointermove', onMove)
-    return () => document.removeEventListener('pointermove', onMove)
-  }, [])
 
   function handleDragStart(event: DragStartEvent) {
     if (event.active.data.current?.source === 'todo-column') {
@@ -106,12 +60,11 @@ export default function DesktopLayout({
     const isFromColumn = active.data.current?.source === 'todo-column'
     const supabase = createClient()
 
-    // Day view: drop on an hour slot
+    // Day view: hour slot
     const hourMatch = String(over.id).match(/^hour-(\d+)$/)
     if (hourMatch) {
       const hour = parseInt(hourMatch[1])
       const scheduledTime = `${String(hour).padStart(2, '0')}:00:00`
-      // If dragged from TodoColumn, also pin it to the visible day
       const updates: Record<string, string> = { scheduled_time: scheduledTime }
       if (isFromColumn) updates.due_date = format(dayDate, 'yyyy-MM-dd')
       await supabase.from('todos').update(updates).eq('id', todoId)
@@ -119,26 +72,22 @@ export default function DesktopLayout({
       return
     }
 
-    // Week view: determine date+hour from mouse position over the calendar
-    if (over.id === 'week-droppable' && weekCalRef.current) {
-      const result = detectWeekDate(weekCalRef.current, lastMousePos.current, weekCalDate)
-      if (result) {
-        await supabase.from('todos').update({
-          due_date: result.date,
-          scheduled_time: `${String(result.hour).padStart(2, '0')}:00:00`,
-        }).eq('id', todoId)
-        onRefresh()
-      }
+    // Week view: hour slot with date
+    const weekSlotMatch = String(over.id).match(/^week-slot-(\d{4}-\d{2}-\d{2})-(\d{2})$/)
+    if (weekSlotMatch) {
+      await supabase.from('todos').update({
+        due_date: weekSlotMatch[1],
+        scheduled_time: `${weekSlotMatch[2]}:00:00`,
+      }).eq('id', todoId)
+      onRefresh()
       return
     }
 
-    // Month view: determine date from mouse position over the calendar
-    if (over.id === 'month-droppable' && monthCalRef.current) {
-      const result = detectMonthDate(monthCalRef.current, lastMousePos.current, monthCalDate)
-      if (result) {
-        await supabase.from('todos').update({ due_date: result.date }).eq('id', todoId)
-        onRefresh()
-      }
+    // Month view: day cell
+    const monthDayMatch = String(over.id).match(/^month-day-(\d{4}-\d{2}-\d{2})$/)
+    if (monthDayMatch) {
+      await supabase.from('todos').update({ due_date: monthDayMatch[1] }).eq('id', todoId)
+      onRefresh()
       return
     }
   }
@@ -191,8 +140,7 @@ export default function DesktopLayout({
 
         {/* Right — Tabbed panel */}
         <div className="flex-1 flex flex-col bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
-          {/* Tab bar — active tab uses negative margin + z-index trick to merge with border;
-              these dynamic values must stay inline */}
+          {/* Tab bar */}
           <div className="shrink-0 flex items-end px-4 pt-[10px] border-b border-border gap-0.5">
             {tabs.map(({ id, label }) => (
               <button
@@ -239,7 +187,6 @@ export default function DesktopLayout({
                   Today
                 </button>
               )}
-              {/* Date label — color depends on whether it's today */}
               <p
                 className="text-[13px] font-semibold ml-1"
                 style={{ color: isSameDay(dayDate, new Date()) ? 'var(--color-text)' : 'var(--color-primary)' }}
@@ -262,106 +209,41 @@ export default function DesktopLayout({
             )}
 
             {rightTab === 'week' && (
-              <CalendarDropZone id="week-droppable" isActive={!!draggingTodoId}>
-                <div className="p-4 h-full overflow-hidden flex flex-col box-border">
-                  <SharedCalendar
-                    events={allEvents}
-                    myUserId={profile.id}
-                    partnerUserId={partner?.id ?? null}
-                    myColor="var(--color-primary)"
-                    partnerColor="var(--color-completion)"
-                    onRefresh={onRefresh}
-                    defaultView={Views.WEEK}
-                    calendarDate={weekCalDate}
-                    onCalendarDateChange={setWeekCalDate}
-                    containerRef={weekCalRef}
-                  />
-                </div>
-              </CalendarDropZone>
+              <div className="p-4 h-full overflow-hidden flex flex-col box-border">
+                <WeekCalendar
+                  events={allEvents}
+                  todos={myTodos}
+                  myUserId={profile.id}
+                  partnerUserId={partner?.id ?? null}
+                  myColor="var(--color-primary)"
+                  partnerColor="var(--color-completion)"
+                  date={weekCalDate}
+                  onNavigate={setWeekCalDate}
+                  isDragging={!!draggingTodoId}
+                  onRefresh={onRefresh}
+                />
+              </div>
             )}
 
             {rightTab === 'month' && (
-              <CalendarDropZone id="month-droppable" isActive={!!draggingTodoId}>
-                <div className="p-4 h-full overflow-hidden flex flex-col box-border">
-                  <SharedCalendar
-                    events={allEvents}
-                    myUserId={profile.id}
-                    partnerUserId={partner?.id ?? null}
-                    myColor="var(--color-primary)"
-                    partnerColor="var(--color-completion)"
-                    onRefresh={onRefresh}
-                    defaultView={Views.MONTH}
-                    calendarDate={monthCalDate}
-                    onCalendarDateChange={setMonthCalDate}
-                    containerRef={monthCalRef}
-                  />
-                </div>
-              </CalendarDropZone>
+              <div className="p-4 h-full overflow-hidden flex flex-col box-border">
+                <MonthCalendar
+                  events={allEvents}
+                  todos={myTodos}
+                  myUserId={profile.id}
+                  partnerUserId={partner?.id ?? null}
+                  myColor="var(--color-primary)"
+                  partnerColor="var(--color-completion)"
+                  date={monthCalDate}
+                  onNavigate={setMonthCalDate}
+                  isDragging={!!draggingTodoId}
+                  onRefresh={onRefresh}
+                />
+              </div>
             )}
           </div>
         </div>
       </div>
     </DndContext>
   )
-}
-
-// Detect which date (and hour) the pointer is over in the week calendar view.
-// Uses actual DOM element measurements for accurate positioning.
-function detectWeekDate(
-  calEl: HTMLElement,
-  pos: { x: number; y: number },
-  calendarDate: Date,
-): { date: string; hour: number } | null {
-  const calRect = calEl.getBoundingClientRect()
-  const headerEl = calEl.querySelector('.rbc-time-header')
-  const gutterEl = calEl.querySelector('.rbc-time-gutter')
-  const headerHeight = headerEl?.getBoundingClientRect().height ?? 80
-  const gutterWidth = gutterEl?.getBoundingClientRect().width ?? 60
-
-  const usableWidth = calRect.width - gutterWidth
-  if (usableWidth <= 0) return null
-
-  const relX = pos.x - calRect.left - gutterWidth
-  const relY = pos.y - calRect.top - headerHeight
-
-  const colIndex = Math.max(0, Math.min(6, Math.floor(relX / (usableWidth / 7))))
-  const weekStart = startOfWeek(calendarDate, { weekStartsOn: 1 })
-  const targetDate = addDays(weekStart, colIndex)
-
-  const usableHeight = calRect.height - headerHeight
-  const fracY = usableHeight > 0 ? Math.max(0, Math.min(1, relY / usableHeight)) : 0
-  // Calendar shows 5 AM–8 PM (15 hours)
-  const hour = Math.round(5 + fracY * 15)
-
-  return { date: format(targetDate, 'yyyy-MM-dd'), hour: Math.min(20, Math.max(5, hour)) }
-}
-
-// Detect which date the pointer is over in the month calendar view.
-function detectMonthDate(
-  calEl: HTMLElement,
-  pos: { x: number; y: number },
-  calendarDate: Date,
-): { date: string } | null {
-  const calRect = calEl.getBoundingClientRect()
-  const headerEl = calEl.querySelector('.rbc-month-header')
-  const headerHeight = headerEl?.getBoundingClientRect().height ?? 32
-
-  const relX = pos.x - calRect.left
-  const relY = pos.y - calRect.top - headerHeight
-
-  const colIndex = Math.max(0, Math.min(6, Math.floor(relX / (calRect.width / 7))))
-
-  const monthStart = startOfMonth(calendarDate)
-  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
-  const monthEnd = endOfMonth(calendarDate)
-  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
-  const numWeeks = Math.round((differenceInDays(gridEnd, gridStart) + 1) / 7)
-
-  const usableHeight = calRect.height - headerHeight
-  if (usableHeight <= 0 || numWeeks === 0) return null
-
-  const rowIndex = Math.max(0, Math.min(numWeeks - 1, Math.floor(relY / (usableHeight / numWeeks))))
-  const targetDate = addDays(gridStart, rowIndex * 7 + colIndex)
-
-  return { date: format(targetDate, 'yyyy-MM-dd') }
 }
