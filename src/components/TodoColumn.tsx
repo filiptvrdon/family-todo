@@ -257,7 +257,7 @@ function TodoCard({
         {todo.title}
       </p>
       {todo.recurrence && (
-        <span className="shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-foam)', color: 'var(--color-accent)' }}>
+        <span className="shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
           {todo.recurrence.charAt(0).toUpperCase() + todo.recurrence.slice(1)}
         </span>
       )}
