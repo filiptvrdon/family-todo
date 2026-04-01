@@ -47,12 +47,12 @@ export default function PartnerConnect({ myId, onConnected }: Props) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-md mx-auto mt-8">
+    <div className="bg-card rounded-2xl shadow-[var(--shadow-card)] border border-border p-6 max-w-md mx-auto mt-8">
       <div className="flex items-center gap-2 mb-4">
-        <Link2 className="text-indigo-500" size={20} />
-        <h2 className="font-semibold text-gray-700">Connect with your partner</h2>
+        <Link2 className="text-primary" size={20} />
+        <h2 className="font-semibold text-foreground">Connect with your partner</h2>
       </div>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-muted-foreground mb-4">
         Enter your partner's email to link your accounts. They need to have signed in at least once.
       </p>
       <form onSubmit={connect} className="flex flex-col gap-3">
@@ -61,13 +61,13 @@ export default function PartnerConnect({ myId, onConnected }: Props) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="partner@example.com"
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          className="border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium py-2 rounded-lg transition disabled:opacity-50"
+          className="bg-primary hover:bg-[var(--color-primary-dark)] text-primary-foreground text-sm font-medium py-2 rounded-lg transition disabled:opacity-50"
         >
           {loading ? 'Connecting...' : 'Connect'}
         </button>
