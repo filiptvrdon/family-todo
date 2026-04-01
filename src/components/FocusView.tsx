@@ -154,59 +154,33 @@ export default function FocusView({ myTodos, partnerTodos, myName, partnerName, 
 
   if (!task) {
     return (
-      <div
-        className="flex flex-col items-center justify-center text-center px-8"
-        style={{ minHeight: '60vh' }}
-      >
+      <div className="flex flex-col items-center justify-center text-center px-8 min-h-[60vh]">
         <div className="text-5xl mb-4">🎉</div>
-        <p className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
-          You're all clear
-        </p>
-        <p className="text-base" style={{ color: 'var(--color-text-secondary)' }}>
-          Nothing left to do right now.
-        </p>
+        <p className="text-xl font-semibold mb-2 text-foreground">You're all clear</p>
+        <p className="text-base text-muted-foreground">Nothing left to do right now.</p>
       </div>
     )
   }
 
   return (
-    <div
-      className="flex flex-col items-center justify-center px-4 py-12"
-      style={{ minHeight: '60vh' }}
-    >
-      <div
-        className="w-full rounded-2xl p-8 flex flex-col gap-6"
-        style={{
-          maxWidth: '360px',
-          background: '#fff',
-          border: '1px solid var(--color-border)',
-          boxShadow: '0 4px 24px rgba(0, 181, 200, 0.12)',
-        }}
-      >
+    <div className="flex flex-col items-center justify-center px-4 py-12 min-h-[60vh]">
+      <div className="w-full max-w-[360px] rounded-2xl p-8 flex flex-col gap-6 bg-card border border-border shadow-[0_4px_24px_rgba(0,181,200,0.12)]">
         {/* Owner badge */}
         <div className="flex items-center justify-between">
-          <span
-            className="text-xs font-medium px-3 py-1 rounded-full"
-            style={{ background: 'var(--color-foam)', color: 'var(--color-text-secondary)' }}
-          >
+          <span className="text-xs font-medium px-3 py-1 rounded-full bg-foam text-muted-foreground">
             {isOwn ? 'Your task' : `${partnerName}'s task`}
           </span>
           {task.recurrence && (
-            <span style={{ color: 'var(--color-primary-light)' }} title={`Repeats ${task.recurrence}`}>
+            <span className="text-accent" title={`Repeats ${task.recurrence}`}>
               <RotateCcw size={14} />
             </span>
           )}
         </div>
 
         {/* Title */}
-        <p
-          className="text-2xl font-semibold leading-snug"
-          style={{ color: 'var(--color-text)' }}
-        >
-          {task.title}
-        </p>
+        <p className="text-2xl font-semibold leading-snug text-foreground">{task.title}</p>
 
-        {/* Due date */}
+        {/* Due date — color is dynamic (overdue state), keep inline */}
         {task.due_date && (
           <div
             className="flex items-center gap-1.5 text-sm"
@@ -225,34 +199,21 @@ export default function FocusView({ myTodos, partnerTodos, myName, partnerName, 
           <button
             onClick={handleDone}
             disabled={completing}
-            className="w-full font-semibold text-sm rounded-xl transition"
-            style={{
-              background: 'var(--color-primary)',
-              color: '#fff',
-              minHeight: '52px',
-              opacity: completing ? 0.6 : 1,
-            }}
+            className="w-full font-semibold text-sm rounded-xl transition bg-primary text-primary-foreground min-h-[52px]"
+            style={{ opacity: completing ? 0.6 : 1 }}
           >
             Done
           </button>
           <div className="flex gap-3">
             <button
               onClick={handleSkip}
-              className="flex-1 text-sm rounded-xl transition"
-              style={{
-                color: 'var(--color-text-secondary)',
-                minHeight: '44px',
-              }}
+              className="flex-1 text-sm rounded-xl transition text-muted-foreground min-h-[44px]"
             >
               Skip
             </button>
             <button
               onClick={handleLater}
-              className="flex-1 text-sm rounded-xl transition"
-              style={{
-                color: 'var(--color-text-secondary)',
-                minHeight: '44px',
-              }}
+              className="flex-1 text-sm rounded-xl transition text-muted-foreground min-h-[44px]"
             >
               Later
             </button>
