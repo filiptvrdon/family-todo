@@ -612,3 +612,15 @@ p, li {
   background: rgba(0, 181, 200, 0.12);
   border-radius: 4px;
 }
+
+/* Dark mode — soften all grid lines to a barely-visible hairline */
+.dark .rbc-calendar-themed .rbc-header,
+.dark .rbc-calendar-themed .rbc-timeslot-group,
+.dark .rbc-calendar-themed .rbc-time-content,
+.dark .rbc-calendar-themed .rbc-time-content > * + * > *,
+.dark .rbc-calendar-themed .rbc-time-header-content,
+.dark .rbc-calendar-themed .rbc-month-view,
+.dark .rbc-calendar-themed .rbc-month-row,
+.dark .rbc-calendar-themed .rbc-day-bg + .rbc-day-bg {
+  border-color: rgba(255, 255, 255, 0.06);
+}
