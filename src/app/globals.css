@@ -47,6 +47,9 @@
   --shadow-card:     0 2px 8px rgba(0, 181, 200, 0.08);
   --shadow-elevated: 0 4px 16px rgba(0, 181, 200, 0.14);
 
+  /* --- Overlay (modal backdrops) --- */
+  --overlay-bg: rgba(26, 26, 46, 0.5);
+
   /* --- Typography --- */
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
@@ -91,7 +94,69 @@
 }
 
 /* No dark mode auto-switch — consistent experience is important for ADHD users.
+   Dark mode is available as a manual toggle only (.dark class on <html>).
    See design-visual-guidelines.md#what-not-to-do */
+
+/* Class-based dark mode — responds to .dark on <html>, NOT prefers-color-scheme */
+@variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   Dark mode token overrides
+   Flip all semantic tokens; custom palette tokens stay in
+   sync via the variables they reference.
+   ============================================================ */
+.dark {
+  --background:          #0D1B2A; /* Deep Ocean */
+  --foreground:          #E8EDF5;
+
+  --card:                #162335;
+  --card-foreground:     #E8EDF5;
+  --popover:             #162335;
+  --popover-foreground:  #E8EDF5;
+
+  --primary:             #00C8DC; /* slightly brighter for dark backgrounds */
+  --primary-foreground:  #0D1B2A;
+
+  --secondary:           #1A3040; /* deep seafoam */
+  --secondary-foreground:#E8EDF5;
+
+  --muted:               #1A3040;
+  --muted-foreground:    #8A9BB0;
+
+  --accent:              #1E3D52;
+  --accent-foreground:   #E8EDF5;
+
+  --destructive:         #FF9F7F; /* Sunset Coral stays — still no red */
+
+  --border:              #2A3F52;
+  --input:               #1E3040;
+  --ring:                #00C8DC;
+
+  /* Custom design tokens — dark variants */
+  --color-primary:       #00C8DC;
+  --color-primary-light: #5EC8C4;
+  --color-primary-dark:  #00A8BA;
+  --color-text:          #E8EDF5;
+  --color-text-secondary:#8A9BB0;
+  --color-text-disabled: #4A5568;
+  --color-sand:          #3D2E1E; /* muted warm for dark */
+  --color-foam:          #1A3040; /* deep teal-navy */
+  --color-completion:    #0E9E8F;
+  --color-alert:         #FF9F7F; /* Coral stays */
+  --shadow-card:         0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-elevated:     0 4px 16px rgba(0, 0, 0, 0.4);
+  --overlay-bg:          rgba(0, 0, 0, 0.6);
+
+  /* Sidebar */
+  --sidebar:                    #162335;
+  --sidebar-foreground:         #E8EDF5;
+  --sidebar-primary:            #00C8DC;
+  --sidebar-primary-foreground: #0D1B2A;
+  --sidebar-accent:             #1A3040;
+  --sidebar-accent-foreground:  #E8EDF5;
+  --sidebar-border:             #2A3F52;
+  --sidebar-ring:               #00C8DC;
+}
 
 @theme inline {
   --color-background:    var(--background);
@@ -135,6 +200,18 @@
   --radius-lg:  calc(var(--radius) * 1.333); /* ~16px */
   --radius-xl:  calc(var(--radius) * 1.667); /* ~20px */
   --radius-2xl: calc(var(--radius) * 2);     /* 24px */
+
+  /* Custom design tokens exposed as Tailwind utilities
+     These reference the CSS vars so .dark overrides flow through automatically */
+  --color-sand:          var(--color-sand);
+  --color-foam:          var(--color-foam);
+  --color-completion:    var(--color-completion);
+  --color-alert:         var(--color-alert);
+  --color-text-disabled: var(--color-text-disabled);
+
+  /* Shadow utilities */
+  --shadow-card:         var(--shadow-card);
+  --shadow-elevated:     var(--shadow-elevated);
 }
 
 /* ============================================================
@@ -164,7 +241,7 @@
 .form-card {
   width: 100%;
   max-width: var(--width-form);
-  background: #fff;
+  background: var(--card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-elevated);
   padding: var(--space-8);
@@ -269,7 +346,7 @@ p, li {
 
 /* Cards */
 .card {
-  background: #ffffff;
+  background: var(--card);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   padding: var(--space-4);
