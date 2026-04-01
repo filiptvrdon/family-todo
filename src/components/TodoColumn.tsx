@@ -135,12 +135,11 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-lg" style={{ color: 'var(--color-text)' }}>{ownerName}</h2>
+        <h2 className="font-semibold text-lg text-foreground">{ownerName}</h2>
         {isOwner && (
           <button
             onClick={() => setAdding(!adding)}
-            className="flex items-center gap-1 text-sm font-medium"
-            style={{ color: 'var(--color-primary)' }}
+            className="flex items-center gap-1 text-sm font-medium text-primary"
           >
             <Plus size={16} />
             Add
@@ -151,37 +150,32 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
       {isOwner && adding && (
         <form
           onSubmit={addTodo}
-          className="flex flex-col gap-2 rounded-xl p-3"
-          style={{ background: '#fff', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+          className="flex flex-col gap-2 rounded-xl p-3 bg-card border border-border shadow-[var(--shadow-card)]"
         >
           <input
             autoFocus
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="What needs doing?"
-            className="text-sm rounded-lg px-3 py-1.5 w-full focus:outline-none"
-            style={{ border: '1px solid var(--color-border)', minHeight: '44px' }}
+            className="text-sm rounded-lg px-3 py-1.5 w-full focus:outline-none border border-border bg-background text-foreground min-h-[44px]"
           />
           <input
             type="date"
             value={dueDate}
             onChange={e => setDueDate(e.target.value)}
-            className="text-xs rounded-lg px-2 py-1.5 w-full focus:outline-none"
-            style={{ border: '1px solid var(--color-border)', minHeight: '44px' }}
+            className="text-xs rounded-lg px-2 py-1.5 w-full focus:outline-none border border-border bg-background text-foreground min-h-[44px]"
           />
           <div className="flex gap-2 justify-end">
             <button
               type="button"
               onClick={() => setAdding(false)}
-              className="text-xs"
-              style={{ color: 'var(--color-text-secondary)' }}
+              className="text-xs text-muted-foreground"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="text-xs text-white px-3 py-1 rounded-lg transition"
-              style={{ background: 'var(--color-primary)', minHeight: '32px' }}
+              className="text-xs text-primary-foreground px-3 py-1 rounded-lg transition bg-primary min-h-[32px]"
             >
               Save
             </button>
@@ -191,9 +185,7 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
 
       <div className="flex flex-col gap-2">
         {localTodos.length === 0 && (
-          <p className="text-sm text-center py-6" style={{ color: 'var(--color-text-disabled)' }}>
-            No tasks yet
-          </p>
+          <p className="text-sm text-center py-6 text-text-disabled">No tasks yet</p>
         )}
         {localTodos.map(todo => (
           <TodoCard
@@ -264,14 +256,9 @@ function TodoCard({
       tabIndex={0}
       onClick={() => onOpen(todo)}
       onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onOpen(todo)}
-      className={`rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition ${
+      className={`rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition bg-card border border-border shadow-[var(--shadow-card)] ${
         completing ? 'completing-card' : ''
       } ${todo.completed ? 'opacity-50' : ''}`}
-      style={{
-        background: '#fff',
-        border: '1px solid var(--color-border)',
-        boxShadow: 'var(--shadow-card)',
-      }}
     >
       {isOwner ? (
         <button
@@ -310,16 +297,12 @@ function TodoCard({
         {todo.title}
       </p>
       {todo.recurrence && (
-        <span
-          className="shrink-0"
-          title={`Repeats ${todo.recurrence}`}
-          style={{ color: 'var(--color-primary-light)' }}
-        >
+        <span className="shrink-0 text-accent" title={`Repeats ${todo.recurrence}`}>
           <RotateCcw size={12} />
         </span>
       )}
       {todo.due_date && (
-        <span className="shrink-0 flex items-center gap-1 text-xs" style={{ color: 'var(--color-text-disabled)' }}>
+        <span className="shrink-0 flex items-center gap-1 text-xs text-text-disabled">
           <Calendar size={11} />
           {format(new Date(todo.due_date + 'T00:00:00'), 'MMM d')}
         </span>
@@ -327,10 +310,7 @@ function TodoCard({
       {isOwner && (
         <button
           onClick={handleDelete}
-          className="shrink-0 transition"
-          style={{ color: 'var(--color-text-disabled)' }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-alert)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-disabled)')}
+          className="shrink-0 transition text-text-disabled hover:text-destructive"
         >
           <Trash2 size={14} />
         </button>
@@ -378,7 +358,7 @@ function TodoDetailPanel({
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(26,26,46,0.45)',
+            backgroundColor: 'var(--overlay-bg)',
             backdropFilter: 'blur(2px)',
             zIndex: 40,
             opacity: 'var(--opacity, 1)',
@@ -389,65 +369,44 @@ function TodoDetailPanel({
         <Drawer.Popup className="detail-panel-popup">
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-1">
-            <div className="w-9 h-1 rounded-full" style={{ background: 'var(--color-text-disabled)' }} />
+            <div className="w-9 h-1 rounded-full bg-text-disabled" />
           </div>
 
           <div className="px-5 pb-8 pt-2 flex flex-col gap-5">
             {/* Header */}
             <div className="flex items-center justify-between">
-              <Drawer.Title
-                className="text-base font-semibold"
-                style={{ color: 'var(--color-text)' }}
-              >
+              <Drawer.Title className="text-base font-semibold text-foreground">
                 {isOwner ? 'Edit task' : 'Task detail'}
               </Drawer.Title>
-              <Drawer.Close
-                className="flex items-center justify-center rounded-full w-8 h-8 transition"
-                style={{ color: 'var(--color-text-secondary)', background: 'var(--color-foam)' }}
-              >
+              <Drawer.Close className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam">
                 <X size={16} />
               </Drawer.Close>
             </div>
 
             {/* Title */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                Title
-              </label>
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Title</label>
               {isOwner ? (
                 <input
                   value={editTitle}
                   onChange={e => setEditTitle(e.target.value)}
-                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none"
-                  style={{
-                    background: '#fff',
-                    border: '1.5px solid var(--color-border)',
-                    color: 'var(--color-text)',
-                    minHeight: '44px',
-                  }}
+                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none bg-card border-[1.5px] border-border text-foreground min-h-[44px]"
                 />
               ) : (
-                <p className="text-sm" style={{ color: 'var(--color-text)' }}>{todo.title}</p>
+                <p className="text-sm text-foreground">{todo.title}</p>
               )}
             </div>
 
             {/* Description */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                Notes
-              </label>
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notes</label>
               {isOwner ? (
                 <textarea
                   value={editDescription}
                   onChange={e => setEditDescription(e.target.value)}
                   placeholder="Add any notes…"
                   rows={3}
-                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none resize-none"
-                  style={{
-                    background: '#fff',
-                    border: '1.5px solid var(--color-border)',
-                    color: 'var(--color-text)',
-                  }}
+                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none resize-none bg-card border-[1.5px] border-border text-foreground"
                 />
               ) : (
                 <p className="text-sm" style={{ color: todo.description ? 'var(--color-text)' : 'var(--color-text-disabled)' }}>
@@ -458,21 +417,14 @@ function TodoDetailPanel({
 
             {/* Due date */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                Due date
-              </label>
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Due date</label>
               {isOwner ? (
                 <input
                   type="date"
                   value={editDueDate}
                   onChange={e => setEditDueDate(e.target.value)}
-                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none"
-                  style={{
-                    background: '#fff',
-                    border: '1.5px solid var(--color-border)',
-                    color: editDueDate ? 'var(--color-text)' : 'var(--color-text-disabled)',
-                    minHeight: '44px',
-                  }}
+                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none bg-card border-[1.5px] border-border min-h-[44px]"
+                  style={{ color: editDueDate ? 'var(--color-text)' : 'var(--color-text-disabled)' }}
                 />
               ) : (
                 <p className="text-sm" style={{ color: todo.due_date ? 'var(--color-text)' : 'var(--color-text-disabled)' }}>
@@ -481,11 +433,9 @@ function TodoDetailPanel({
               )}
             </div>
 
-            {/* Recurrence */}
+            {/* Recurrence — selected state is dynamic, kept inline */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                Repeat
-              </label>
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Repeat</label>
               {isOwner ? (
                 <div className="flex gap-2 flex-wrap">
                   {(['', 'daily', 'weekly', 'monthly'] as const).map(val => (
@@ -493,9 +443,8 @@ function TodoDetailPanel({
                       key={val}
                       type="button"
                       onClick={() => setEditRecurrence(val)}
-                      className="px-3 py-1.5 rounded-full text-sm font-medium transition"
+                      className="px-3 py-1.5 rounded-full text-sm font-medium transition min-h-[36px]"
                       style={{
-                        minHeight: '36px',
                         background: editRecurrence === val ? 'var(--color-primary)' : 'var(--color-foam)',
                         color: editRecurrence === val ? '#fff' : 'var(--color-text-secondary)',
                         border: editRecurrence === val ? '1.5px solid var(--color-primary)' : '1.5px solid var(--color-border)',
@@ -520,25 +469,14 @@ function TodoDetailPanel({
                 <button
                   onClick={handleSave}
                   disabled={!editTitle.trim()}
-                  className="w-full font-semibold text-sm rounded-xl transition"
-                  style={{
-                    background: 'var(--color-primary)',
-                    color: '#fff',
-                    minHeight: '48px',
-                    opacity: editTitle.trim() ? 1 : 0.4,
-                  }}
+                  className="w-full font-semibold text-sm rounded-xl transition bg-primary text-primary-foreground min-h-[48px]"
+                  style={{ opacity: editTitle.trim() ? 1 : 0.4 }}
                 >
                   Save changes
                 </button>
                 <button
                   onClick={() => { onDelete(); onClose() }}
-                  className="w-full text-sm rounded-xl transition"
-                  style={{
-                    background: 'transparent',
-                    color: 'var(--color-alert)',
-                    minHeight: '44px',
-                    border: '1.5px solid var(--color-alert)',
-                  }}
+                  className="w-full text-sm rounded-xl transition text-destructive min-h-[44px] border-[1.5px] border-destructive"
                 >
                   Delete task
                 </button>
