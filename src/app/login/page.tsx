@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Heart } from 'lucide-react'
@@ -8,6 +8,14 @@ import { Heart } from 'lucide-react'
 type Mode = 'magic' | 'password'
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   const [mode, setMode] = useState<Mode>('magic')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
