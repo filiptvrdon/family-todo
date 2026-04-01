@@ -73,23 +73,13 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
   }
 
   return (
-    <div
-      className="flex flex-col min-h-screen md:h-screen md:overflow-hidden"
-      style={{ background: 'var(--background)' }}
-    >
+    <div className="flex flex-col min-h-screen md:h-screen md:overflow-hidden bg-background">
       {/* ── Header ── */}
-      <header
-        className="shrink-0 sticky top-0 z-10"
-        style={{
-          background: '#fff',
-          borderBottom: '1px solid var(--color-border)',
-          boxShadow: 'var(--shadow-card)',
-        }}
-      >
+      <header className="shrink-0 sticky top-0 z-10 bg-card border-b border-border shadow-[var(--shadow-card)]">
         <div className="layout-container py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Heart size={20} fill="currentColor" style={{ color: 'var(--color-completion)' }} />
-            <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Family Todo</span>
+            <Heart size={20} fill="currentColor" className="text-completion" />
+            <span className="font-semibold text-foreground">Family Todo</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -103,11 +93,10 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
                 <img
                   src={profile.avatar_url}
                   alt="Profile"
-                  className="rounded-full object-cover"
-                  style={{ width: 28, height: 28, border: '2px solid #D6EFE4' }}
+                  className="rounded-full object-cover size-7 border-2 border-foam"
                 />
               ) : (
-                <UserCircle size={24} style={{ color: 'var(--color-text-disabled)' }} />
+                <UserCircle size={24} className="text-text-disabled" />
               )}
             </button>
           </div>
@@ -120,10 +109,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
       </div>
 
       {/* ── Desktop layout (≥ md): fills remaining viewport height ── */}
-      <div
-        className="hidden md:flex flex-col"
-        style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
-      >
+      <div className="hidden md:flex flex-col flex-1 min-h-0 overflow-hidden">
         <DesktopLayout {...sharedProps} onTodoComplete={completeTodo} />
       </div>
 
