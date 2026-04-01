@@ -30,11 +30,8 @@ export default function MobileLayout({
   return (
     <>
       {/* Tab bar */}
-      <div
-        className="sticky top-[57px] z-10 flex justify-center px-4 py-2"
-        style={{ background: 'var(--background)', borderBottom: '1px solid var(--color-border)' }}
-      >
-        <div className="flex items-center rounded-lg p-1 gap-1" style={{ background: 'var(--color-foam)' }}>
+      <div className="sticky top-[57px] z-10 flex justify-center px-4 py-2 bg-background border-b border-border">
+        <div className="flex items-center rounded-lg p-1 gap-1 bg-foam">
           {(['todos', 'calendar', 'focus'] as Tab[]).map((t) => (
             <button
               key={t}
@@ -42,7 +39,7 @@ export default function MobileLayout({
               className="text-sm px-3 py-1 rounded-md transition font-medium capitalize"
               style={
                 tab === t
-                  ? { background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', color: 'var(--color-text)' }
+                  ? { background: 'var(--card)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', color: 'var(--color-text)' }
                   : { color: 'var(--color-text-secondary)' }
               }
             >
@@ -57,8 +54,7 @@ export default function MobileLayout({
           <div className="relative mb-4">
             <button
               onClick={() => setShowConnect(false)}
-              className="absolute top-2 right-2 z-10"
-              style={{ color: 'var(--color-text-disabled)' }}
+              className="absolute top-2 right-2 z-10 text-text-disabled"
             >
               <X size={16} />
             </button>
@@ -70,12 +66,9 @@ export default function MobileLayout({
         )}
 
         {!partner && !showConnect && (
-          <p className="text-sm text-center py-4 mb-4" style={{ color: 'var(--color-text-disabled)' }}>
+          <p className="text-sm text-center py-4 mb-4 text-text-disabled">
             No partner connected yet.{' '}
-            <button
-              onClick={() => setShowConnect(true)}
-              style={{ color: 'var(--color-primary)' }}
-            >
+            <button onClick={() => setShowConnect(true)} className="text-primary">
               Connect your partner
             </button>{' '}
             to see their tasks.
@@ -83,7 +76,7 @@ export default function MobileLayout({
         )}
 
         {tab === 'todos' && (
-          <div className="rounded-2xl p-4" style={{ background: '#fff', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <div className="rounded-2xl p-4 bg-card border border-border shadow-[var(--shadow-card)]">
             <TodoColumn todos={myTodos} ownerName={myName} isOwner={true} userId={profile.id} onRefresh={onRefresh} />
           </div>
         )}
