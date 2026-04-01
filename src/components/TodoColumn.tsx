@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Trash2, Check, Calendar, RotateCcw, X } from 'lucide-react'
+import { Trash2, Check, Calendar, X } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { Drawer } from '@base-ui/react'
 
@@ -35,9 +35,7 @@ interface Props {
 
 export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefresh }: Props) {
   const [localTodos, setLocalTodos] = useState<Todo[]>(todos)
-  const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState('')
-  const [dueDate, setDueDate] = useState('')
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const supabase = createClient()
@@ -61,7 +59,7 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
       user_id: userId,
       title: title.trim(),
       description: null,
-      due_date: dueDate || null,
+      due_date: null,
       recurrence: null,
       scheduled_time: null,
       completed: false,
@@ -70,13 +68,10 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
 
     setLocalTodos(prev => [optimistic, ...prev])
     setTitle('')
-    setDueDate('')
-    setAdding(false)
 
     await supabase.from('todos').insert({
       user_id: userId,
       title: optimistic.title,
-      due_date: optimistic.due_date,
     })
     onRefresh()
   }
@@ -132,62 +127,27 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
     onRefresh()
   }
 
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const displayTodos = localTodos.filter(todo => !todo.completed || todo.due_date === today)
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-lg text-foreground">{ownerName}</h2>
-        {isOwner && (
-          <button
-            onClick={() => setAdding(!adding)}
-            className="flex items-center gap-1 text-sm font-medium text-primary"
-          >
-            <Plus size={16} />
-            Add
-          </button>
-        )}
-      </div>
-
-      {isOwner && adding && (
-        <form
-          onSubmit={addTodo}
-          className="flex flex-col gap-2 rounded-xl p-3 bg-card border border-border shadow-[var(--shadow-card)]"
-        >
+      {isOwner && (
+        <form onSubmit={addTodo}>
           <input
-            autoFocus
             value={title}
             onChange={e => setTitle(e.target.value)}
-            placeholder="What needs doing?"
-            className="text-sm rounded-lg px-3 py-1.5 w-full focus:outline-none border border-border bg-background text-foreground min-h-[44px]"
+            placeholder="Add a task…"
+            className="text-sm rounded-xl px-3 py-2.5 w-full focus:outline-none border border-border bg-background text-foreground min-h-[44px] placeholder:text-text-disabled"
           />
-          <input
-            type="date"
-            value={dueDate}
-            onChange={e => setDueDate(e.target.value)}
-            className="text-xs rounded-lg px-2 py-1.5 w-full focus:outline-none border border-border bg-background text-foreground min-h-[44px]"
-          />
-          <div className="flex gap-2 justify-end">
-            <button
-              type="button"
-              onClick={() => setAdding(false)}
-              className="text-xs text-muted-foreground"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="text-xs text-primary-foreground px-3 py-1 rounded-lg transition bg-primary min-h-[32px]"
-            >
-              Save
-            </button>
-          </div>
         </form>
       )}
 
       <div className="flex flex-col gap-2">
-        {localTodos.length === 0 && (
+        {displayTodos.length === 0 && (
           <p className="text-sm text-center py-6 text-text-disabled">No tasks yet</p>
         )}
-        {localTodos.map(todo => (
+        {displayTodos.map(todo => (
           <TodoCard
             key={todo.id}
             todo={todo}
@@ -297,8 +257,8 @@ function TodoCard({
         {todo.title}
       </p>
       {todo.recurrence && (
-        <span className="shrink-0 text-accent" title={`Repeats ${todo.recurrence}`}>
-          <RotateCcw size={12} />
+        <span className="shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-foam)', color: 'var(--color-accent)' }}>
+          {todo.recurrence.charAt(0).toUpperCase() + todo.recurrence.slice(1)}
         </span>
       )}
       {todo.due_date && (

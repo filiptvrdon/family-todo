@@ -193,7 +193,7 @@ export default function DayTimeline({ events, todos, onTodoComplete, expand = fa
     <div ref={containerRef} style={{ overflowY: 'auto', padding: '0 12px', ...(expand ? { flex: 1 } : { height: 192 }) }}>
       {hours.map((hour) => {
         const hourEvents = todayEvents.filter((e) => new Date(e.start_time).getHours() === hour)
-        const hourTodos = todos.filter((t) => t.scheduled_time && parseInt(t.scheduled_time.split(':')[0]) === hour)
+        const hourTodos = todos.filter((t) => t.scheduled_time && parseInt(t.scheduled_time.split(':')[0]) === hour && (!t.completed || t.due_date === dateKey))
 
         return (
           <HourRow
