@@ -93,30 +93,17 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(26, 26, 46, 0.4)' }}
+      style={{ background: 'var(--overlay-bg)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div
-        className="w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
-        style={{
-          background: '#fff',
-          boxShadow: '0 8px 32px rgba(0, 181, 200, 0.12)',
-          border: '1px solid #D6EFE4',
-        }}
-      >
+      <div className="w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto bg-card border border-border shadow-[0_8px_32px_rgba(0,181,200,0.12)]">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <User size={20} style={{ color: 'var(--color-primary)' }} />
-            <h2 className="font-semibold" style={{ color: 'var(--color-text)', fontSize: '1.125rem' }}>
-              Your profile
-            </h2>
+            <User size={20} className="text-primary" />
+            <h2 className="font-semibold text-foreground text-lg">Your profile</h2>
           </div>
-          <button
-            onClick={onClose}
-            style={{ color: 'var(--color-text-disabled)' }}
-            className="transition hover:opacity-70"
-          >
+          <button onClick={onClose} className="text-text-disabled transition hover:opacity-70">
             <X size={20} />
           </button>
         </div>
@@ -130,22 +117,15 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
               className="relative group"
               title="Change profile picture"
             >
-              <div
-                className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center"
-                style={{ background: '#D6EFE4', border: '2px solid #D6EFE4' }}
-              >
+              <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-foam border-2 border-foam">
                 {avatarPreview ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={avatarPreview}
-                    alt="Profile picture"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={avatarPreview} alt="Profile picture" className="w-full h-full object-cover" />
                 ) : (
-                  <User size={36} style={{ color: 'var(--color-primary)' }} />
+                  <User size={36} className="text-primary" />
                 )}
               </div>
-              {/* Hover overlay */}
+              {/* Hover overlay — rgba tint, kept inline */}
               <div
                 className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{ background: 'rgba(0, 181, 200, 0.5)' }}
@@ -153,9 +133,7 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
                 <Camera size={20} color="#fff" />
               </div>
             </button>
-            <p className="text-xs" style={{ color: 'var(--color-text-disabled)' }}>
-              Click to change photo
-            </p>
+            <p className="text-xs text-text-disabled">Click to change photo</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -167,31 +145,15 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
 
           {/* Email (read-only) */}
           <div>
-            <label
-              className="block text-xs font-medium mb-1"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Email
-            </label>
-            <div
-              className="px-3 py-2 rounded-lg text-sm"
-              style={{
-                background: '#FAF7F2',
-                color: 'var(--color-text-disabled)',
-                border: '1px solid #D6EFE4',
-              }}
-            >
+            <label className="block text-xs font-medium mb-1 text-muted-foreground">Email</label>
+            <div className="px-3 py-2 rounded-lg text-sm bg-background text-text-disabled border border-border">
               {profile.email}
             </div>
           </div>
 
           {/* Display name */}
           <div>
-            <label
-              htmlFor="display-name"
-              className="block text-xs font-medium mb-1"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
+            <label htmlFor="display-name" className="block text-xs font-medium mb-1 text-muted-foreground">
               Display name
             </label>
             <input
@@ -201,21 +163,13 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="How should we call you?"
               maxLength={60}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{
-                border: '1px solid #D6EFE4',
-                color: 'var(--color-text)',
-              }}
+              className="w-full px-3 py-2 rounded-lg text-sm border border-border text-foreground bg-background focus:outline-none"
             />
           </div>
 
           {/* Username */}
           <div>
-            <label
-              htmlFor="username"
-              className="block text-xs font-medium mb-1"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
+            <label htmlFor="username" className="block text-xs font-medium mb-1 text-muted-foreground">
               Username
             </label>
             <input
@@ -225,24 +179,16 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
               onChange={(e) => setUsername(e.target.value)}
               placeholder="e.g. filip"
               maxLength={40}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{
-                border: '1px solid #D6EFE4',
-                color: 'var(--color-text)',
-              }}
+              className="w-full px-3 py-2 rounded-lg text-sm border border-border text-foreground bg-background focus:outline-none"
             />
           </div>
 
           {/* Customization prompt */}
           <div>
-            <label
-              htmlFor="customization-prompt"
-              className="block text-xs font-medium mb-1"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
+            <label htmlFor="customization-prompt" className="block text-xs font-medium mb-1 text-muted-foreground">
               Customization prompt
             </label>
-            <p className="text-xs mb-1.5" style={{ color: 'var(--color-text-disabled)' }}>
+            <p className="text-xs mb-1.5 text-text-disabled">
               Tell the AI companion a bit about you — your preferences, how you like to be supported, anything that helps.
             </p>
             <textarea
@@ -252,29 +198,19 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
               placeholder="e.g. I have ADHD and work best with gentle nudges. I prefer mornings for hard tasks."
               rows={4}
               maxLength={500}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
-              style={{
-                border: '1px solid #D6EFE4',
-                color: 'var(--color-text)',
-              }}
+              className="w-full px-3 py-2 rounded-lg text-sm border border-border text-foreground bg-background focus:outline-none resize-none"
             />
-            <p className="text-xs mt-0.5 text-right" style={{ color: 'var(--color-text-disabled)' }}>
-              {customizationPrompt.length}/500
-            </p>
+            <p className="text-xs mt-0.5 text-right text-text-disabled">{customizationPrompt.length}/500</p>
           </div>
 
           {/* Google Calendar */}
-          <div
-            className="flex items-center justify-between rounded-xl px-4 py-3"
-            style={{ background: '#FAF7F2', border: '1px solid #D6EFE4' }}
-          >
+          <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-background border border-border">
             <div className="flex items-center gap-2">
+              {/* Icon color is dynamic (connected state), kept inline */}
               <CalendarDays size={16} style={{ color: googleConnected ? 'var(--color-completion)' : 'var(--color-text-disabled)' }} />
               <div>
-                <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Google Calendar</p>
-                <p className="text-xs" style={{ color: 'var(--color-text-disabled)' }}>
-                  {googleConnected ? 'Connected' : 'Not connected'}
-                </p>
+                <p className="text-sm font-medium text-foreground">Google Calendar</p>
+                <p className="text-xs text-text-disabled">{googleConnected ? 'Connected' : 'Not connected'}</p>
               </div>
             </div>
             {googleConnected ? (
@@ -282,47 +218,32 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
                 type="button"
                 onClick={disconnectGoogle}
                 disabled={disconnecting}
-                className="text-xs font-medium transition flex items-center gap-1 disabled:opacity-50"
-                style={{ color: '#FF9F7F' }}
+                className="text-xs font-medium transition flex items-center gap-1 disabled:opacity-50 text-destructive"
               >
                 {disconnecting && <Loader2 size={12} className="animate-spin" />}
                 Disconnect
               </button>
             ) : (
-              <a
-                href="/api/auth/google"
-                className="text-xs font-medium transition"
-                style={{ color: 'var(--color-primary)' }}
-              >
+              <a href="/api/auth/google" className="text-xs font-medium transition text-primary">
                 Connect
               </a>
             )}
           </div>
 
-          {error && (
-            <p className="text-xs" style={{ color: '#FF9F7F' }}>{error}</p>
-          )}
+          {error && <p className="text-xs text-destructive">{error}</p>}
 
           <div className="flex gap-3 mt-1">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 rounded-lg text-sm font-medium transition"
-              style={{
-                border: '1px solid #D6EFE4',
-                color: 'var(--color-text-secondary)',
-              }}
+              className="flex-1 py-2 rounded-lg text-sm font-medium transition border border-border text-muted-foreground"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
-              style={{
-                background: 'var(--color-primary)',
-                color: '#fff',
-              }}
+              className="flex-1 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 bg-primary text-primary-foreground"
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
@@ -331,8 +252,7 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
           <button
             type="button"
             onClick={onSignOut}
-            className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm font-medium transition mt-1"
-            style={{ color: 'var(--color-text-disabled)' }}
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm font-medium transition mt-1 text-text-disabled"
           >
             <LogOut size={14} />
             Sign out
