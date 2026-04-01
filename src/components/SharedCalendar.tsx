@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay } from 'date-fns'
 import { enUS } from 'date-fns/locale/en-US'
@@ -37,14 +37,30 @@ interface Props {
   onRefresh: () => void
   calendarHeight?: number
   defaultView?: (typeof Views)[keyof typeof Views]
+  // Controlled date state (optional — falls back to internal state)
+  calendarDate?: Date
+  onCalendarDateChange?: (date: Date) => void
+  // Ref forwarded to the .rbc-calendar-themed container for drop detection
+  containerRef?: React.RefObject<HTMLDivElement | null>
 }
 
-export default function SharedCalendar({ events, myUserId, partnerUserId, myColor, partnerColor, onRefresh, calendarHeight = 500, defaultView = Views.MONTH }: Props) {
+export default function SharedCalendar({
+  events, myUserId, partnerUserId, myColor, partnerColor, onRefresh,
+  calendarHeight = 500, defaultView = Views.MONTH,
+  calendarDate: controlledDate, onCalendarDateChange,
+  containerRef,
+}: Props) {
+  const [internalDate, setInternalDate] = useState(() => new Date())
   const [showForm, setShowForm] = useState(false)
   const [newEvent, setNewEvent] = useState({ title: '', start: '', end: '', allDay: false })
-  const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [calendarView, setCalendarView] = useState<(typeof Views)[keyof typeof Views]>(defaultView)
   const supabase = createClient()
+
+  const activeDate = controlledDate ?? internalDate
+  function handleNavigate(date: Date) {
+    setInternalDate(date)
+    onCalendarDateChange?.(date)
+  }
 
   const calEvents: CalEvent[] = events.map((e) => ({
     id: e.id,
@@ -150,13 +166,13 @@ export default function SharedCalendar({ events, myUserId, partnerUserId, myColo
         </div>
       )}
 
-      <div className="rbc-calendar-themed flex-1 min-h-0" style={{ height: calendarHeight }}>
+      <div ref={containerRef} className="rbc-calendar-themed flex-1 min-h-0" style={{ height: calendarHeight }}>
         <Calendar
           localizer={localizer}
           events={calEvents}
-          date={calendarDate}
+          date={activeDate}
           view={calendarView}
-          onNavigate={(date) => setCalendarDate(date)}
+          onNavigate={handleNavigate}
           onView={(view) => setCalendarView(view)}
           views={[Views.MONTH, Views.WEEK, Views.DAY]}
           min={MIN_TIME}

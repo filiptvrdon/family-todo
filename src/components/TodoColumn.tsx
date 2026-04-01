@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
-import { Trash2, Check, Calendar, X } from 'lucide-react'
+import { Trash2, Check, Calendar, X, GripVertical } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { Drawer } from '@base-ui/react'
+import { useDraggable } from '@dnd-kit/core'
 
 const CELEBRATIONS = [
   'Badass 🍑',
@@ -31,9 +32,10 @@ interface Props {
   isOwner: boolean
   userId: string
   onRefresh: () => void
+  draggable?: boolean
 }
 
-export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefresh }: Props) {
+export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefresh, draggable = false }: Props) {
   const [localTodos, setLocalTodos] = useState<Todo[]>(todos)
   const [title, setTitle] = useState('')
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
@@ -147,16 +149,27 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
         {displayTodos.length === 0 && (
           <p className="text-sm text-center py-6 text-text-disabled">No tasks yet</p>
         )}
-        {displayTodos.map(todo => (
-          <TodoCard
-            key={todo.id}
-            todo={todo}
-            isOwner={isOwner}
-            onToggle={toggleTodo}
-            onDelete={deleteTodo}
-            onOpen={openDetail}
-          />
-        ))}
+        {displayTodos.map(todo =>
+          draggable ? (
+            <DraggableTodoCard
+              key={todo.id}
+              todo={todo}
+              isOwner={isOwner}
+              onToggle={toggleTodo}
+              onDelete={deleteTodo}
+              onOpen={openDetail}
+            />
+          ) : (
+            <TodoCard
+              key={todo.id}
+              todo={todo}
+              isOwner={isOwner}
+              onToggle={toggleTodo}
+              onDelete={deleteTodo}
+              onOpen={openDetail}
+            />
+          )
+        )}
       </div>
 
       {selectedTodo && (
@@ -180,19 +193,27 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
   )
 }
 
+interface TodoCardProps {
+  todo: Todo
+  isOwner: boolean
+  onToggle: (t: Todo) => void
+  onDelete: (id: string) => void
+  onOpen: (t: Todo) => void
+  dragHandle?: React.ReactNode
+  isDragging?: boolean
+  cardRef?: (node: HTMLElement | null) => void
+}
+
 function TodoCard({
   todo,
   isOwner,
   onToggle,
   onDelete,
   onOpen,
-}: {
-  todo: Todo
-  isOwner: boolean
-  onToggle: (t: Todo) => void
-  onDelete: (id: string) => void
-  onOpen: (t: Todo) => void
-}) {
+  dragHandle,
+  isDragging = false,
+  cardRef,
+}: TodoCardProps) {
   const [completing, setCompleting] = useState(false)
 
   function handleToggle(e: { stopPropagation(): void }) {
@@ -212,6 +233,7 @@ function TodoCard({
 
   return (
     <div
+      ref={cardRef}
       role="button"
       tabIndex={0}
       onClick={() => onOpen(todo)}
@@ -219,7 +241,9 @@ function TodoCard({
       className={`rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition bg-card border border-border shadow-[var(--shadow-card)] ${
         completing ? 'completing-card' : ''
       } ${todo.completed ? 'opacity-50' : ''}`}
+      style={{ opacity: isDragging ? 0.4 : todo.completed ? 0.5 : 1 }}
     >
+      {dragHandle}
       {isOwner ? (
         <button
           onClick={handleToggle}
@@ -257,7 +281,7 @@ function TodoCard({
         {todo.title}
       </p>
       {todo.recurrence && (
-        <span className="shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
+        <span className="shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-foam)', color: 'var(--color-accent)' }}>
           {todo.recurrence.charAt(0).toUpperCase() + todo.recurrence.slice(1)}
         </span>
       )}
@@ -276,6 +300,50 @@ function TodoCard({
         </button>
       )}
     </div>
+  )
+}
+
+function DraggableTodoCard({
+  todo,
+  isOwner,
+  onToggle,
+  onDelete,
+  onOpen,
+}: {
+  todo: Todo
+  isOwner: boolean
+  onToggle: (t: Todo) => void
+  onDelete: (id: string) => void
+  onOpen: (t: Todo) => void
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: todo.id,
+    data: { source: 'todo-column', todo },
+    disabled: todo.completed,
+  })
+
+  const dragHandle = !todo.completed ? (
+    <button
+      {...listeners}
+      {...attributes}
+      onClick={e => e.stopPropagation()}
+      className="shrink-0 text-text-disabled cursor-grab active:cursor-grabbing touch-none"
+    >
+      <GripVertical size={14} />
+    </button>
+  ) : undefined
+
+  return (
+    <TodoCard
+      todo={todo}
+      isOwner={isOwner}
+      onToggle={onToggle}
+      onDelete={onDelete}
+      onOpen={onOpen}
+      dragHandle={dragHandle}
+      isDragging={isDragging}
+      cardRef={setNodeRef}
+    />
   )
 }
 
