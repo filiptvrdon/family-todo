@@ -80,16 +80,17 @@ export default function SharedCalendar({ events, myUserId, partnerUserId, myColo
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="flex flex-col h-full">
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+      <div className="flex items-center justify-between mb-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {/* dot color is dynamic (user color prop), kept inline */}
             <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: myColor, display: 'inline-block' }} />
             You
           </span>
           {partnerUserId && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: partnerColor, display: 'inline-block' }} />
               Partner
             </span>
@@ -97,60 +98,51 @@ export default function SharedCalendar({ events, myUserId, partnerUserId, myColo
         </div>
         <button
           onClick={() => setShowForm(true)}
-          style={{
-            fontSize: 12,
-            fontWeight: 500,
-            background: 'var(--color-primary)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 6,
-            padding: '4px 12px',
-            cursor: 'pointer',
-          }}
+          className="text-xs font-medium bg-primary text-primary-foreground rounded-md px-3 py-1 cursor-pointer"
         >
           + Event
         </button>
       </div>
 
       {showForm && (
-        <div style={{ marginBottom: 12, background: 'var(--color-foam)', border: '1px solid var(--color-border)', borderRadius: 10, padding: 12, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>New event</p>
-            <button onClick={() => setShowForm(false)} style={{ color: 'var(--color-text-disabled)', background: 'none', border: 'none', cursor: 'pointer' }}>
+        <div className="mb-3 bg-foam border border-border rounded-[10px] p-3 shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[13px] font-semibold text-foreground">New event</p>
+            <button onClick={() => setShowForm(false)} className="text-text-disabled cursor-pointer">
               <X size={14} />
             </button>
           </div>
-          <form onSubmit={addEvent} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <form onSubmit={addEvent} className="flex flex-col gap-2">
             <input
               autoFocus
               value={newEvent.title}
               onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
               placeholder="Event title"
-              style={{ fontSize: 13, border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', outline: 'none' }}
+              className="text-[13px] border border-border rounded-md px-[10px] py-1.5 bg-background text-foreground outline-none"
             />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                <label style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Start</label>
+            <div className="flex gap-2">
+              <div className="flex flex-col gap-1 flex-1">
+                <label className="text-[11px] text-muted-foreground">Start</label>
                 <input
                   type="datetime-local"
                   value={newEvent.start}
                   onChange={(e) => setNewEvent({ ...newEvent, start: e.target.value })}
-                  style={{ fontSize: 11, border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 8px', outline: 'none' }}
+                  className="text-[11px] border border-border rounded-md px-2 py-1 bg-background text-foreground outline-none"
                 />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                <label style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>End</label>
+              <div className="flex flex-col gap-1 flex-1">
+                <label className="text-[11px] text-muted-foreground">End</label>
                 <input
                   type="datetime-local"
                   value={newEvent.end}
                   onChange={(e) => setNewEvent({ ...newEvent, end: e.target.value })}
-                  style={{ fontSize: 11, border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 8px', outline: 'none' }}
+                  className="text-[11px] border border-border rounded-md px-2 py-1 bg-background text-foreground outline-none"
                 />
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button type="button" onClick={() => setShowForm(false)} style={{ fontSize: 12, color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" style={{ fontSize: 12, fontWeight: 500, background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer' }}>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowForm(false)} className="text-xs text-muted-foreground cursor-pointer">Cancel</button>
+              <button type="submit" className="text-xs font-medium bg-primary text-primary-foreground rounded-md px-3 py-1 cursor-pointer">
                 Save
               </button>
             </div>
@@ -158,7 +150,7 @@ export default function SharedCalendar({ events, myUserId, partnerUserId, myColo
         </div>
       )}
 
-      <div className="rbc-calendar-themed" style={{ flex: 1, minHeight: 0, height: calendarHeight }}>
+      <div className="rbc-calendar-themed flex-1 min-h-0" style={{ height: calendarHeight }}>
         <Calendar
           localizer={localizer}
           events={calEvents}
