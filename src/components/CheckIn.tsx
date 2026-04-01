@@ -82,14 +82,7 @@ function DraggableTodoItem({ todo, isOverdue, today, onCheck }: DraggableTodoIte
       <button
         {...listeners}
         {...attributes}
-        style={{
-          flexShrink: 0,
-          cursor: 'grab',
-          color: 'var(--color-text-disabled)',
-          display: 'flex',
-          alignItems: 'center',
-          touchAction: 'none',
-        }}
+        className="shrink-0 flex items-center text-text-disabled cursor-grab touch-none"
       >
         <GripVertical size={14} />
       </button>
@@ -309,35 +302,17 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(26,26,46,0.5)', backdropFilter: 'blur(4px)' }}
+      style={{ backgroundColor: 'var(--overlay-bg)', backdropFilter: 'blur(4px)' }}
     >
-      <div
-        className="w-full flex flex-col"
-        style={{
-          maxWidth: '440px',
-          height: 'calc(100vh - 2rem)',
-          background: 'var(--background)',
-          borderRadius: '20px',
-          border: '1px solid var(--color-border)',
-          boxShadow: '0 8px 48px rgba(0,181,200,0.14)',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="w-full max-w-[440px] h-[calc(100vh-2rem)] flex flex-col bg-background rounded-[20px] border border-border shadow-[0_8px_48px_rgba(0,181,200,0.14)] overflow-hidden">
         {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 py-4 shrink-0"
-          style={{ borderBottom: '1px solid var(--color-border)' }}
-        >
-          <span
-            className="text-xs font-semibold uppercase tracking-wide"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+        <div className="flex items-center justify-between px-5 py-4 shrink-0 border-b border-border">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Daily check-in
           </span>
           <button
             onClick={handleDismiss}
-            className="w-7 h-7 flex items-center justify-center rounded-full transition"
-            style={{ background: 'var(--color-foam)', color: 'var(--color-text-secondary)' }}
+            className="w-7 h-7 flex items-center justify-center rounded-full transition bg-foam text-muted-foreground"
           >
             <X size={14} />
           </button>
@@ -358,40 +333,28 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
               >
                 {showDots ? (
                   <div
-                    className="flex gap-1 items-center"
-                    style={{
-                      padding: '12px 16px',
-                      borderRadius: '18px 18px 18px 4px',
-                      background: '#fff',
-                      border: '1px solid var(--color-border)',
-                    }}
+                    className="flex gap-1 items-center bg-card border border-border"
+                    style={{ padding: '12px 16px', borderRadius: '18px 18px 18px 4px' }}
                   >
                     {[0, 1, 2].map((j) => (
                       <span
                         key={j}
-                        className="block w-1.5 h-1.5 rounded-full"
-                        style={{
-                          background: 'var(--color-text-disabled)',
-                          animation: `checkin-bounce 1.2s ease-in-out ${j * 0.15}s infinite`,
-                        }}
+                        className="block w-1.5 h-1.5 rounded-full bg-text-disabled"
+                        style={{ animation: `checkin-bounce 1.2s ease-in-out ${j * 0.15}s infinite` }}
                       />
                     ))}
                   </div>
                 ) : (
+                  // Message bubble colors are dynamic (user vs assistant role), kept inline
                   <p
                     className="text-sm leading-relaxed"
                     style={{
                       maxWidth: '85%',
                       padding: '10px 16px',
-                      borderRadius:
-                        msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                      borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                       ...(msg.role === 'user'
                         ? { background: 'var(--color-primary)', color: '#fff' }
-                        : {
-                            background: '#fff',
-                            color: 'var(--color-text)',
-                            border: '1px solid var(--color-border)',
-                          }),
+                        : { background: 'var(--card)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }),
                     }}
                   >
                     {msg.content}
@@ -405,14 +368,8 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
 
         {/* Task checklist — overdue + due today */}
         {checklistTodos.length > 0 && (
-          <div
-            className="shrink-0 px-5 py-3"
-            style={{ borderTop: '1px solid var(--color-border)' }}
-          >
-            <p
-              className="text-xs font-semibold uppercase tracking-wide mb-2"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
+          <div className="shrink-0 px-5 py-3 border-t border-border">
+            <p className="text-xs font-semibold uppercase tracking-wide mb-2 text-muted-foreground">
               {overdueTodos.length > 0 ? 'Overdue & due today' : 'Due today'}
             </p>
             <div className="flex flex-col gap-1.5">
@@ -430,16 +387,8 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
         )}
 
         {/* Day timeline — expands to fill remaining space when no checklist items */}
-        <div
-          className={`px-5 pt-3 pb-2 ${checklistTodos.length === 0 ? 'flex-1 flex flex-col min-h-0' : 'shrink-0'}`}
-          style={{ borderTop: '1px solid var(--color-border)' }}
-        >
-          <p
-            className="text-xs font-semibold uppercase tracking-wide mb-2 shrink-0"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Today
-          </p>
+        <div className={`px-5 pt-3 pb-2 border-t border-border ${checklistTodos.length === 0 ? 'flex-1 flex flex-col min-h-0' : 'shrink-0'}`}>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2 shrink-0 text-muted-foreground">Today</p>
           <DayTimeline
             events={allEvents}
             todos={scheduledTodos}
@@ -453,13 +402,7 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
           <div className="px-5 pt-1 pb-2 shrink-0">
             <button
               onClick={handleWrapUp}
-              className="w-full text-sm font-medium rounded-xl transition"
-              style={{
-                background: 'var(--color-foam)',
-                color: 'var(--color-primary)',
-                minHeight: '40px',
-                border: '1px solid var(--color-border)',
-              }}
+              className="w-full text-sm font-medium rounded-xl transition bg-foam text-primary min-h-[40px] border border-border"
             >
               All done — wrap up ✓
             </button>
@@ -468,12 +411,8 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
 
         {/* Input */}
         <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            sendMessage()
-          }}
-          className="flex items-center gap-2 px-4 py-3 shrink-0"
-          style={{ borderTop: '1px solid var(--color-border)' }}
+          onSubmit={(e) => { e.preventDefault(); sendMessage() }}
+          className="flex items-center gap-2 px-4 py-3 shrink-0 border-t border-border"
         >
           <input
             ref={inputRef}
@@ -481,26 +420,14 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
             onChange={(e) => setInput(e.target.value)}
             placeholder={userMessageCount === 0 ? "What's on your mind…" : 'Reply…'}
             disabled={isBusy}
-            className="flex-1 text-sm rounded-xl px-4 focus:outline-none"
-            style={{
-              background: '#fff',
-              border: '1.5px solid var(--color-border)',
-              color: 'var(--color-text)',
-              minHeight: '44px',
-              opacity: isBusy ? 0.5 : 1,
-            }}
+            className="flex-1 text-sm rounded-xl px-4 focus:outline-none bg-card border-[1.5px] border-border text-foreground min-h-[44px]"
+            style={{ opacity: isBusy ? 0.5 : 1 }}
           />
           <button
             type="submit"
             disabled={!input.trim() || isBusy}
-            className="shrink-0 flex items-center justify-center rounded-xl transition"
-            style={{
-              background: 'var(--color-primary)',
-              color: '#fff',
-              width: '44px',
-              height: '44px',
-              opacity: !input.trim() || isBusy ? 0.35 : 1,
-            }}
+            className="shrink-0 flex items-center justify-center rounded-xl transition bg-primary text-primary-foreground size-11"
+            style={{ opacity: !input.trim() || isBusy ? 0.35 : 1 }}
           >
             <Send size={15} />
           </button>
@@ -517,18 +444,7 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
 
     <DragOverlay>
       {activeDragTodo && (
-        <div
-          style={{
-            background: '#fff',
-            border: '1.5px solid var(--color-primary)',
-            borderRadius: 8,
-            padding: '8px 12px',
-            fontSize: 13,
-            color: 'var(--color-text)',
-            boxShadow: '0 4px 16px rgba(0,181,200,0.2)',
-            maxWidth: 280,
-          }}
-        >
+        <div className="bg-card border-[1.5px] border-primary rounded-lg px-3 py-2 text-[13px] text-foreground shadow-[0_4px_16px_rgba(0,181,200,0.2)] max-w-[280px]">
           {activeDragTodo.title}
         </div>
       )}
