@@ -8,7 +8,8 @@ import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import ProfileModal from '@/components/ProfileModal'
 import MobileLayout from '@/components/MobileLayout'
 import DesktopLayout from '@/components/DesktopLayout'
-import { Heart, UserCircle } from 'lucide-react'
+import { Heart, UserCircle, Moon, Sun } from 'lucide-react'
+import { useTheme } from '@/lib/hooks/useTheme'
 
 interface Props {
   profile: Profile
@@ -24,6 +25,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
   const [localPartnerTodos, setLocalPartnerTodos] = useState<Todo[]>(partnerTodos)
   const [showCheckin, setShowCheckin] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const { isDark, toggle: toggleTheme } = useTheme()
   const router = useRouter()
   const supabase = createClient()
 
@@ -83,6 +85,13 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className="transition hover:opacity-80 text-muted-foreground"
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <button
               onClick={() => setShowProfile(true)}
               className="transition hover:opacity-80"

@@ -28,6 +28,17 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Inline script runs synchronously before paint to prevent flash of wrong theme.
+            Reads localStorage and applies .dark to <html> before React hydrates. */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            if (localStorage.getItem('theme') === 'dark') {
+              document.documentElement.classList.add('dark');
+            }
+          } catch {}
+        ` }} />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <Toaster position="top-center" duration={2000} />
