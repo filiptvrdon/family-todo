@@ -21,6 +21,14 @@ export interface Todo {
   created_at: string
 }
 
+export interface SubTask {
+  id: string
+  todo_id: string
+  title: string
+  completed: boolean
+  created_at: string
+}
+
 export interface CalendarEvent {
   id: string
   user_id: string
