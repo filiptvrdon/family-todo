@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState, useEffect, useCallback } from 'react'
+import { useId, useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -47,6 +47,7 @@ interface Props {
   todos?: Todo[]
   onRefresh: () => void
   useInternalDndContext?: boolean
+  hideProgress?: boolean
 }
 
 function DndMonitor({ onDragEnd }: { onDragEnd: (event: DragEndEvent) => void }) {
@@ -61,44 +62,57 @@ export default function TodoList({
   parentId, 
   todos, 
   onRefresh,
-  useInternalDndContext = true
+  useInternalDndContext = true,
+  hideProgress = false
 }: Props) {
   const [localTodos, setLocalTodos] = useState<Todo[]>(todos ?? [])
+  const [prevTodos, setPrevTodos] = useState<Todo[] | undefined>(todos)
+  const [prevParentId, setPrevParentId] = useState<string | null>(parentId)
   const [title, setTitle] = useState('')
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [loading, setLoading] = useState(!todos && !!parentId)
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
-  const supabase = createClient()
-  const dndContextId = useId()
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
-
-  const fetchSubTasks = useCallback(async () => {
-    if (!parentId) return
-    setLoading(true)
-    const { data } = await supabase
-      .from('todos')
-      .select('*, subtasks_count:todos(count)')
-      .eq('parent_id', parentId)
-      .order('index', { ascending: true })
-    
-    const formatted = (data ?? []).map(t => ({
-      ...t,
-      subtasks_count: (t.subtasks_count as any)?.[0]?.count ?? 0
-    }))
-    setLocalTodos(formatted)
-    setLoading(false)
-  }, [parentId, supabase])
-
-  useEffect(() => {
+  // Adjust localTodos if props change from above
+  if (todos !== prevTodos || parentId !== prevParentId) {
+    setPrevTodos(todos)
+    setPrevParentId(parentId)
     if (todos) {
       setLocalTodos(todos)
       setLoading(false)
     } else if (parentId) {
-      fetchSubTasks()
+      setLoading(true)
     }
-  }, [todos, parentId, fetchSubTasks])
+  }
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const supabase = useMemo(() => createClient(), [])
+  const dndContextId = useId()
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  useEffect(() => {
+    if (!todos && parentId) {
+      let ignore = false
+      const fetch = async () => {
+        const { data } = await supabase
+          .from('todos')
+          .select('*, subtasks_count:todos(count)')
+          .eq('parent_id', parentId)
+          .order('index', { ascending: true })
+        
+        if (ignore) return
+
+        const formatted = (data ?? []).map(t => ({
+          ...t,
+          subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
+        }))
+        setLocalTodos(formatted)
+        setLoading(false)
+      }
+      fetch()
+      return () => { ignore = true }
+    }
+  }, [todos, parentId, supabase])
 
   function toggleExpand(id: string) {
     setExpandedIds(prev => {
@@ -134,7 +148,8 @@ export default function TodoList({
       parent_id: parentId,
       index: newIndex,
       created_at: new Date().toISOString(),
-      subtasks_count: 0
+      subtasks_count: 0,
+      completed: false
     }
 
     setLocalTodos(prev => [...prev, optimistic])
@@ -268,6 +283,7 @@ export default function TodoList({
                     parentId={todo.id}
                     onRefresh={onRefresh}
                     useInternalDndContext={false}
+                    hideProgress={true}
                   />
                 </div>
               )}
@@ -280,7 +296,7 @@ export default function TodoList({
 
   return (
     <div className="flex flex-col gap-3">
-      {parentId && totalCount > 0 && (
+      {parentId && totalCount > 0 && !hideProgress && (
         <div className="flex flex-col gap-1.5 mb-1">
           <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             <span>Progress</span>

@@ -53,7 +53,7 @@ export default function PartnerConnect({ myId, onConnected }: Props) {
         <h2 className="font-semibold text-foreground">Connect with your partner</h2>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Enter your partner's email to link your accounts. They need to have signed in at least once.
+        Enter your partner&apos;s email to link your accounts. They need to have signed in at least once.
       </p>
       <form onSubmit={connect} className="flex flex-col gap-3">
         <input

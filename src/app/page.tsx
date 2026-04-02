@@ -45,7 +45,7 @@ export default async function Home() {
 
   const myTodos = (myTodosRaw ?? []).map(t => ({
     ...t,
-    subtasks_count: (t.subtasks_count as any)?.[0]?.count ?? 0
+    subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
   }))
 
   const { data: partnerTodosRaw } = profile?.partner_id
@@ -54,7 +54,7 @@ export default async function Home() {
 
   const partnerTodos = (partnerTodosRaw ?? []).map(t => ({
     ...t,
-    subtasks_count: (t.subtasks_count as any)?.[0]?.count ?? 0
+    subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
   }))
 
   const { data: myEvents } = await supabase

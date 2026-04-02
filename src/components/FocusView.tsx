@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -75,18 +75,19 @@ interface Props {
 
 export default function FocusView({ myTodos, partnerTodos, myName, partnerName, myUserId, onRefresh }: Props) {
   const [localTodos, setLocalTodos] = useState<Todo[]>(() => [...myTodos, ...partnerTodos])
-  const [skipped, setSkipped] = useState<Set<string>>(new Set())
-  const [completing, setCompleting] = useState(false)
+  const [prevMyTodos, setPrevMyTodos] = useState(myTodos)
+  const [prevPartnerTodos, setPrevPartnerTodos] = useState(partnerTodos)
+  const [skipped, setSkipped] = useState<Set<string>>(() => getSkippedIds())
   const supabase = createClient()
 
   // Sync incoming props into local state (e.g. after a background refresh)
-  useEffect(() => {
+  if (myTodos !== prevMyTodos || partnerTodos !== prevPartnerTodos) {
+    setPrevMyTodos(myTodos)
+    setPrevPartnerTodos(partnerTodos)
     setLocalTodos([...myTodos, ...partnerTodos])
-  }, [myTodos, partnerTodos])
+  }
 
-  useEffect(() => {
-    setSkipped(getSkippedIds())
-  }, [])
+  const [completing, setCompleting] = useState(false)
 
   const task = useMemo(() => selectTask(localTodos, skipped), [localTodos, skipped])
 
@@ -156,7 +157,7 @@ export default function FocusView({ myTodos, partnerTodos, myName, partnerName, 
     return (
       <div className="flex flex-col items-center justify-center text-center px-8 min-h-[60vh]">
         <div className="text-5xl mb-4">🎉</div>
-        <p className="text-xl font-semibold mb-2 text-foreground">You're all clear</p>
+        <p className="text-xl font-semibold mb-2 text-foreground">You&apos;re all clear</p>
         <p className="text-base text-muted-foreground">Nothing left to do right now.</p>
       </div>
     )

@@ -58,7 +58,7 @@ export default function DesktopLayout({
 
     // Reordering within the list
     const oldIndex = myTodos.findIndex(t => t.id === active.id)
-    const newIndex = myTodos.findIndex(t => t.id === over.id)
+    const newIndex = over ? myTodos.findIndex(t => t.id === over.id) : -1
 
     if (oldIndex !== -1 && newIndex !== -1) {
       const reordered = [...myTodos]

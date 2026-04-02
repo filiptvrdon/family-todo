@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 /**
  * Manages the manual dark mode toggle.
@@ -7,11 +7,12 @@ import { useState, useEffect } from 'react'
  */
 export function useTheme() {
   // Initialise from DOM so the state matches the FOUC-prevention script immediately
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains('dark'))
-  }, [])
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof document !== 'undefined') {
+      return document.documentElement.classList.contains('dark')
+    }
+    return false
+  })
 
   function toggle() {
     const next = !isDark

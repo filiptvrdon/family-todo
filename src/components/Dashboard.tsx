@@ -23,35 +23,45 @@ interface Props {
 export default function Dashboard({ profile, partner, myTodos, partnerTodos, allEvents, googleConnected }: Props) {
   const [localMyTodos, setLocalMyTodos] = useState<Todo[]>(myTodos)
   const [localPartnerTodos, setLocalPartnerTodos] = useState<Todo[]>(partnerTodos)
-  const [showCheckin, setShowCheckin] = useState(false)
+  const [prevMyTodos, setPrevMyTodos] = useState(myTodos)
+  const [prevPartnerTodos, setPrevPartnerTodos] = useState(partnerTodos)
+
+  if (myTodos !== prevMyTodos || partnerTodos !== prevPartnerTodos) {
+    setPrevMyTodos(myTodos)
+    setPrevPartnerTodos(partnerTodos)
+    setLocalMyTodos(myTodos)
+    setLocalPartnerTodos(partnerTodos)
+  }
+
+  const [showCheckin, setShowCheckin] = useState(() => {
+    if (typeof window !== 'undefined') return !hasCheckedInToday()
+    return false
+  })
   const [showProfile, setShowProfile] = useState(false)
   const { isDark, toggle: toggleTheme } = useTheme()
   const router = useRouter()
   const supabase = createClient()
-
-  useEffect(() => { setLocalMyTodos(myTodos) }, [myTodos])
-  useEffect(() => { setLocalPartnerTodos(partnerTodos) }, [partnerTodos])
 
   const refreshLocal = useCallback(async () => {
     const [{ data: mineRaw }, { data: theirsRaw }] = await Promise.all([
       supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', profile.id).is('parent_id', null).order('index', { ascending: true }),
       partner?.id
         ? supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', partner.id).is('parent_id', null).order('index', { ascending: true })
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] as unknown as { count: number }[][] }),
     ])
     
     const mine = (mineRaw ?? []).map(t => ({
       ...t,
-      subtasks_count: (t.subtasks_count as any)?.[0]?.count ?? 0
+      subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
     }))
     const theirs = (theirsRaw ?? []).map(t => ({
       ...t,
-      subtasks_count: (t.subtasks_count as any)?.[0]?.count ?? 0
+      subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
     }))
 
     if (mine) setLocalMyTodos(mine)
     if (theirs) setLocalPartnerTodos(theirs ?? [])
-  }, [supabase, profile.id, partner?.id])
+  }, [supabase, profile.id, partner])
 
   const refresh = useCallback(() => router.refresh(), [router])
 
@@ -62,7 +72,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
   }, [supabase, refresh])
 
   useEffect(() => {
-    if (!hasCheckedInToday()) setShowCheckin(true)
+    // Check-in logic is now handled in initial state
   }, [])
 
   async function signOut() {

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Todo } from '@/lib/types'
 import { Trash2, Check, Calendar, GripVertical, Pencil, ChevronRight, ChevronDown, Layers } from 'lucide-react'
 import { format } from 'date-fns'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { createClient } from '@/lib/supabase/client'
 
 interface Props {
   todo: Todo
@@ -21,6 +22,30 @@ interface Props {
   isExpanded?: boolean
   onToggleExpand?: () => void
 }
+
+const START_MESSAGES = [
+  'Let\'s get this rolling! 🚀',
+  'A fresh start awaits ✨',
+  'Tiny steps, big wins 💪',
+  'You\'ve got this! 🌟',
+  'Ready when you are 🙌',
+]
+
+const IN_PROGRESS_MESSAGES = [
+  'Making moves ⚡️',
+  'Chipping away 🧱',
+  'Momentum looks great 🚴‍♀️',
+  'Keep the flow going 💧',
+  'You\'re on a roll 🌀',
+]
+
+const DONE_MESSAGES = [
+  'All done — legend! 🏆',
+  'Perfection unlocked ✅',
+  'Mission accomplished 🎯',
+  'That was chef\'s kiss 👩‍🍳✨',
+  'Confetti time 🎉',
+]
 
 export default function TodoCard({
   todo,
@@ -38,6 +63,40 @@ export default function TodoCard({
   const [completing, setCompleting] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState(todo.title)
+
+  const supabase = createClient()
+  const [subtaskTotals, setSubtaskTotals] = useState<{ total: number; completed: number } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function fetchCounts() {
+      if (!todo.subtasks_count || todo.subtasks_count <= 0) return
+      const { data } = await supabase
+        .from('todos')
+        .select('id, completed')
+        .eq('parent_id', todo.id)
+      if (!cancelled && data) {
+        const total = data.length
+        const completed = data.filter(d => d.completed).length
+        setSubtaskTotals({ total, completed })
+      }
+    }
+    fetchCounts()
+    return () => { cancelled = true }
+  }, [supabase, todo.id, todo.subtasks_count])
+
+  const totalSub = useMemo(() => subtaskTotals?.total ?? (todo.subtasks_count ?? 0), [subtaskTotals?.total, todo.subtasks_count])
+  const completedSub = useMemo(() => subtaskTotals?.completed ?? 0, [subtaskTotals?.completed])
+  const subProgress = useMemo(() => (totalSub > 0 ? (completedSub / totalSub) * 100 : 0), [completedSub, totalSub])
+
+  const encouragement = useMemo(() => {
+    if (!subtaskTotals) return null
+    if (totalSub === 0) return null
+    const index = todo.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    if (completedSub === 0) return START_MESSAGES[index % START_MESSAGES.length]
+    if (completedSub < totalSub) return IN_PROGRESS_MESSAGES[index % IN_PROGRESS_MESSAGES.length]
+    return DONE_MESSAGES[index % DONE_MESSAGES.length]
+  }, [subtaskTotals, completedSub, totalSub, todo.id])
 
   // Sortable hook
   const sortable = useSortable({
@@ -160,37 +219,55 @@ export default function TodoCard({
         </div>
       )}
 
-      {editing ? (
-        <input
-          autoFocus
-          value={editValue}
-          onChange={e => setEditValue(e.target.value)}
-          onClick={e => e.stopPropagation()}
-          onBlur={() => {
-            if (editValue.trim() && editValue.trim() !== todo.title) {
-              onEdit?.(todo.id, editValue.trim())
-            } else {
-              setEditValue(todo.title)
-            }
-            setEditing(false)
-          }}
-          onKeyDown={e => {
-            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-            if (e.key === 'Escape') {
-              setEditValue(todo.title)
+      <div className="flex-1 min-w-0">
+        {editing ? (
+          <input
+            autoFocus
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onClick={e => e.stopPropagation()}
+            onBlur={() => {
+              if (editValue.trim() && editValue.trim() !== todo.title) {
+                onEdit?.(todo.id, editValue.trim())
+              } else {
+                setEditValue(todo.title)
+              }
               setEditing(false)
-            }
-          }}
-          className="flex-1 text-sm font-medium rounded-lg px-2 py-0.5 focus:outline-none bg-card border-[1.5px] border-border text-foreground"
-        />
-      ) : (
-        <p
-          className={`flex-1 text-sm font-medium truncate ${todo.completed ? 'line-through' : ''}`}
-          style={{ color: todo.completed ? 'var(--color-text-secondary)' : 'var(--color-text)' }}
-        >
-          {todo.title}
-        </p>
-      )}
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') {
+                setEditValue(todo.title)
+                setEditing(false)
+              }
+            }}
+            className="w-full text-sm font-medium rounded-lg px-2 py-0.5 focus:outline-none bg-card border-[1.5px] border-border text-foreground"
+          />
+        ) : (
+          <>
+            <p
+              className={`text-sm font-medium truncate ${todo.completed ? 'line-through' : ''}`}
+              style={{ color: todo.completed ? 'var(--color-text-secondary)' : 'var(--color-text)' }}
+            >
+              {todo.title}
+            </p>
+            {todo.subtasks_count !== undefined && todo.subtasks_count > 0 && subtaskTotals && (
+              <div className="mt-1">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span className="font-semibold">{completedSub}/{totalSub}</span>
+                  {encouragement && <span className="italic">{encouragement}</span>}
+                </div>
+                <div className="h-1 w-full bg-foam rounded-full overflow-hidden mt-0.5">
+                  <div
+                    className="h-full bg-primary transition-all duration-500 ease-out"
+                    style={{ width: `${subProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {!editing && (
         <>
