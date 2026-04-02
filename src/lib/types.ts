@@ -21,6 +21,7 @@ export interface Todo {
   parent_id: string | null       // set for sub-tasks; null for top-level todos
   index: string                  // fractional index for ordering within parent
   created_at: string
+  subtasks_count?: number        // calculated field from Supabase
 }
 
 

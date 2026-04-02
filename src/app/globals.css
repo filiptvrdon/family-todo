@@ -40,8 +40,8 @@
 
   /* --- Layout widths --- */
   --width-content: 1024px; /* max page content width */
-  --width-panel:    480px; /* modals, drawers, bottom sheets */
-  --width-form:     400px; /* standalone auth/settings forms */
+  --width-panel:    55%; /* modals, drawers, bottom sheets */
+  --width-form:     50%; /* standalone auth/settings forms */
 
   /* --- Shadows (tinted with primary, not grey) --- */
   --shadow-card:     0 2px 8px rgba(0, 181, 200, 0.08);
@@ -273,7 +273,7 @@
     left: calc(50% - (var(--width-panel) / 2));
     right: auto;
     width: var(--width-panel);
-    max-height: 85vh;
+    max-height: 90vh;
     border-radius: var(--radius-xl);
     /* Combine vertical centering with drawer drag offset */
     transform: translateY(calc(-50% + var(--drawer-offset, 0px)));

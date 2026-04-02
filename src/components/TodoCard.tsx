@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Todo } from '@/lib/types'
-import { Trash2, Check, Calendar, GripVertical, Pencil } from 'lucide-react'
+import { Trash2, Check, Calendar, GripVertical, Pencil, ChevronRight, ChevronDown, Layers } from 'lucide-react'
 import { format } from 'date-fns'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -18,6 +18,8 @@ interface Props {
   isSortable?: boolean
   isDraggable?: boolean
   isDroppable?: boolean
+  isExpanded?: boolean
+  onToggleExpand?: () => void
 }
 
 export default function TodoCard({
@@ -30,6 +32,8 @@ export default function TodoCard({
   isSortable = false,
   isDraggable = false,
   isDroppable = false,
+  isExpanded = false,
+  onToggleExpand,
 }: Props) {
   const [completing, setCompleting] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -105,12 +109,24 @@ export default function TodoCard({
     >
       {isOwner && (isSortable || isDraggable) && !todo.completed && (
         <div
-          {...(isSortable ? { ...sortable.attributes, ...sortable.listeners } : { ...draggable.attributes, ...draggable.listeners })}
+          {...(isSortable ? { ...sortable.listeners } : { ...draggable.listeners })}
           onClick={e => e.stopPropagation()}
           className="shrink-0 text-text-disabled cursor-grab active:cursor-grabbing touch-none"
         >
           <GripVertical size={14} />
         </div>
+      )}
+
+      {todo.subtasks_count !== undefined && todo.subtasks_count > 0 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleExpand?.();
+          }}
+          className="shrink-0 p-0.5 -ml-1 rounded hover:bg-muted-foreground/10 transition text-text-disabled hover:text-foreground"
+        >
+          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </button>
       )}
 
       {isOwner ? (
@@ -187,6 +203,12 @@ export default function TodoCard({
             <span className="shrink-0 flex items-center gap-1 text-xs text-text-disabled">
               <Calendar size={11} />
               {format(new Date(todo.due_date + 'T00:00:00'), 'MMM d')}
+            </span>
+          )}
+          {todo.subtasks_count !== undefined && todo.subtasks_count > 0 && (
+            <span className="shrink-0 flex items-center gap-1 text-xs text-text-disabled bg-foam/30 px-1.5 py-0.5 rounded-md">
+              <Layers size={11} />
+              {todo.subtasks_count}
             </span>
           )}
           {isOwner && (

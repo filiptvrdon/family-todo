@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
@@ -156,8 +156,10 @@ export default function DesktopLayout({
     { id: 'month', label: 'Month' },
   ]
 
+  const dndContextId = useId()
+
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext id={dndContextId} sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <DragOverlay dropAnimation={null}>
         {draggingTodo && (
           <div

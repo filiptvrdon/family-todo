@@ -118,7 +118,7 @@ Three canonical widths are defined as CSS variables in `globals.css` and must be
 | Variable | Value | Used for |
 |----------|-------|----------|
 | `--width-content` | `1024px` | Page content max-width — wrap all page `<main>` and `<header>` content |
-| `--width-panel` | `480px` | Modals, drawers, bottom sheets, side panels |
+| `--width-panel` | `50%` | Modals, drawers, bottom sheets, side panels |
 | `--width-form` | `400px` | Standalone auth/settings forms |
 
 ### Rules

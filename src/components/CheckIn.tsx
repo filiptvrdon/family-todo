@@ -81,7 +81,6 @@ function DraggableTodoItem({ todo, isOverdue, today, onCheck }: DraggableTodoIte
       )}
       <button
         {...listeners}
-        {...attributes}
         className="shrink-0 flex items-center text-text-disabled cursor-grab touch-none"
       >
         <GripVertical size={14} />

@@ -36,16 +36,26 @@ export default async function Home() {
     partner = data
   }
 
-  const { data: myTodos } = await supabase
+  const { data: myTodosRaw } = await supabase
     .from('todos')
-    .select('*')
+    .select('*, subtasks_count:todos(count)')
     .eq('user_id', user.id)
     .is('parent_id', null)
     .order('index', { ascending: true })
 
-  const { data: partnerTodos } = profile?.partner_id
-    ? await supabase.from('todos').select('*').eq('user_id', profile.partner_id).is('parent_id', null).order('index', { ascending: true })
+  const myTodos = (myTodosRaw ?? []).map(t => ({
+    ...t,
+    subtasks_count: (t.subtasks_count as any)?.[0]?.count ?? 0
+  }))
+
+  const { data: partnerTodosRaw } = profile?.partner_id
+    ? await supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', profile.partner_id).is('parent_id', null).order('index', { ascending: true })
     : { data: [] }
+
+  const partnerTodos = (partnerTodosRaw ?? []).map(t => ({
+    ...t,
+    subtasks_count: (t.subtasks_count as any)?.[0]?.count ?? 0
+  }))
 
   const { data: myEvents } = await supabase
     .from('calendar_events')

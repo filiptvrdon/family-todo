@@ -67,7 +67,6 @@ function DraggableTimelineTodo({ todo, onComplete }: { todo: Todo; onComplete: (
       {!todo.completed && (
         <button
           {...listeners}
-          {...attributes}
           style={{
             flexShrink: 0,
             cursor: 'grab',

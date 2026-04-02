@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useId, useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -12,6 +12,7 @@ import {
   useSensor,
   useSensors,
   closestCenter,
+  useDndMonitor,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -48,6 +49,11 @@ interface Props {
   useInternalDndContext?: boolean
 }
 
+function DndMonitor({ onDragEnd }: { onDragEnd: (event: DragEndEvent) => void }) {
+  useDndMonitor({ onDragEnd })
+  return null
+}
+
 export default function TodoList({ 
   userId, 
   ownerName, 
@@ -62,7 +68,9 @@ export default function TodoList({
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [loading, setLoading] = useState(!todos && !!parentId)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
+  const dndContextId = useId()
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -71,10 +79,15 @@ export default function TodoList({
     setLoading(true)
     const { data } = await supabase
       .from('todos')
-      .select('*')
+      .select('*, subtasks_count:todos(count)')
       .eq('parent_id', parentId)
       .order('index', { ascending: true })
-    setLocalTodos(data ?? [])
+    
+    const formatted = (data ?? []).map(t => ({
+      ...t,
+      subtasks_count: (t.subtasks_count as any)?.[0]?.count ?? 0
+    }))
+    setLocalTodos(formatted)
     setLoading(false)
   }, [parentId, supabase])
 
@@ -86,6 +99,15 @@ export default function TodoList({
       fetchSubTasks()
     }
   }, [todos, parentId, fetchSubTasks])
+
+  function toggleExpand(id: string) {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   function openDetail(todo: Todo) {
     setSelectedTodo(todo)
@@ -111,8 +133,8 @@ export default function TodoList({
       scheduled_time: null,
       parent_id: parentId,
       index: newIndex,
-      completed: false,
       created_at: new Date().toISOString(),
+      subtasks_count: 0
     }
 
     setLocalTodos(prev => [...prev, optimistic])
@@ -213,29 +235,47 @@ export default function TodoList({
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
   const ListContent = (
-    <div className="flex flex-col gap-2">
-      {displayTodos.length === 0 && !loading && (
-        <p className="text-sm text-center py-6 text-text-disabled">No tasks yet</p>
-      )}
-      {loading && <p className="text-sm text-center py-6 text-text-disabled">Loading tasks…</p>}
-      
-      <SortableContext items={displayTodos.map(t => t.id)} strategy={verticalListSortingStrategy}>
-        {displayTodos.map(todo => (
-          <TodoCard
-            key={todo.id}
-            todo={todo}
-            isOwner={isOwner}
-            onToggle={toggleTodo}
-            onDelete={deleteTodo}
-            onOpen={openDetail}
-            onEdit={editTodo}
-            isSortable={isOwner}
-            isDraggable={isOwner && parentId === null}
-            isDroppable={isOwner && parentId === null}
-          />
-        ))}
-      </SortableContext>
-    </div>
+    <>
+      <DndMonitor onDragEnd={handleDragEnd} />
+      <div className="flex flex-col gap-2">
+        {displayTodos.length === 0 && !loading && (
+          <p className="text-sm text-center py-6 text-text-disabled">No tasks yet</p>
+        )}
+        {loading && <p className="text-sm text-center py-6 text-text-disabled">Loading tasks…</p>}
+        
+        <SortableContext items={displayTodos.map(t => t.id)} strategy={verticalListSortingStrategy}>
+          {displayTodos.map(todo => (
+            <div key={todo.id} className="flex flex-col">
+              <TodoCard
+                todo={todo}
+                isOwner={isOwner}
+                onToggle={toggleTodo}
+                onDelete={deleteTodo}
+                onOpen={openDetail}
+                onEdit={editTodo}
+                isSortable={isOwner}
+                isDraggable={isOwner}
+                isDroppable={isOwner}
+                isExpanded={expandedIds.has(todo.id)}
+                onToggleExpand={() => toggleExpand(todo.id)}
+              />
+              {expandedIds.has(todo.id) && (
+                <div className="ml-8 mt-1 border-l border-border/40 pl-2">
+                  <TodoList
+                    userId={userId}
+                    ownerName={ownerName}
+                    isOwner={isOwner}
+                    parentId={todo.id}
+                    onRefresh={onRefresh}
+                    useInternalDndContext={false}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </SortableContext>
+      </div>
+    </>
   )
 
   return (
@@ -267,7 +307,7 @@ export default function TodoList({
       )}
 
       {useInternalDndContext ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext id={dndContextId} sensors={sensors} collisionDetection={closestCenter}>
           {ListContent}
         </DndContext>
       ) : (
