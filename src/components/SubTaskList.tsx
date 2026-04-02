@@ -167,15 +167,16 @@ export default function SubTaskList({ todoId, isOwner }: Props) {
     const [moved] = reordered.splice(oldIndex, 1)
     reordered.splice(newIndex, 0, moved)
 
-    const before = newIndex > 0 ? reordered[newIndex - 1].index : null
-    const after = newIndex < reordered.length - 1 ? reordered[newIndex + 1].index : null
+    const before = newIndex > 0 ? (reordered[newIndex - 1].index || null) : null
+    const after = newIndex < reordered.length - 1 ? (reordered[newIndex + 1].index || null) : null
     const updatedIndex = generateKeyBetween(before, after)
 
     const updatedMoved = { ...moved, index: updatedIndex }
     reordered[newIndex] = updatedMoved
 
     setSubTasks(reordered)
-    await supabase.from('sub_tasks').update({ index: updatedIndex }).eq('id', moved.id)
+    const { error } = await supabase.from('sub_tasks').update({ index: updatedIndex }).eq('id', moved.id)
+    if (error) console.error('SubTask reorder error:', error)
   }
 
   const completed = subTasks.filter(s => s.completed).length
