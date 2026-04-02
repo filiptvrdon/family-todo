@@ -295,7 +295,7 @@ export default function TodoList({
   )
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 min-w-0">
       {parentId && totalCount > 0 && !hideProgress && (
         <div className="flex flex-col gap-1.5 mb-1">
           <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">

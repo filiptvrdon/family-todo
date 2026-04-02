@@ -28,34 +28,34 @@ export default function TaskBoard({
   const activeUserId = view === 'me' ? profile.id : (partner?.id || '')
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden min-w-0">
       {/* View Switcher */}
       <div className="shrink-0 flex items-center justify-between px-4 py-3 md:p-4 border-b border-border bg-card">
         <div className="flex items-center gap-1 bg-foam p-1 rounded-lg">
           <button
             onClick={() => setView('me')}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition min-w-0"
             style={{
               background: view === 'me' ? 'var(--card)' : 'transparent',
               color: view === 'me' ? 'var(--color-text)' : 'var(--color-text-secondary)',
               boxShadow: view === 'me' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
             }}
           >
-            <User size={14} />
-            <span>{myName}</span>
+            <User size={14} className="shrink-0" />
+            <span className="truncate">{myName}</span>
           </button>
           {partner && (
             <button
               onClick={() => setView('partner')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition min-w-0"
               style={{
                 background: view === 'partner' ? 'var(--card)' : 'transparent',
                 color: view === 'partner' ? 'var(--color-text)' : 'var(--color-text-secondary)',
                 boxShadow: view === 'partner' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
               }}
             >
-              <Users size={14} />
-              <span>{partnerName}</span>
+              <Users size={14} className="shrink-0" />
+              <span className="truncate">{partnerName}</span>
             </button>
           )}
         </div>

@@ -162,7 +162,7 @@ export default function TodoCard({
       tabIndex={0}
       onClick={() => !editing && onOpen(todo)}
       onKeyDown={e => !editing && (e.key === 'Enter' || e.key === ' ') && onOpen(todo)}
-      className={`rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition bg-card border shadow-[var(--shadow-card)] group ${
+      className={`w-full min-w-0 rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition bg-card border shadow-[var(--shadow-card)] group ${
         completing ? 'completing-card' : ''
       } ${isOver ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border'}`}
     >
@@ -270,26 +270,26 @@ export default function TodoCard({
       </div>
 
       {!editing && (
-        <>
+        <div className="flex items-center gap-2 shrink-0">
           {todo.recurrence && (
-            <span className="shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-foam)', color: 'var(--color-accent)' }}>
+            <span className="text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-foam)', color: 'var(--color-accent)' }}>
               {todo.recurrence.charAt(0).toUpperCase() + todo.recurrence.slice(1)}
             </span>
           )}
           {todo.due_date && (
-            <span className="shrink-0 flex items-center gap-1 text-xs text-text-disabled">
+            <span className="flex items-center gap-1 text-xs text-text-disabled">
               <Calendar size={11} />
               {format(new Date(todo.due_date + 'T00:00:00'), 'MMM d')}
             </span>
           )}
           {todo.subtasks_count !== undefined && todo.subtasks_count > 0 && (
-            <span className="shrink-0 flex items-center gap-1 text-xs text-text-disabled bg-foam/30 px-1.5 py-0.5 rounded-md">
+            <span className="flex items-center gap-1 text-xs text-text-disabled bg-foam/30 px-1.5 py-0.5 rounded-md">
               <Layers size={11} />
               {todo.subtasks_count}
             </span>
           )}
           {isOwner && (
-            <div className="flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-1">
               <button
                 type="button"
                 onClick={handleEdit}
@@ -299,13 +299,13 @@ export default function TodoCard({
               </button>
               <button
                 onClick={handleDelete}
-                className="shrink-0 opacity-0 group-hover:opacity-100 transition text-text-disabled hover:text-destructive p-1"
+                className="opacity-0 group-hover:opacity-100 transition text-text-disabled hover:text-destructive p-1"
               >
                 <Trash2 size={14} />
               </button>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   )

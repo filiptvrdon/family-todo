@@ -122,6 +122,7 @@ function HourRow({ hour, isCurrent, events, todos, onTodoComplete }: HourRowProp
       <div
         style={{
           flex: 1,
+          minWidth: 0,
           borderTop: `1px solid ${isOver ? 'var(--color-primary)' : isCurrent ? 'var(--color-primary)' : 'var(--color-border)'}`,
           marginTop: 10,
           paddingTop: hasItems ? 5 : 0,

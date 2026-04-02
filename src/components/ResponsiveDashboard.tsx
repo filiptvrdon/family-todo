@@ -64,7 +64,7 @@ export default function ResponsiveDashboard(props: Props) {
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* ── Task Board (Left on Desktop, Tab 1 on Mobile) ── */}
         <div 
-          className={`flex-1 md:flex-initial md:w-[400px] lg:w-[450px] md:border-r border-border bg-card flex-col ${
+          className={`flex-1 min-w-0 md:flex-initial md:w-[400px] lg:w-[450px] md:border-r border-border bg-card flex-col ${
             mobileTab === 'tasks' ? 'flex' : 'hidden md:flex'
           }`}
         >
