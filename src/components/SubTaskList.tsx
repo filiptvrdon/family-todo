@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, Check, Pencil } from 'lucide-react'
-import { SubTask } from '@/lib/types'
+import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import {
   DndContext,
@@ -23,12 +23,13 @@ import { generateKeyBetween } from 'fractional-indexing'
 interface Props {
   todoId: string
   isOwner: boolean
+  userId: string
 }
 
 interface SortableItemProps {
-  subTask: SubTask
+  subTask: Todo
   isOwner: boolean
-  onToggle: (subTask: SubTask) => void
+  onToggle: (subTask: Todo) => void
   onDelete: (id: string) => void
   onEdit: (id: string, newTitle: string) => void
 }
@@ -120,8 +121,8 @@ function SortableItem({ subTask, isOwner, onToggle, onDelete, onEdit }: Sortable
   )
 }
 
-export default function SubTaskList({ todoId, isOwner }: Props) {
-  const [subTasks, setSubTasks] = useState<SubTask[]>([])
+export default function SubTaskList({ todoId, isOwner, userId }: Props) {
+  const [subTasks, setSubTasks] = useState<Todo[]>([])
   const [newTitle, setNewTitle] = useState('')
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -135,9 +136,9 @@ export default function SubTaskList({ todoId, isOwner }: Props) {
   async function fetchSubTasks() {
     setLoading(true)
     const { data } = await supabase
-      .from('sub_tasks')
+      .from('todos')
       .select('*')
-      .eq('todo_id', todoId)
+      .eq('parent_id', todoId)
       .order('index', { ascending: true })
     setSubTasks(data ?? [])
     setLoading(false)
@@ -147,15 +148,20 @@ export default function SubTaskList({ todoId, isOwner }: Props) {
     e.preventDefault()
     if (!newTitle.trim()) return
 
-    const lastIndex = subTasks.length > 0 ? subTasks[subTasks.length - 1].index : null
+    const lastIndex = subTasks.length > 0 ? (subTasks[subTasks.length - 1].index || null) : null
     const newIndex = generateKeyBetween(lastIndex, null)
 
     const tempId = `temp-${Date.now()}`
-    const optimistic: SubTask = {
+    const optimistic: Todo = {
       id: tempId,
-      todo_id: todoId,
+      user_id: userId,
       title: newTitle.trim(),
+      description: null,
       completed: false,
+      due_date: null,
+      recurrence: null,
+      scheduled_time: null,
+      parent_id: todoId,
       index: newIndex,
       created_at: new Date().toISOString(),
     }
@@ -163,8 +169,8 @@ export default function SubTaskList({ todoId, isOwner }: Props) {
     setNewTitle('')
 
     const { data } = await supabase
-      .from('sub_tasks')
-      .insert({ todo_id: todoId, title: optimistic.title, index: newIndex })
+      .from('todos')
+      .insert({ user_id: userId, title: optimistic.title, parent_id: todoId, index: newIndex })
       .select()
       .single()
 
@@ -173,20 +179,20 @@ export default function SubTaskList({ todoId, isOwner }: Props) {
     }
   }
 
-  async function toggleSubTask(subTask: SubTask) {
+  async function toggleSubTask(subTask: Todo) {
     const next = !subTask.completed
     setSubTasks(prev => prev.map(s => s.id === subTask.id ? { ...s, completed: next } : s))
-    await supabase.from('sub_tasks').update({ completed: next }).eq('id', subTask.id)
+    await supabase.from('todos').update({ completed: next }).eq('id', subTask.id)
   }
 
   async function editSubTask(id: string, newTitle: string) {
     setSubTasks(prev => prev.map(s => s.id === id ? { ...s, title: newTitle } : s))
-    await supabase.from('sub_tasks').update({ title: newTitle }).eq('id', id)
+    await supabase.from('todos').update({ title: newTitle }).eq('id', id)
   }
 
   async function deleteSubTask(id: string) {
     setSubTasks(prev => prev.filter(s => s.id !== id))
-    await supabase.from('sub_tasks').delete().eq('id', id)
+    await supabase.from('todos').delete().eq('id', id)
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -209,7 +215,7 @@ export default function SubTaskList({ todoId, isOwner }: Props) {
     reordered[newIndex] = updatedMoved
 
     setSubTasks(reordered)
-    const { error } = await supabase.from('sub_tasks').update({ index: updatedIndex }).eq('id', moved.id)
+    const { error } = await supabase.from('todos').update({ index: updatedIndex }).eq('id', moved.id)
     if (error) console.error('SubTask reorder error:', error)
   }
 

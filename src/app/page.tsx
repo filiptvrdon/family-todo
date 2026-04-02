@@ -40,10 +40,11 @@ export default async function Home() {
     .from('todos')
     .select('*')
     .eq('user_id', user.id)
+    .is('parent_id', null)
     .order('created_at', { ascending: false })
 
   const { data: partnerTodos } = profile?.partner_id
-    ? await supabase.from('todos').select('*').eq('user_id', profile.partner_id).order('created_at', { ascending: false })
+    ? await supabase.from('todos').select('*').eq('user_id', profile.partner_id).is('parent_id', null).order('created_at', { ascending: false })
     : { data: [] }
 
   const { data: myEvents } = await supabase

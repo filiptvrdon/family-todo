@@ -64,6 +64,8 @@ export default function TodoColumn({ todos, ownerName, isOwner, userId, onRefres
       due_date: null,
       recurrence: null,
       scheduled_time: null,
+      parent_id: null,
+      index: '',
       completed: false,
       created_at: new Date().toISOString(),
     }

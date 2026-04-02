@@ -18,17 +18,11 @@ export interface Todo {
   due_date: string | null
   recurrence: 'daily' | 'weekly' | 'monthly' | null
   scheduled_time: string | null  // HH:MM:SS — time slot assigned via drag-and-drop
+  parent_id: string | null       // set for sub-tasks; null for top-level todos
+  index: string                  // fractional index for ordering within parent
   created_at: string
 }
 
-export interface SubTask {
-  id: string
-  todo_id: string
-  title: string
-  completed: boolean
-  index: string
-  created_at: string
-}
 
 export interface CalendarEvent {
   id: string
