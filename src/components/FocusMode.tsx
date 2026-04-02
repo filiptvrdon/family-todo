@@ -67,13 +67,12 @@ function selectTask(todos: Todo[], skipped: Set<string>): Todo | null {
 interface Props {
   myTodos: Todo[]
   partnerTodos: Todo[]
-  myName: string
   partnerName: string
   myUserId: string
   onRefresh: () => void
 }
 
-export default function FocusView({ myTodos, partnerTodos, myName, partnerName, myUserId, onRefresh }: Props) {
+export default function FocusMode({ myTodos, partnerTodos, partnerName, myUserId, onRefresh }: Props) {
   const [localTodos, setLocalTodos] = useState<Todo[]>(() => [...myTodos, ...partnerTodos])
   const [prevMyTodos, setPrevMyTodos] = useState(myTodos)
   const [prevPartnerTodos, setPrevPartnerTodos] = useState(partnerTodos)
@@ -155,7 +154,7 @@ export default function FocusView({ myTodos, partnerTodos, myName, partnerName, 
 
   if (!task) {
     return (
-      <div className="flex flex-col items-center justify-center text-center px-8 min-h-[60vh]">
+      <div className="flex flex-col items-center justify-center text-center px-8 flex-1">
         <div className="text-5xl mb-4">🎉</div>
         <p className="text-xl font-semibold mb-2 text-foreground">You&apos;re all clear</p>
         <p className="text-base text-muted-foreground">Nothing left to do right now.</p>
@@ -164,8 +163,8 @@ export default function FocusView({ myTodos, partnerTodos, myName, partnerName, 
   }
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-12 min-h-[60vh]">
-      <div className="w-full max-w-[360px] rounded-2xl p-8 flex flex-col gap-6 bg-card border border-border shadow-[0_4px_24px_rgba(0,181,200,0.12)]">
+    <div className="flex flex-col items-center justify-center px-4 py-12 flex-1 overflow-y-auto">
+      <div className="w-full max-w-[360px] rounded-2xl p-8 flex flex-col gap-6 bg-card border border-border shadow-[var(--shadow-card)]">
         {/* Owner badge */}
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium px-3 py-1 rounded-full bg-foam text-muted-foreground">
@@ -208,13 +207,13 @@ export default function FocusView({ myTodos, partnerTodos, myName, partnerName, 
           <div className="flex gap-3">
             <button
               onClick={handleSkip}
-              className="flex-1 text-sm rounded-xl transition text-muted-foreground min-h-[44px]"
+              className="flex-1 text-sm rounded-xl transition text-muted-foreground hover:bg-foam min-h-[44px]"
             >
               Skip
             </button>
             <button
               onClick={handleLater}
-              className="flex-1 text-sm rounded-xl transition text-muted-foreground min-h-[44px]"
+              className="flex-1 text-sm rounded-xl transition text-muted-foreground hover:bg-foam min-h-[44px]"
             >
               Later
             </button>

@@ -31,11 +31,10 @@ interface Props {
 interface DraggableTodoItemProps {
   todo: Todo
   isOverdue: boolean
-  today: string
   onCheck: (id: string) => void
 }
 
-function DraggableTodoItem({ todo, isOverdue, today, onCheck }: DraggableTodoItemProps) {
+function DraggableTodoItem({ todo, isOverdue, onCheck }: DraggableTodoItemProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: todo.id })
   return (
     <div
@@ -80,6 +79,7 @@ function DraggableTodoItem({ todo, isOverdue, today, onCheck }: DraggableTodoIte
         </span>
       )}
       <button
+        {...attributes}
         {...listeners}
         className="shrink-0 flex items-center text-text-disabled cursor-grab touch-none"
       >
@@ -188,7 +188,7 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
 
     run()
     return () => controller.abort()
-  }, [userName])
+  }, [userName]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -377,7 +377,6 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
                   key={todo.id}
                   todo={todo}
                   isOverdue={todo.due_date! < today}
-                  today={today}
                   onCheck={handleTodoCheck}
                 />
               ))}

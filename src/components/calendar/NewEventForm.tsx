@@ -15,7 +15,6 @@ export default function NewEventForm({ userId, defaultStart = '', onSave, onCanc
   const [title, setTitle] = useState('')
   const [start, setStart] = useState(defaultStart)
   const [end, setEnd] = useState(defaultStart)
-  const [allDay, setAllDay] = useState(false)
   const supabase = createClient()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -27,7 +26,7 @@ export default function NewEventForm({ userId, defaultStart = '', onSave, onCanc
       title,
       start_time: new Date(start).toISOString(),
       end_time: new Date(endTime).toISOString(),
-      all_day: allDay,
+      all_day: false,
     })
     onSave()
   }
