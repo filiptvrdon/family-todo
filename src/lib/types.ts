@@ -26,6 +26,7 @@ export interface SubTask {
   todo_id: string
   title: string
   completed: boolean
+  index: string
   created_at: string
 }
 
