@@ -6,7 +6,7 @@ import { X } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
-import SubTaskList from '@/components/SubTaskList'
+import TodoList from "./TodoList"
 
 type Recurrence = 'daily' | 'weekly' | 'monthly'
 
@@ -108,7 +108,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
             </div>
 
             {/* Sub-tasks */}
-            <SubTaskList todoId={todo.id} isOwner={isOwner} userId={todo.user_id} />
+            <TodoList parentId={todo.id} isOwner={isOwner} userId={todo.user_id} ownerName="" onRefresh={onRefresh} />
 
             {/* Due date */}
             <div className="flex flex-col gap-1.5">

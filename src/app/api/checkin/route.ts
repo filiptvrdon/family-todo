@@ -162,7 +162,7 @@ Ask what else is on their mind — new tasks, thoughts, plans, anything.
           tasks.map((t: { title: string; due_date: string | null; recurrence: string | null }) => ({
             user_id: user.id,
             title: t.title,
-            due_date: t.due_date ?? null,
+            due_date: t.due_date ?? today,
             recurrence: (['daily', 'weekly', 'monthly'] as const).includes(
               t.recurrence as 'daily' | 'weekly' | 'monthly',
             )

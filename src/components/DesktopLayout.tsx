@@ -5,7 +5,7 @@ import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
 import { generateKeyBetween } from 'fractional-indexing'
-import TodoColumn from '@/components/TodoColumn'
+import TodoList from '@/components/TodoList'
 import DayTimeline from '@/components/DayTimeline'
 import WeekCalendar from '@/components/calendar/WeekCalendar'
 import MonthCalendar from '@/components/calendar/MonthCalendar'
@@ -54,12 +54,30 @@ export default function DesktopLayout({
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     setDraggingTodoId(null)
+    const supabase = createClient()
+
+    // Reordering within the list
+    const oldIndex = myTodos.findIndex(t => t.id === active.id)
+    const newIndex = myTodos.findIndex(t => t.id === over.id)
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const reordered = [...myTodos]
+      const [moved] = reordered.splice(oldIndex, 1)
+      reordered.splice(newIndex, 0, moved)
+
+      const before = newIndex > 0 ? (reordered[newIndex - 1].index || null) : null
+      const after = newIndex < reordered.length - 1 ? (reordered[newIndex + 1].index || null) : null
+      const computedIndex = generateKeyBetween(before, after)
+
+      await supabase.from('todos').update({ index: computedIndex }).eq('id', active.id)
+      onRefresh()
+      return
+    }
 
     if (!over) return
 
     const todoId = active.id as string
     const isFromColumn = active.data.current?.source === 'todo-column'
-    const supabase = createClient()
 
     // Day view: hour slot
     const hourMatch = String(over.id).match(/^hour-(\d+)$/)
@@ -157,13 +175,14 @@ export default function DesktopLayout({
 
         {/* Left — Task list */}
         <div className="flex-1 bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-y-auto p-4">
-          <TodoColumn
+          <TodoList
             todos={myTodos}
             ownerName={myName}
             isOwner={true}
             userId={profile.id}
+            parentId={null}
             onRefresh={onRefresh}
-            draggable={true}
+            useInternalDndContext={false}
           />
         </div>
 

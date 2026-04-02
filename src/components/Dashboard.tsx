@@ -34,9 +34,9 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
 
   const refreshLocal = useCallback(async () => {
     const [{ data: mine }, { data: theirs }] = await Promise.all([
-      supabase.from('todos').select('*').eq('user_id', profile.id).is('parent_id', null).order('created_at', { ascending: false }),
+      supabase.from('todos').select('*').eq('user_id', profile.id).is('parent_id', null).order('index', { ascending: true }),
       partner?.id
-        ? supabase.from('todos').select('*').eq('user_id', partner.id).is('parent_id', null).order('created_at', { ascending: false })
+        ? supabase.from('todos').select('*').eq('user_id', partner.id).is('parent_id', null).order('index', { ascending: true })
         : Promise.resolve({ data: [] as Todo[] }),
     ])
     if (mine) setLocalMyTodos(mine)

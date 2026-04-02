@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
-import TodoColumn from '@/components/TodoColumn'
+import TodoList from '@/components/TodoList'
 import MonthCalendar from '@/components/calendar/MonthCalendar'
 import FocusView from '@/components/FocusView'
 import PartnerConnect from '@/components/PartnerConnect'
@@ -78,7 +78,7 @@ export default function MobileLayout({
 
         {tab === 'todos' && (
           <div className="rounded-2xl p-4 bg-card border border-border shadow-[var(--shadow-card)]">
-            <TodoColumn todos={myTodos} ownerName={myName} isOwner={true} userId={profile.id} onRefresh={onRefresh} />
+            <TodoList todos={myTodos} ownerName={myName} isOwner={true} userId={profile.id} parentId={null} onRefresh={onRefresh} />
           </div>
         )}
 
