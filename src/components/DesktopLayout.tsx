@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Profile, Todo, CalendarEvent } from '@/lib/types'
+import { generateKeyBetween } from 'fractional-indexing'
 import TodoColumn from '@/components/TodoColumn'
 import DayTimeline from '@/components/DayTimeline'
 import WeekCalendar from '@/components/calendar/WeekCalendar'
@@ -87,6 +88,34 @@ export default function DesktopLayout({
     const monthDayMatch = String(over.id).match(/^month-day-(\d{4}-\d{2}-\d{2})$/)
     if (monthDayMatch) {
       await supabase.from('todos').update({ due_date: monthDayMatch[1] }).eq('id', todoId)
+      onRefresh()
+      return
+    }
+
+    // Drop onto another todo to make it a sub-task
+    if (over.data.current?.type === 'todo-drop-target') {
+      const parentId = over.data.current.todoId
+      if (parentId === todoId) return // Cannot drop onto itself
+
+      // Get existing sub-tasks of the target to compute index
+      const { data: existingSubTasks } = await supabase
+        .from('todos')
+        .select('index')
+        .eq('parent_id', parentId)
+        .order('index', { ascending: true })
+
+      const lastIndex = existingSubTasks && existingSubTasks.length > 0
+        ? (existingSubTasks[existingSubTasks.length - 1].index || null)
+        : null
+      const newIndex = generateKeyBetween(lastIndex, null)
+
+      await supabase.from('todos').update({
+        parent_id: parentId,
+        index: newIndex,
+        due_date: null,
+        scheduled_time: null,
+      }).eq('id', todoId)
+
       onRefresh()
       return
     }

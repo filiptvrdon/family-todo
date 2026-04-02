@@ -6,7 +6,7 @@ import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { Trash2, Check, Calendar, GripVertical } from 'lucide-react'
 import { format, addDays } from 'date-fns'
-import { useDraggable } from '@dnd-kit/core'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import TodoDetailPanel from '@/components/TodoDetailPanel'
 
 const CELEBRATIONS = [
@@ -199,7 +199,8 @@ function TodoCard({
   dragHandle,
   isDragging = false,
   cardRef,
-}: TodoCardProps) {
+  isOver = false,
+}: TodoCardProps & { isOver?: boolean }) {
   const [completing, setCompleting] = useState(false)
 
   function handleToggle(e: { stopPropagation(): void }) {
@@ -224,9 +225,9 @@ function TodoCard({
       tabIndex={0}
       onClick={() => onOpen(todo)}
       onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onOpen(todo)}
-      className={`rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition bg-card border border-border shadow-[var(--shadow-card)] ${
+      className={`rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition bg-card border shadow-[var(--shadow-card)] ${
         completing ? 'completing-card' : ''
-      }`}
+      } ${isOver ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border'}`}
       style={{ opacity: isDragging ? 0.4 : todo.completed ? 0.5 : 1 }}
     >
       {dragHandle}
@@ -302,11 +303,22 @@ function DraggableTodoCard({
   onDelete: (id: string) => void
   onOpen: (t: Todo) => void
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef: setDraggableRef, isDragging } = useDraggable({
     id: todo.id,
     data: { source: 'todo-column', todo },
     disabled: todo.completed,
   })
+
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: `todo-${todo.id}`,
+    data: { type: 'todo-drop-target', todoId: todo.id },
+  })
+
+  // Combine refs
+  const setNodeRef = (node: HTMLElement | null) => {
+    setDraggableRef(node)
+    setDroppableRef(node)
+  }
 
   const dragHandle = !todo.completed ? (
     <button
@@ -329,6 +341,7 @@ function DraggableTodoCard({
       dragHandle={dragHandle}
       isDragging={isDragging}
       cardRef={setNodeRef}
+      isOver={isOver}
     />
   )
 }
