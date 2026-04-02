@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Check, GripVertical } from 'lucide-react'
+import { Plus, Trash2, Check, Pencil } from 'lucide-react'
 import { SubTask } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -30,9 +30,12 @@ interface SortableItemProps {
   isOwner: boolean
   onToggle: (subTask: SubTask) => void
   onDelete: (id: string) => void
+  onEdit: (id: string, newTitle: string) => void
 }
 
-function SortableItem({ subTask, isOwner, onToggle, onDelete }: SortableItemProps) {
+function SortableItem({ subTask, isOwner, onToggle, onDelete, onEdit }: SortableItemProps) {
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState(subTask.title)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: subTask.id,
     disabled: !isOwner,
@@ -45,17 +48,12 @@ function SortableItem({ subTask, isOwner, onToggle, onDelete }: SortableItemProp
   }
 
   return (
-    <li ref={setNodeRef} style={style} className="flex items-center gap-2 group">
-      {isOwner && (
-        <button
-          type="button"
-          className="flex-shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground opacity-0 group-hover:opacity-100 transition p-0.5"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical size={14} />
-        </button>
-      )}
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 group${isOwner ? ' cursor-grab active:cursor-grabbing' : ''}`}
+      {...(isOwner ? { ...attributes, ...listeners } : {})}
+    >
       <button
         type="button"
         onClick={() => isOwner && onToggle(subTask)}
@@ -68,24 +66,55 @@ function SortableItem({ subTask, isOwner, onToggle, onDelete }: SortableItemProp
       >
         {subTask.completed && <Check size={11} color="#fff" strokeWidth={3} />}
       </button>
-      <span
-        className="flex-1 text-sm"
-        style={{
-          color: subTask.completed ? 'var(--color-text-disabled)' : 'var(--color-text)',
-          textDecoration: subTask.completed ? 'line-through' : 'none',
-        }}
-      >
-        {subTask.title}
-      </span>
-      {isOwner && (
-        <button
-          type="button"
-          onClick={() => onDelete(subTask.id)}
-          className="opacity-0 group-hover:opacity-100 transition p-1 rounded-lg"
-          style={{ color: 'var(--color-text-disabled)' }}
+      {editing ? (
+        <input
+          autoFocus
+          value={editValue}
+          onChange={e => setEditValue(e.target.value)}
+          onBlur={() => {
+            if (editValue.trim() && editValue.trim() !== subTask.title) {
+              onEdit(subTask.id, editValue.trim())
+            } else {
+              setEditValue(subTask.title)
+            }
+            setEditing(false)
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+            if (e.key === 'Escape') { setEditValue(subTask.title); setEditing(false) }
+          }}
+          className="flex-1 text-sm rounded-lg px-2 py-0.5 focus:outline-none bg-card border-[1.5px] border-border text-foreground"
+        />
+      ) : (
+        <span
+          className="flex-1 text-sm"
+          style={{
+            color: subTask.completed ? 'var(--color-text-disabled)' : 'var(--color-text)',
+            textDecoration: subTask.completed ? 'line-through' : 'none',
+          }}
         >
-          <Trash2 size={13} />
-        </button>
+          {subTask.title}
+        </span>
+      )}
+      {isOwner && (
+        <>
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); setEditing(true) }}
+            className="opacity-0 group-hover:opacity-100 transition p-1 rounded-lg"
+            style={{ color: 'var(--color-text-disabled)' }}
+          >
+            <Pencil size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(subTask.id)}
+            className="opacity-0 group-hover:opacity-100 transition p-1 rounded-lg"
+            style={{ color: 'var(--color-text-disabled)' }}
+          >
+            <Trash2 size={13} />
+          </button>
+        </>
       )}
     </li>
   )
@@ -150,6 +179,11 @@ export default function SubTaskList({ todoId, isOwner }: Props) {
     await supabase.from('sub_tasks').update({ completed: next }).eq('id', subTask.id)
   }
 
+  async function editSubTask(id: string, newTitle: string) {
+    setSubTasks(prev => prev.map(s => s.id === id ? { ...s, title: newTitle } : s))
+    await supabase.from('sub_tasks').update({ title: newTitle }).eq('id', id)
+  }
+
   async function deleteSubTask(id: string) {
     setSubTasks(prev => prev.filter(s => s.id !== id))
     await supabase.from('sub_tasks').delete().eq('id', id)
@@ -212,6 +246,7 @@ export default function SubTaskList({ todoId, isOwner }: Props) {
                   isOwner={isOwner}
                   onToggle={toggleSubTask}
                   onDelete={deleteSubTask}
+                  onEdit={editSubTask}
                 />
               ))}
             </ul>
