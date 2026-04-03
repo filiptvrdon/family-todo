@@ -84,7 +84,6 @@ export default function TodoList({
       setLoading(true)
     }
   }
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const supabase = useMemo(() => createClient(), [])
   const dndContextId = useId()
 
@@ -113,15 +112,6 @@ export default function TodoList({
       return () => { ignore = true }
     }
   }, [todos, parentId, supabase])
-
-  function toggleExpand(id: string) {
-    setExpandedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
 
   function openDetail(todo: Todo) {
     setSelectedTodo(todo)
@@ -260,34 +250,18 @@ export default function TodoList({
         
         <SortableContext items={displayTodos.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {displayTodos.map(todo => (
-            <div key={todo.id} className="flex flex-col">
-              <TodoCard
-                todo={todo}
-                isOwner={isOwner}
-                onToggle={toggleTodo}
-                onDelete={deleteTodo}
-                onOpen={openDetail}
-                onEdit={editTodo}
-                isSortable={isOwner}
-                isDraggable={isOwner}
-                isDroppable={isOwner}
-                isExpanded={expandedIds.has(todo.id)}
-                onToggleExpand={() => toggleExpand(todo.id)}
-              />
-              {expandedIds.has(todo.id) && (
-                <div className="ml-8 mt-1 border-l border-border/40 pl-2">
-                  <TodoList
-                    userId={userId}
-                    ownerName={ownerName}
-                    isOwner={isOwner}
-                    parentId={todo.id}
-                    onRefresh={onRefresh}
-                    useInternalDndContext={false}
-                    hideProgress={true}
-                  />
-                </div>
-              )}
-            </div>
+            <TodoCard
+              key={todo.id}
+              todo={todo}
+              isOwner={isOwner}
+              onToggle={toggleTodo}
+              onDelete={deleteTodo}
+              onOpen={openDetail}
+              onEdit={editTodo}
+              isSortable={isOwner}
+              isDraggable={isOwner}
+              isDroppable={isOwner}
+            />
           ))}
         </SortableContext>
       </div>
