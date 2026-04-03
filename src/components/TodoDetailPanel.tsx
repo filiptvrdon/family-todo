@@ -108,7 +108,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
             </div>
 
             {/* Sub-tasks */}
-            <TodoList parentId={todo.id} isOwner={isOwner} userId={todo.user_id} ownerName="" onRefresh={onRefresh} />
+            <TodoList parentId={todo.id} isOwner={isOwner} userId={todo.user_id} onRefresh={onRefresh} />
 
             {/* Due date */}
             <div className="flex flex-col gap-1.5">

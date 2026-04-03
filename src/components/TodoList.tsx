@@ -41,7 +41,6 @@ function nextDueDate(recurrence: Recurrence): string {
 
 interface Props {
   userId: string
-  ownerName: string
   isOwner: boolean
   parentId: string | null
   todos?: Todo[]
@@ -55,10 +54,9 @@ function DndMonitor({ onDragEnd }: { onDragEnd: (event: DragEndEvent) => void })
   return null
 }
 
-export default function TodoList({ 
-  userId, 
-  ownerName, 
-  isOwner, 
+export default function TodoList({
+  userId,
+  isOwner,
   parentId, 
   todos, 
   onRefresh,

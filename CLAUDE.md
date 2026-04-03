@@ -17,6 +17,7 @@ Core design constraints — both are first-class requirements, not afterthoughts
 ## Working Style
 
 - **Commit after each completed task.** When given a list of tasks, create a git commit as soon as each one is done — before moving to the next.
+- **Verify build and lint before committing.** Always run `npm run build && npm run lint` before creating a commit. Fix all errors and warnings before proceeding.
 
 ## Before Building Anything
 

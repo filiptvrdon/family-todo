@@ -23,7 +23,6 @@ export default function TaskBoard({
   const [showConnect, setShowConnect] = useState(false)
 
   const activeTodos = view === 'me' ? myTodos : partnerTodos
-  const activeName = view === 'me' ? myName : partnerName
   const isOwner = view === 'me'
   const activeUserId = view === 'me' ? profile.id : (partner?.id || '')
 
@@ -100,7 +99,6 @@ export default function TaskBoard({
 
         <TodoList
           todos={activeTodos}
-          ownerName={activeName}
           isOwner={isOwner}
           userId={activeUserId}
           parentId={null}
