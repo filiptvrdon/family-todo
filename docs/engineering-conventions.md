@@ -1,98 +1,55 @@
 # Engineering Conventions
 
-This document defines code quality standards, component architecture rules, and practices for this project. When writing or reviewing code, treat these as requirements, not suggestions.
+Treat these as requirements, not suggestions.
 
 ---
 
 ## Component Architecture
 
-### The layered abstraction rule
-
-Components exist in a hierarchy. **Raw JSX belongs only at the lowest layer.** As abstraction level increases, components should be composed exclusively from lower-level components — not from raw HTML tags.
+Four layers — **raw JSX belongs only at Layer 0**:
 
 ```
-Layer 0 — Primitives (Button, Input, Badge, Icon, Card, ...)
-  → May contain raw JSX
-  → Generic, configurable, no domain knowledge
+Layer 0 — Primitives (Button, Input, Badge, Card, IconButton, ...)
+  → May contain raw JSX. Generic, no domain knowledge.
 
 Layer 1 — Domain atoms (TodoCard, PriorityBadge, DueDateLabel, ...)
-  → Built from Layer 0 primitives
-  → Ideally no raw JSX; if unavoidable, minimal and justified
+  → Built from Layer 0. No raw JSX.
 
 Layer 2 — Feature components (TodoColumn, AddTaskForm, ...)
-  → Built from Layer 1 components
-  → No raw JSX — only composition
+  → Built from Layer 1. No raw JSX.
 
 Layer 3 — Page / layout components
-  → Orchestration only; no styling logic
+  → Orchestration only. No styling logic.
 ```
 
-**Concrete example of what to avoid** — in `TodoColumn.tsx`:
-```tsx
-// Bad — raw JSX repeated inline, no reuse
-<button onClick={() => onDelete(todo.id)} className="text-gray-300 hover:text-red-400 transition flex-shrink-0 mt-0.5">
-  <Trash2 size={14} />
-</button>
-
-// Good — use a generic IconButton primitive
-<IconButton icon={Trash2} onClick={() => onDelete(todo.id)} variant="danger" />
-```
-
-### One component per file
-
-Do not co-locate multiple exported or non-trivial components in a single file. `TodoCard` living inside `TodoColumn.tsx` makes both harder to find, test, and reuse. Each component gets its own file.
-
-Exception: tiny, tightly-coupled sub-components that are never used elsewhere may live in the same file but must be defined above the parent and clearly named (e.g. `function ColumnHeader`).
+**One component per file.** Exception: tiny tightly-coupled sub-components never used elsewhere may live in the same file, defined above the parent.
 
 ---
 
-## Generic / Configurable Primitives
+## Primitives
 
-Primitives should be **configurable through props**, not duplicated. Instead of writing a new `<button>` every time, use a `Button` component that accepts:
-
+Primitives are **configurable through props**, not duplicated. Standard props for interactive primitives:
 - `variant` — e.g. `primary | ghost | danger | subtle`
 - `size` — e.g. `sm | md | lg`
-- `icon` — optional leading/trailing icon component
-- `href` — renders as an `<a>` or Next.js `<Link>` when provided
-- `loading` — shows a spinner and disables interaction
-- `onClick` — standard handler
+- `icon`, `loading`, `onClick`, `href`
 
-```tsx
-// Bad — raw inline button
-<button type="submit" className="text-xs bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded-lg transition">
-  Save
-</button>
-
-// Good — configurable primitive
-<Button type="submit" size="sm" variant="primary">Save</Button>
-```
-
-The same principle applies to: `Input`, `Select`, `Badge`, `IconButton`, `Card`, `Label`, `DatePicker`, `EmptyState`, etc.
+Applies to: `Button`, `Input`, `Select`, `Badge`, `IconButton`, `Card`, `Label`, `DatePicker`, `EmptyState`, etc.
 
 ---
 
 ## Tailwind & Styling
 
 - **No raw Tailwind class strings in feature/page components.** Style decisions belong in primitives.
-- Use `cva` (class-variance-authority) or a similar utility for variant-based styling within primitives — not ternary chains inside `className`.
-- Design token values (colors, spacing, radii) must come from the CSS variables defined in `globals.css`, not hardcoded hex or Tailwind color names. See `docs/design-visual-guidelines.md`.
-
-```tsx
-// Bad
-className={`bg-white border rounded-xl px-3 py-2.5 flex items-start gap-2.5 shadow-sm transition ${completing ? 'completing-card' : ''}`}
-
-// Good — encapsulated in a Card primitive, variant drives the rest
-<Card variant={completing ? 'completing' : 'default'}>
-```
+- Use `cva` for variant-based styling within primitives — not ternary chains in `className`.
+- Design token values (colors, spacing, radii) must come from CSS variables in `globals.css` — not hardcoded hex or Tailwind color names.
 
 ---
 
 ## TypeScript
 
-- All component props must have an explicit interface or type (no inline `{ foo: string }` in function signatures for anything beyond trivial cases).
-- Prefer named interfaces over inline types for props — they show up in IDE hints.
+- All component props must have an explicit named interface (not inline `{ foo: string }` in the signature).
 - No `any`. Use `unknown` and narrow, or model the type properly.
-- Avoid type assertions (`as Foo`) except at system boundaries (e.g. parsing external API responses).
+- No type assertions (`as Foo`) except at system boundaries (parsing external API responses).
 
 ---
 
@@ -101,117 +58,69 @@ className={`bg-white border rounded-xl px-3 py-2.5 flex items-start gap-2.5 shad
 ```
 src/
   components/
-    ui/               ← Layer 0 primitives (Button, Input, Badge, Card, ...)
-    [feature]/        ← Layer 1+ domain components grouped by feature
-  app/                ← Next.js pages and layouts (Layer 3)
-  lib/                ← Utilities, Supabase client, types
+    ui/           ← Layer 0 primitives (no imports from lib/)
+    [feature]/    ← Layer 1+ domain components grouped by feature
+  app/            ← Next.js pages and layouts (Layer 3)
+  lib/            ← Utilities, Supabase client, types
 ```
-
-Primitives live in `components/ui/`. They must have no imports from `lib/` (no Supabase, no domain types).
 
 ---
 
 ## Layout Width System
 
-Three canonical widths are defined as CSS variables in `globals.css` and must be used consistently:
+Three canonical widths defined as CSS variables in `globals.css`:
 
 | Variable | Value | Used for |
 |----------|-------|----------|
-| `--width-content` | `1024px` | Page content max-width — wrap all page `<main>` and `<header>` content |
-| `--width-panel` | `50%` | Modals, drawers, bottom sheets, side panels |
-| `--width-form` | `400px` | Standalone auth/settings forms |
+| `--width-content` | `1024px` | Page content — use `.layout-container` class |
+| `--width-panel` | `50%` | Modals, drawers, bottom sheets |
+| `--width-form` | `400px` | Auth/settings forms — use `.form-page` + `.form-card` |
 
-### Rules
-
-- **Page containers** use the `.layout-container` utility class (centered, horizontally padded, `max-width: --width-content`). Never manually repeat `max-w-5xl mx-auto px-4`.
-- **Auth/settings pages** use `.form-page` + `.form-card` (centered card, `max-width: --width-form`).
-- **Bottom sheets / drawers** use the `.detail-panel-popup` class — full-width bottom sheet on mobile, `--width-panel` centered (vertically + horizontally) on `≥768px`.
-- **Hard rule:** panels and modals must never be full viewport width on desktop. Use `--width-panel` with `left: calc(50% - var(--width-panel) / 2)`.
+- **Never** manually repeat `max-w-5xl mx-auto px-4` — use `.layout-container`.
+- **Bottom sheets** use `.detail-panel-popup` — full-width on mobile, `--width-panel` centered on `≥768px`.
+- Panels and modals must **never** be full viewport width on desktop.
 
 ---
 
 ## Mobile-First PWA
 
-This app is built as a **Progressive Web App (PWA)**, designed primarily for mobile use. Treat desktop as an enhancement, not the baseline.
+Design every screen for **390px viewport first**, then scale up.
 
-### Layout & interaction
-
-- Design every screen for a 390px viewport first (iPhone 14 baseline), then scale up
-- Use `min-h-[44px]` / `min-w-[44px]` touch targets on all interactive elements (already in `globals.css` for `.btn-*`)
-- No hover-only affordances — any interactive hint that relies on `:hover` must have a visible equivalent on touch
-- Avoid fixed pixel widths; use `w-full`, `max-w-*`, and fluid grids
-- Bottom navigation / actions within thumb reach — primary actions should not live at the top of the screen on mobile
-
-### PWA requirements
-
-- `manifest.json` must define: `name`, `short_name`, `start_url`, `display: standalone`, `background_color`, `theme_color` (use `--color-primary: #00B5C8`), and icons at 192px + 512px
-- Service worker for offline support — at minimum, cache the app shell so it loads without a network connection
-- `<meta name="viewport" content="width=device-width, initial-scale=1">` must be present in layout (verify in `app/layout.tsx`)
-- Add to home screen prompt should be handled gracefully — don't suppress the browser default
-
-### Performance expectations
-
-- Target Lighthouse PWA score ≥ 90
-- First Contentful Paint < 2s on a mid-tier mobile device
-- No layout shift during auth/data load — use skeleton states, not spinners that shift content
+- `min-h-[44px]` / `min-w-[44px]` touch targets on all interactive elements
+- No hover-only affordances — every `:hover` hint needs a visible touch equivalent
+- Bottom navigation / primary actions within thumb reach
+- No fixed pixel widths — use `w-full`, `max-w-*`, fluid grids
+- `manifest.json`: `display: standalone`, `theme_color: #00B5C8`, icons at 192px + 512px
+- Service worker for offline app shell
+- Target: Lighthouse PWA ≥ 90, FCP < 2s, no layout shift during load (use skeletons, not spinners)
 
 ---
 
 ## Local State + Background Sync Pattern
 
-Use this pattern whenever a user action creates or mutates server data and the UI must reflect it **immediately** — without waiting for `router.refresh()` to complete a full server re-render.
-
-### The problem
-
-`router.refresh()` triggers a server-side re-fetch and re-render, but the new props only arrive after a round-trip. If a background process (e.g. the daily check-in creating tasks via an API route) has just written to the DB, the user will see stale data for a noticeable moment.
-
-### The pattern
+Use whenever a mutation must reflect **immediately** in the UI without waiting for `router.refresh()`.
 
 ```tsx
-// 1. Mirror server-provided props into local state
-const [localMyTodos, setLocalMyTodos] = useState<Todo[]>(myTodos)
+// 1. Mirror server props into local state
+const [localTodos, setLocalTodos] = useState<Todo[]>(todos)
 
-// 2. Keep local state in sync when server re-renders push new props
-useEffect(() => { setLocalMyTodos(myTodos) }, [myTodos])
+// 2. Keep in sync when server re-renders push new props
+useEffect(() => { setLocalTodos(todos) }, [todos])
 
-// 3. Client-side fetch — hits Supabase directly, updates local state instantly
+// 3. Client-side fetch — hits Supabase directly, instant update
 const refreshLocal = useCallback(async () => {
-  const { data } = await supabase
-    .from('todos')
-    .select('*')
-    .eq('user_id', profile.id)
-    .order('created_at', { ascending: false })
-  if (data) setLocalMyTodos(data)
+  const { data } = await supabase.from('todos').select('*')
+    .eq('user_id', profile.id).order('created_at', { ascending: false })
+  if (data) setLocalTodos(data)
 }, [supabase, profile.id])
 
-// 4. On mutation completion: refresh local immediately, server in background
+// 4. On mutation: refresh local instantly, server in background
 onDone={() => {
-  refreshLocal()   // instant — Supabase client, updates UI now
-  router.refresh() // background — re-renders server component for full consistency
+  refreshLocal()    // instant
+  router.refresh()  // background — full consistency
 }}
 ```
 
-### When to use it
+**When to use:** any operation that writes to DB outside the normal optimistic-update flow (AI check-in creating tasks, bulk imports), or wherever `router.refresh()` alone causes a visible stale-data flash.
 
-- After any operation that writes to the DB outside the normal optimistic-update flow (e.g. AI check-in creating tasks, bulk imports)
-- Wherever `router.refresh()` alone causes a visible stale-data flash
-
-### Pass local state down, not raw props
-
-Once you hold local state, pass it to child components instead of the original props. Children that do their own optimistic updates (e.g. `TodoColumn`, `FocusView`) already handle their own local state — they just need an accurate starting point from the parent.
-
-### Rule
-
-Every component that is the authoritative owner of a resource list should follow this pattern. Do not rely on `router.refresh()` alone for UI immediacy.
-
----
-
-## Component Checklist
-
-Before committing a component, verify:
-
-- [ ] Does it use raw JSX where a primitive already exists or should exist?
-- [ ] Are there any co-located components that belong in their own file?
-- [ ] Are Tailwind classes leaking into a layer where they don't belong?
-- [ ] Are props typed with a named interface?
-- [ ] Is the component doing more than one thing? (If yes — split it)
+Pass local state down to children, not the original props.

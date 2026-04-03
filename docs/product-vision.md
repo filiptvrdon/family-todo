@@ -1,88 +1,81 @@
 # Product Vision
 
-## The core idea
+## Core Idea
 
-This is not a todo app. It is a **gentle AI companion that helps two people live their lives with less friction and more joy** — and tasks happen to be how it does that.
+Not a todo app — a **gentle AI companion that helps two people live with less friction and more joy**. Tasks are the mechanism; wellbeing is the goal.
 
-That framing changes everything: the language, the UI, the interactions, the notifications. It is not about productivity — it is about wellbeing.
+- Tasks are **intentions**, not demands — frame is *"what would make tomorrow-you grateful?"*, never *"what are you behind on?"*
+- The AI has a real opinion: notices patterns, checks in contextually, answers *"what should I do right now?"* with genuine reasoning
 
 ---
 
-## What makes it different
+## Data Model
 
-### Shift the mental model
+Items evolve — they don't start as a type, they become one.
 
-Most todo apps are lists of obligations. This app is not.
+**One-off (default)** — name only, no date, no category. Created in 1 tap. Completion removes it.
 
-- Tasks are **intentions**, not demands
-- The framing is *"what would make tomorrow-you grateful?"* — not *"what are you behind on?"*
-- Language and UI treat the user as capable and worthy of care, not as someone who needs to be managed
+**Scheduled** — a one-off with a time slot. Missed items surface without guilt; easy to reschedule in one tap.
 
-### The AI is a real companion, not a parser
+**Recurring** — resets on a rhythm. Becomes recurring after creation, never forced at entry. Missed items roll over quietly — skipping is first-class, no penalty.
 
-The AI does more than extract task fields from natural language. It:
+**Ownership** — every item belongs to someone. Defaults to creator. Both partners see each other's items; either can complete shared tasks. Dashboard always shows both side by side.
 
-- Notices patterns: *"You tend to push dentist appointments — want help making this one stick?"*
-- Checks in contextually: *"You had a big day yesterday. Want a lighter list today?"*
-- Celebrates in a personal, non-generic way
-- Answers *"what should I do right now?"* with genuine reasoning — factoring in energy level, available time, mood, and history — not just sorting by priority
+**Creation fast path:** name only → tap + → enter. Done. Date, recurrence, notes are optional, added later.
 
-This is the biggest differentiator and should be treated as a core feature, not a nice-to-have.
+---
+
+## Key Differentiators
 
 ### Replace the list view
-
-The default experience is not a list.
-
-- **Today card** — one focus task, front and center. Everything else is hidden unless explicitly requested
-- **Mood-based / energy-based surfacing** — *"I have 10 minutes and low energy"* → app picks the right task
-- **Conversational interface** — users interact through chat, not forms and checkboxes
-- Lists are available but opt-in, not the primary surface
-
-### Reframe what "done" means
-
-Completing a task is not just a checkbox state change — it becomes part of a story.
-
-- A journal-like log surfaces naturally: *"This week: you cleared 6 things, including that dentist call you'd been avoiding"*
-- Progress is shown as a narrative, not just a count or a percentage bar
-- Completion feels like a moment, not an update
-
-### Lean into being a team of two
-
-The 2-person aspect is a genuine product feature, not a constraint.
-
-- Shared tasks feel qualitatively different from solo ones
-- Gentle mutual awareness: *"Your partner also completed something today"*
-- Celebrate each other's wins — quietly, warmly, without competition
-- No leaderboards, no pressure — just quiet mutual support
+The default experience is not a list:
+- **Today card** — one focus task, front and center. Everything else hidden unless requested.
+- **Energy/mood surfacing** — *"I have 10 minutes and low energy"* → app picks the right task
+- **Conversational** — chat, not forms and checkboxes
 
 ### "Just tell me what to do" mode
+For decision paralysis (the hardest ADHD symptom to design around):
+- Inputs: available time + energy level
+- Returns ONE task. No list, no alternatives, no chrome.
+- Celebrates when done, then: *"Want to do one more?"*
 
-Decision paralysis is one of the hardest ADHD symptoms to design around. This mode hands over control completely:
+### Reframe "done"
+Completion is a moment, not a state change:
+- Journal-like narrative: *"This week you cleared 6 things, including that dentist call you'd been avoiding"*
+- Progress shown as a story, not a count or percentage bar
 
-- User says: *"I have 20 minutes and low energy — what should I do?"*
-- App picks ONE task, surfaces it with a gentle nudge
-- No list visible, no distractions, no choices
-- Celebrates when done, then asks: *"Want to do one more?"*
+### Team of two
+The 2-person dynamic is a product feature, not a constraint:
+- Gentle mutual awareness, never competitive
+- **End-of-day recap shows only wins** — what you two got done; nothing about what's left
+- Partner attribution: *"[Name] just finished paying the rent"* — shoulder tap, never leaderboard
+- Joint wins surfaced and celebrated warmly
+
+### AI as real companion
+Not a parser — a thoughtful presence:
+- Notices avoidance: *"You tend to push dentist appointments — want help making this one stick?"*
+- Checks in contextually: *"You had a big day yesterday. Want a lighter list today?"*
+- **Body doubling mode**: full-screen focus with AI side-channel chat; timer hidden during session, reveals at end (*"That took 11 minutes"*) — dopamine hit from the reveal
+- Micro-first-step for any procrastinated task: *"What's the very first physical action?"*
 
 ---
 
-## What to avoid
+## What to Avoid
 
-- **The todo app trap** — long lists, overdue counts, productivity metrics
-- **Generic AI** — confetti and "Great job!" are not companion behavior; personalization matters
-- **Competitive dynamics** — between partners or against past performance
-- **Obligation framing** — the app should never make the user feel behind or guilty
+- Long lists, overdue counts, productivity metrics
+- Generic AI responses ("Great job!") — personalization matters
+- Competitive dynamics between partners or vs. past performance
+- Obligation framing — never make the user feel behind or guilty
+- Red for overdue states (use warm, non-alarming colors)
+- Dark mode auto-switch (ADHD users benefit from visual predictability)
+- Blinking, pulsing, or autoplaying elements
 
 ---
 
-## AI integration notes
+## AI Integration
 
-The Claude API is the intended backend for all AI features. Key capabilities to build around:
-
-- Natural language task capture with intent extraction
-- Context-aware "what next?" recommendations
-- Pattern recognition over time (what gets avoided, what gets done well)
-- Personalized, warm, non-generic response generation
-- Conversational task management (add, reschedule, break down — all through chat)
-
-See also: [ADHD/Neurodivergent Design Principles](./design-adhd-principles.md) — many of the AI behaviors above directly serve those goals.
+Claude API is the intended backend. Key capabilities:
+- Natural language task capture — extract task, date, recurrence, priority, energy level quietly; show confirmation card, not a form
+- Context-aware "what next?" reasoning — energy, time available, avoidance patterns, partner activity
+- Warm, personalized (never generic) response generation
+- Conversational task management — add, reschedule, break down through chat
