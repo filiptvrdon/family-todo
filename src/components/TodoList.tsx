@@ -95,7 +95,7 @@ export default function TodoList({
           .from('todos')
           .select('*, subtasks_count:todos(count)')
           .eq('parent_id', parentId)
-          .order('index', { ascending: true })
+          .order('index', { ascending: true, nullsFirst: false })
         
         if (ignore) return
 
@@ -224,7 +224,6 @@ export default function TodoList({
       setLocalTodos(reordered.map((t, i) => i === newIndex ? { ...t, index: computedIndex } : t))
 
       await supabase.from('todos').update({ index: computedIndex }).eq('id', active.id)
-      onRefresh()
     }
   }
 
@@ -289,7 +288,7 @@ export default function TodoList({
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder={parentId ? "Add a sub-task…" : "Add a task…"}
-            className="text-sm rounded-xl px-3 py-2.5 w-full focus:outline-none border border-border bg-background text-foreground min-h-[44px] placeholder:text-text-disabled"
+            className="text-sm rounded-xl px-3 py-2.5 w-full focus:outline-none border-[1.5px] border-border bg-card text-foreground min-h-[44px] placeholder:text-text-disabled"
           />
         </form>
       )}

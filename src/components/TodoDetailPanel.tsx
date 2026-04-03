@@ -59,6 +59,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
           data-open={open || undefined}
         />
         <Drawer.Popup className="detail-panel-popup">
+          <div className="overflow-y-auto h-full">
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-1">
             <div className="w-9 h-1 rounded-full bg-text-disabled" />
@@ -66,71 +67,62 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
 
           <div className="px-5 pb-8 pt-2 flex flex-col gap-5">
             {/* Header */}
-            <div className="flex items-center justify-between">
-              <Drawer.Title className="text-base font-semibold text-foreground">
-                {isOwner ? 'Edit task' : 'Task detail'}
+            <div className="flex items-center justify-between gap-3">
+              <Drawer.Title className="text-base font-semibold text-foreground truncate">
+                {todo.title}
               </Drawer.Title>
-              <Drawer.Close className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam">
+              <Drawer.Close className="flex-shrink-0 flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam">
                 <X size={16} />
               </Drawer.Close>
             </div>
 
             {/* Title */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Title</label>
-              {isOwner ? (
-                <input
-                  value={editTitle}
-                  onChange={e => setEditTitle(e.target.value)}
-                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none bg-card border-[1.5px] border-border text-foreground min-h-[44px]"
-                />
-              ) : (
-                <p className="text-sm text-foreground">{todo.title}</p>
-              )}
-            </div>
+            {isOwner ? (
+              <input
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                placeholder="Task title"
+                className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none bg-card border-[1.5px] border-border text-foreground min-h-[44px]"
+              />
+            ) : (
+              <p className="text-sm text-foreground">{todo.title}</p>
+            )}
 
             {/* Description */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notes</label>
-              {isOwner ? (
-                <textarea
-                  value={editDescription}
-                  onChange={e => setEditDescription(e.target.value)}
-                  placeholder="Add any notes…"
-                  rows={3}
-                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none resize-none bg-card border-[1.5px] border-border text-foreground"
-                />
-              ) : (
-                <p className="text-sm" style={{ color: todo.description ? 'var(--color-text)' : 'var(--color-text-disabled)' }}>
-                  {todo.description || 'No notes'}
-                </p>
-              )}
-            </div>
+            {isOwner ? (
+              <textarea
+                value={editDescription}
+                onChange={e => setEditDescription(e.target.value)}
+                placeholder="Add any notes…"
+                rows={3}
+                className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none resize-none bg-card border-[1.5px] border-border text-foreground"
+              />
+            ) : (
+              <p className="text-sm" style={{ color: todo.description ? 'var(--color-text)' : 'var(--color-text-disabled)' }}>
+                {todo.description || 'No notes'}
+              </p>
+            )}
 
             {/* Sub-tasks */}
             <TodoList parentId={todo.id} isOwner={isOwner} userId={todo.user_id} onRefresh={onRefresh} />
 
             {/* Due date */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Due date</label>
-              {isOwner ? (
-                <input
-                  type="date"
-                  value={editDueDate}
-                  onChange={e => setEditDueDate(e.target.value)}
-                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none bg-card border-[1.5px] border-border min-h-[44px]"
-                  style={{ color: editDueDate ? 'var(--color-text)' : 'var(--color-text-disabled)' }}
-                />
-              ) : (
-                <p className="text-sm" style={{ color: todo.due_date ? 'var(--color-text)' : 'var(--color-text-disabled)' }}>
-                  {todo.due_date ? format(new Date(todo.due_date + 'T00:00:00'), 'MMMM d, yyyy') : 'No due date'}
-                </p>
-              )}
-            </div>
+            {isOwner ? (
+              <input
+                type="date"
+                value={editDueDate}
+                onChange={e => setEditDueDate(e.target.value)}
+                className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none bg-card border-[1.5px] border-border min-h-[44px]"
+                style={{ color: editDueDate ? 'var(--color-text)' : 'var(--color-text-disabled)' }}
+              />
+            ) : (
+              <p className="text-sm" style={{ color: todo.due_date ? 'var(--color-text)' : 'var(--color-text-disabled)' }}>
+                {todo.due_date ? format(new Date(todo.due_date + 'T00:00:00'), 'MMMM d, yyyy') : 'No due date'}
+              </p>
+            )}
 
             {/* Recurrence */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Repeat</label>
               {isOwner ? (
                 <div className="flex gap-2 flex-wrap">
                   {(['', 'daily', 'weekly', 'monthly'] as const).map(val => (
@@ -175,6 +167,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
                 </button>
               </div>
             )}
+          </div>
           </div>
         </Drawer.Popup>
       </Drawer.Portal>

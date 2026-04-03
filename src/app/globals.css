@@ -256,7 +256,7 @@
   left: 1rem;
   right: 1rem;
   height: calc(100vh - 2rem);
-  overflow-y: auto;
+  overflow: hidden;
   z-index: 50;
   background: var(--background);
   border-radius: 20px;
