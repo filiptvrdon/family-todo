@@ -25,6 +25,18 @@ export interface Todo {
 }
 
 
+export interface Quest {
+  id: string
+  user_id: string
+  name: string
+  icon: string
+  description: string | null
+  status: 'active' | 'completed'
+  pinned: boolean
+  completed_at: string | null
+  created_at: string
+}
+
 export interface CalendarEvent {
   id: string
   user_id: string

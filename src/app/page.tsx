@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
 import { refreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar'
-import { CalendarEvent } from '@/lib/types'
+import { CalendarEvent, Quest } from '@/lib/types'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -66,6 +66,15 @@ export default async function Home() {
     ? await supabase.from('calendar_events').select('*').eq('user_id', profile.partner_id)
     : { data: [] }
 
+  const { data: pinnedQuests } = await supabase
+    .from('quests')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .eq('pinned', true)
+    .order('created_at', { ascending: true })
+    .limit(3)
+
   // Fetch Google Calendar events if the user has connected their account
   let googleEvents: CalendarEvent[] = []
   const googleRefreshToken = profile.google_refresh_token
@@ -88,6 +97,7 @@ export default async function Home() {
       partnerTodos={partnerTodos ?? []}
       allEvents={[...(myEvents ?? []), ...(partnerEvents ?? []), ...googleEvents]}
       googleConnected={!!googleRefreshToken}
+      pinnedQuests={(pinnedQuests ?? []) as Quest[]}
     />
   )
 }

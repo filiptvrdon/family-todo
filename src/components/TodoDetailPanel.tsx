@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { X } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
-import { Todo } from '@/lib/types'
+import { Todo, Quest } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import TodoList from "./TodoList"
 
@@ -23,16 +23,55 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
   const [editDescription, setEditDescription] = useState(todo.description ?? '')
   const [editDueDate, setEditDueDate] = useState(todo.due_date ?? '')
   const [editRecurrence, setEditRecurrence] = useState<Recurrence | ''>(todo.recurrence ?? '')
+  const [activeQuests, setActiveQuests] = useState<Quest[]>([])
+  const [linkedQuestIds, setLinkedQuestIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
+
+  useEffect(() => {
+    if (!open || !isOwner) return
+    let ignore = false
+
+    async function loadQuests() {
+      const [{ data: quests }, { data: links }] = await Promise.all([
+        supabase.from('quests').select('*').eq('user_id', todo.user_id).eq('status', 'active').order('created_at', { ascending: false }),
+        supabase.from('quest_tasks').select('quest_id').eq('task_id', todo.id),
+      ])
+      if (ignore) return
+      setActiveQuests(quests ?? [])
+      setLinkedQuestIds(new Set((links ?? []).map((l: { quest_id: string }) => l.quest_id)))
+    }
+
+    loadQuests()
+    return () => { ignore = true }
+  }, [open, isOwner, todo.id, todo.user_id, supabase])
+
+  function toggleQuestLink(questId: string) {
+    setLinkedQuestIds(prev => {
+      const next = new Set(prev)
+      if (next.has(questId)) next.delete(questId)
+      else next.add(questId)
+      return next
+    })
+  }
 
   async function handleSave() {
     if (!editTitle.trim()) return
+
     await supabase.from('todos').update({
       title: editTitle.trim(),
       description: editDescription.trim() || null,
       due_date: editDueDate || null,
       recurrence: (editRecurrence as Recurrence) || null,
     }).eq('id', todo.id)
+
+    // Sync quest links: delete all existing, re-insert current selection
+    await supabase.from('quest_tasks').delete().eq('task_id', todo.id)
+    if (linkedQuestIds.size > 0) {
+      await supabase.from('quest_tasks').insert(
+        [...linkedQuestIds].map(quest_id => ({ quest_id, task_id: todo.id }))
+      )
+    }
+
     onRefresh()
     onClose()
   }
@@ -147,6 +186,34 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
                 </p>
               )}
             </div>
+
+            {/* Quest links */}
+            {isOwner && activeQuests.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quests</p>
+                <div className="flex flex-wrap gap-2">
+                  {activeQuests.map(quest => {
+                    const linked = linkedQuestIds.has(quest.id)
+                    return (
+                      <button
+                        key={quest.id}
+                        type="button"
+                        onClick={() => toggleQuestLink(quest.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition min-h-[36px]"
+                        style={{
+                          background: linked ? 'var(--color-primary)' : 'var(--color-foam)',
+                          color: linked ? '#fff' : 'var(--color-text-secondary)',
+                          border: linked ? '1.5px solid var(--color-primary)' : '1.5px solid var(--color-border)',
+                        }}
+                      >
+                        <span>{quest.icon}</span>
+                        <span>{quest.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             {isOwner && (

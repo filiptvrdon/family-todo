@@ -3,11 +3,12 @@
 import { useState, useCallback, useEffect, useId } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, Todo, CalendarEvent } from '@/lib/types'
+import { Profile, Todo, CalendarEvent, Quest } from '@/lib/types'
 import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import ProfileModal from '@/components/ProfileModal'
+import QuestPanel from '@/components/QuestPanel'
 import ResponsiveDashboard from '@/components/ResponsiveDashboard'
-import { Heart, UserCircle, Moon, Sun } from 'lucide-react'
+import { Heart, UserCircle, Moon, Sun, Swords } from 'lucide-react'
 import { useTheme } from '@/lib/hooks/useTheme'
 import {
   DndContext,
@@ -28,9 +29,10 @@ interface Props {
   partnerTodos: Todo[]
   allEvents: CalendarEvent[]
   googleConnected: boolean
+  pinnedQuests: Quest[]
 }
 
-export default function Dashboard({ profile, partner, myTodos, partnerTodos, allEvents, googleConnected }: Props) {
+export default function Dashboard({ profile, partner, myTodos, partnerTodos, allEvents, googleConnected, pinnedQuests }: Props) {
   const [localMyTodos, setLocalMyTodos] = useState<Todo[]>(myTodos)
   const [localPartnerTodos, setLocalPartnerTodos] = useState<Todo[]>(partnerTodos)
   const [prevMyTodos, setPrevMyTodos] = useState(myTodos)
@@ -56,6 +58,9 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
     return false
   })
   const [showProfile, setShowProfile] = useState(false)
+  const [showQuests, setShowQuests] = useState(false)
+  const [questPanelInitialId, setQuestPanelInitialId] = useState<string | null>(null)
+  const [localPinnedQuests, setLocalPinnedQuests] = useState<Quest[]>(pinnedQuests)
   const { isDark, toggle: toggleTheme } = useTheme()
   const router = useRouter()
   const supabase = createClient()
@@ -87,6 +92,18 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
     refreshLocal()
     refresh()
   }, [refreshLocal, refresh])
+
+  const refreshPinnedQuests = useCallback(async () => {
+    const { data } = await supabase
+      .from('quests')
+      .select('*')
+      .eq('user_id', profile.id)
+      .eq('status', 'active')
+      .eq('pinned', true)
+      .order('created_at', { ascending: true })
+      .limit(3)
+    setLocalPinnedQuests(data ?? [])
+  }, [supabase, profile.id])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     if (event.active.data.current?.source === 'todo-column') {
@@ -207,13 +224,36 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
       <div className="flex flex-col h-[100dvh] overflow-hidden bg-background">
         {/* ── Header ── */}
         <header className="shrink-0 bg-card border-b border-border shadow-[var(--shadow-card)]">
-          <div className="layout-container py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="layout-container py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 shrink-0">
               <Heart size={20} fill="currentColor" className="text-completion" />
               <span className="font-semibold text-foreground">Family Todo</span>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Pinned quests */}
+            <div className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
+              {localPinnedQuests.map(quest => (
+                <button
+                  key={quest.id}
+                  onClick={() => { setQuestPanelInitialId(quest.id); setShowQuests(true) }}
+                  title={quest.name}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition shrink-0"
+                  style={{ background: 'var(--color-foam)', color: 'var(--color-primary-dark)' }}
+                >
+                  <span>{quest.icon}</span>
+                  <span className="max-w-[80px] truncate hidden sm:inline">{quest.name}</span>
+                </button>
+              ))}
+              <button
+                onClick={() => { setQuestPanelInitialId(null); setShowQuests(true) }}
+                className="flex items-center justify-center w-8 h-8 rounded-full transition text-muted-foreground hover:text-foreground shrink-0"
+                title="Quests"
+              >
+                <Swords size={17} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={toggleTheme}
                 className="transition hover:opacity-80 text-muted-foreground"
@@ -252,6 +292,16 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
             onSaved={refresh}
             onGoogleDisconnected={refresh}
             onSignOut={signOut}
+          />
+        )}
+
+        {showQuests && (
+          <QuestPanel
+            open={showQuests}
+            userId={profile.id}
+            initialQuestId={questPanelInitialId}
+            onClose={() => { setShowQuests(false); setQuestPanelInitialId(null) }}
+            onQuestsChanged={refreshPinnedQuests}
           />
         )}
 

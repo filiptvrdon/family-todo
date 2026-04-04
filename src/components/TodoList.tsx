@@ -175,6 +175,26 @@ export default function TodoList({
 
       await supabase.from('todos').update({ completed: true }).eq('id', todo.id)
 
+      // Quest nudge: check if task is linked to any quests
+      const { data: links } = await supabase
+        .from('quest_tasks')
+        .select('quest_id, quests(name, icon)')
+        .eq('task_id', todo.id)
+      if (links && links.length > 0) {
+        const quests = links.map((l: { quests: { name: string; icon: string } | { name: string; icon: string }[] | null }) => {
+          const q = Array.isArray(l.quests) ? l.quests[0] : l.quests
+          return q
+        }).filter(Boolean) as { name: string; icon: string }[]
+        const questLabel = quests.map(q => `${q.icon} ${q.name}`).join(' and ')
+        toast(`That moves you closer to ${questLabel}.`, {
+          duration: 3500,
+          style: {
+            color: 'var(--color-primary-dark)',
+            fontWeight: '500',
+          },
+        })
+      }
+
       if (todo.recurrence) {
         setTimeout(async () => {
           const due = nextDueDate(todo.recurrence!)
