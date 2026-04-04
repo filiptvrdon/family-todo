@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { X, ArrowLeft, Pin, PinOff, Plus, CheckCircle2 } from 'lucide-react'
+import { X, ArrowLeft, Pin, PinOff, Plus, CheckCircle2, Pencil } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
 import { Quest } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -35,6 +35,12 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
   const [newIcon, setNewIcon] = useState(QUEST_ICONS[0].name)
   const [newDescription, setNewDescription] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editIcon, setEditIcon] = useState(QUEST_ICONS[0].name)
+  const [editDescription, setEditDescription] = useState('')
 
   const supabase = createClient()
 
@@ -117,6 +123,33 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
     onQuestsChanged()
     setView('list')
     setSelectedQuest(null)
+  }
+
+  function startEdit() {
+    if (!selectedQuest) return
+    setEditName(selectedQuest.name)
+    setEditIcon(selectedQuest.icon)
+    setEditDescription(selectedQuest.description ?? '')
+    setIsEditing(true)
+  }
+
+  async function saveEdit() {
+    if (!selectedQuest || !editName.trim()) return
+    setSaving(true)
+    const updates = { name: editName.trim(), icon: editIcon, description: editDescription.trim() || null }
+    await supabase.from('quests').update(updates).eq('id', selectedQuest.id)
+    const updated = { ...selectedQuest, ...updates }
+    setSelectedQuest(updated)
+    setQuests(prev => prev.map(q => q.id === selectedQuest.id ? updated : q))
+    onQuestsChanged()
+    setSaving(false)
+    setIsEditing(false)
+  }
+
+  async function unlinkTask(taskId: string) {
+    if (!selectedQuest) return
+    await supabase.from('quest_tasks').delete().eq('quest_id', selectedQuest.id).eq('task_id', taskId)
+    setLinkedTasks(prev => prev.filter(t => t.id !== taskId))
   }
 
   function progressProse(tasks: LinkedTask[]): string {
@@ -276,35 +309,113 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
               <div className="px-5 pb-8 pt-2 flex flex-col gap-5">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => { setView('list'); setSelectedQuest(null) }}
+                    onClick={() => { setView('list'); setSelectedQuest(null); setIsEditing(false) }}
                     className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam cursor-pointer"
                   >
                     <ArrowLeft size={16} />
                   </button>
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <span className="text-primary shrink-0">
-                      <QuestIcon name={selectedQuest.icon} size={18} />
+                      <QuestIcon name={isEditing ? editIcon : selectedQuest.icon} size={18} />
                     </span>
-                    <Drawer.Title className="text-base font-semibold text-foreground truncate">{selectedQuest.name}</Drawer.Title>
+                    <Drawer.Title className="text-base font-semibold text-foreground truncate">
+                      {isEditing ? editName || selectedQuest.name : selectedQuest.name}
+                    </Drawer.Title>
                   </div>
-                  <Drawer.Close className="flex-shrink-0 flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam cursor-pointer">
-                    <X size={16} />
-                  </Drawer.Close>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!isEditing && (
+                      <button
+                        onClick={startEdit}
+                        className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam cursor-pointer"
+                        title="Edit quest"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    <Drawer.Close className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam cursor-pointer">
+                      <X size={16} />
+                    </Drawer.Close>
+                  </div>
                 </div>
 
-                {selectedQuest.description && (
-                  <p className="text-sm text-text-secondary">{selectedQuest.description}</p>
+                {/* Edit mode: icon picker + fields */}
+                {isEditing && (
+                  <>
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Icon</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {QUEST_ICONS.map(({ name, component: Icon }) => {
+                          const selected = editIcon === name
+                          return (
+                            <button
+                              key={name}
+                              type="button"
+                              onClick={() => setEditIcon(name)}
+                              className="flex items-center justify-center rounded-xl w-full aspect-square transition cursor-pointer"
+                              style={{
+                                background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
+                                color: selected ? '#fff' : 'var(--color-text-secondary)',
+                                border: selected ? '1.5px solid var(--color-primary)' : '1.5px solid transparent',
+                              }}
+                            >
+                              <Icon size={18} />
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <input
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      placeholder="Quest name"
+                      className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none bg-card border-[1.5px] border-border text-foreground min-h-[44px] placeholder:text-text-disabled"
+                    />
+
+                    <textarea
+                      value={editDescription}
+                      onChange={e => setEditDescription(e.target.value)}
+                      placeholder="What's this quest about? (optional)"
+                      rows={3}
+                      className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none resize-none bg-card border-[1.5px] border-border text-foreground placeholder:text-text-disabled"
+                    />
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveEdit}
+                        disabled={!editName.trim() || saving}
+                        className="flex-1 font-semibold text-sm rounded-xl transition bg-primary text-primary-foreground min-h-[44px] cursor-pointer"
+                        style={{ opacity: editName.trim() ? 1 : 0.4 }}
+                      >
+                        {saving ? 'Saving…' : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => setIsEditing(false)}
+                        className="flex-1 text-sm rounded-xl transition min-h-[44px] border-[1.5px] border-border text-muted-foreground cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
                 )}
 
-                {/* Progress prose */}
-                <p
-                  className="text-sm font-medium px-4 py-3 rounded-xl"
-                  style={{ background: 'var(--color-foam)', color: 'var(--color-primary-dark)' }}
-                >
-                  {loadingTasks ? '…' : progressProse(linkedTasks)}
-                </p>
+                {/* Read mode: description + progress */}
+                {!isEditing && (
+                  <>
+                    {selectedQuest.description && (
+                      <p className="text-sm text-text-secondary">{selectedQuest.description}</p>
+                    )}
 
-                {/* Linked tasks */}
+                    <p
+                      className="text-sm font-medium px-4 py-3 rounded-xl"
+                      style={{ background: 'var(--color-foam)', color: 'var(--color-primary-dark)' }}
+                    >
+                      {loadingTasks ? '…' : progressProse(linkedTasks)}
+                    </p>
+                  </>
+                )}
+
+                {/* Linked tasks — always visible */}
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Linked tasks</p>
                   {loadingTasks && <p className="text-sm text-text-disabled py-2">Loading…</p>}
@@ -317,27 +428,35 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                         size={16}
                         style={{ color: task.completed ? 'var(--color-completion)' : 'var(--color-text-disabled)', flexShrink: 0 }}
                       />
-                      <span style={{
+                      <span className="flex-1" style={{
                         color: task.completed ? 'var(--color-text-disabled)' : 'var(--color-text)',
                         textDecoration: task.completed ? 'line-through' : 'none',
                       }}>
                         {task.title}
                       </span>
+                      {isEditing && (
+                        <button
+                          onClick={() => unlinkTask(task.id)}
+                          className="shrink-0 text-text-disabled hover:text-destructive transition cursor-pointer"
+                          title="Unlink task"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
 
-                {/* Complete quest */}
-                <button
-                  onClick={completeQuest}
-                  className="w-full text-sm rounded-xl transition min-h-[44px] border-[1.5px] mt-2 cursor-pointer"
-                  style={{
-                    color: 'var(--color-completion)',
-                    borderColor: 'var(--color-completion)',
-                  }}
-                >
-                  Mark quest as complete
-                </button>
+                {/* Complete quest — only in read mode */}
+                {!isEditing && (
+                  <button
+                    onClick={completeQuest}
+                    className="w-full text-sm rounded-xl transition min-h-[44px] border-[1.5px] mt-2 cursor-pointer"
+                    style={{ color: 'var(--color-completion)', borderColor: 'var(--color-completion)' }}
+                  >
+                    Mark quest as complete
+                  </button>
+                )}
               </div>
             )}
           </div>
