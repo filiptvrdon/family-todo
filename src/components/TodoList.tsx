@@ -185,7 +185,7 @@ export default function TodoList({
           const q = Array.isArray(l.quests) ? l.quests[0] : l.quests
           return q
         }).filter(Boolean) as { name: string; icon: string }[]
-        const questLabel = quests.map(q => `${q.icon} ${q.name}`).join(' and ')
+        const questLabel = quests.map(q => q.name).join(' and ')
         toast(`That moves you closer to ${questLabel}.`, {
           duration: 3500,
           style: {

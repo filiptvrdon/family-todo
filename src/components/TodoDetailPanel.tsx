@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
 import { Todo, Quest } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
+import { QuestIcon } from '@/lib/questIcons'
 import TodoList from "./TodoList"
 
 type Recurrence = 'daily' | 'weekly' | 'monthly'
@@ -206,7 +207,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
                           border: linked ? '1.5px solid var(--color-primary)' : '1.5px solid var(--color-border)',
                         }}
                       >
-                        <span>{quest.icon}</span>
+                        <QuestIcon name={quest.icon} size={14} />
                         <span>{quest.name}</span>
                       </button>
                     )

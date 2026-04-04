@@ -9,6 +9,7 @@ import ProfileModal from '@/components/ProfileModal'
 import QuestPanel from '@/components/QuestPanel'
 import ResponsiveDashboard from '@/components/ResponsiveDashboard'
 import { Heart, UserCircle, Moon, Sun, Swords } from 'lucide-react'
+import { QuestIcon } from '@/lib/questIcons'
 import { useTheme } from '@/lib/hooks/useTheme'
 import {
   DndContext,
@@ -237,10 +238,10 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
                   key={quest.id}
                   onClick={() => { setQuestPanelInitialId(quest.id); setShowQuests(true) }}
                   title={quest.name}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition shrink-0"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition shrink-0 cursor-pointer"
                   style={{ background: 'var(--color-foam)', color: 'var(--color-primary-dark)' }}
                 >
-                  <span>{quest.icon}</span>
+                  <QuestIcon name={quest.icon} size={14} />
                   <span className="max-w-[80px] truncate hidden sm:inline">{quest.name}</span>
                 </button>
               ))}

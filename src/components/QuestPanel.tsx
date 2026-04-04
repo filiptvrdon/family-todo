@@ -5,6 +5,7 @@ import { X, ArrowLeft, Pin, PinOff, Plus, CheckCircle2 } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
 import { Quest } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
+import { QUEST_ICONS, QuestIcon } from '@/lib/questIcons'
 
 interface LinkedTask {
   id: string
@@ -31,7 +32,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
 
   // Create form state
   const [newName, setNewName] = useState('')
-  const [newIcon, setNewIcon] = useState('')
+  const [newIcon, setNewIcon] = useState(QUEST_ICONS[0].name)
   const [newDescription, setNewDescription] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -78,7 +79,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
 
   async function togglePin(quest: Quest) {
     const pinned = quests.filter(q => q.pinned)
-    if (!quest.pinned && pinned.length >= 3) return // max 3
+    if (!quest.pinned && pinned.length >= 3) return
     const newVal = !quest.pinned
     setQuests(prev => prev.map(q => q.id === quest.id ? { ...q, pinned: newVal } : q))
     await supabase.from('quests').update({ pinned: newVal }).eq('id', quest.id)
@@ -86,12 +87,12 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
   }
 
   async function createQuest() {
-    if (!newName.trim() || !newIcon.trim()) return
+    if (!newName.trim()) return
     setSaving(true)
     const { data } = await supabase.from('quests').insert({
       user_id: userId,
       name: newName.trim(),
-      icon: newIcon.trim(),
+      icon: newIcon,
       description: newDescription.trim() || null,
     }).select().single()
     if (data) {
@@ -99,7 +100,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
       onQuestsChanged()
     }
     setNewName('')
-    setNewIcon('')
+    setNewIcon(QUEST_ICONS[0].name)
     setNewDescription('')
     setSaving(false)
     setView('list')
@@ -122,8 +123,8 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
     const done = tasks.filter(t => t.completed).length
     if (tasks.length === 0) return 'No tasks linked yet.'
     if (done === 0) return 'Your journey begins — link tasks and start moving.'
-    if (done === 1) return 'You\'ve taken your first step toward this.'
-    return `You've taken ${done} step${done > 1 ? 's' : ''} toward this.`
+    if (done === 1) return "You've taken your first step toward this."
+    return `You've taken ${done} steps toward this.`
   }
 
   const activeQuests = quests.filter(q => q.status === 'active')
@@ -158,13 +159,13 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setView('create')}
-                      className="flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-full transition"
+                      className="flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-full transition cursor-pointer"
                       style={{ background: 'var(--color-primary)', color: '#fff' }}
                     >
                       <Plus size={14} />
                       New
                     </button>
-                    <Drawer.Close className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam">
+                    <Drawer.Close className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam cursor-pointer">
                       <X size={16} />
                     </Drawer.Close>
                   </div>
@@ -182,15 +183,17 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                     >
                       <button
                         onClick={() => openDetail(quest)}
-                        className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                        className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
                       >
-                        <span className="text-xl shrink-0">{quest.icon}</span>
+                        <span className="shrink-0 text-primary">
+                          <QuestIcon name={quest.icon} size={18} />
+                        </span>
                         <span className="text-sm font-medium text-foreground truncate">{quest.name}</span>
                       </button>
                       <button
                         onClick={() => togglePin(quest)}
                         title={quest.pinned ? 'Unpin from navbar' : pinnedCount >= 3 ? 'Unpin another quest first' : 'Pin to navbar'}
-                        className="shrink-0 transition"
+                        className="shrink-0 transition cursor-pointer"
                         style={{
                           color: quest.pinned ? 'var(--color-primary)' : 'var(--color-text-disabled)',
                           opacity: !quest.pinned && pinnedCount >= 3 ? 0.35 : 1,
@@ -210,20 +213,37 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setView('list')}
-                    className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam"
+                    className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam cursor-pointer"
                   >
                     <ArrowLeft size={16} />
                   </button>
                   <Drawer.Title className="text-base font-semibold text-foreground">New Quest</Drawer.Title>
                 </div>
 
-                <input
-                  value={newIcon}
-                  onChange={e => setNewIcon(e.target.value)}
-                  placeholder="Icon (emoji, e.g. 🏖️)"
-                  className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none bg-card border-[1.5px] border-border text-foreground min-h-[44px] placeholder:text-text-disabled"
-                  maxLength={4}
-                />
+                {/* Icon picker */}
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Icon</p>
+                  <div className="grid grid-cols-6 gap-2">
+                    {QUEST_ICONS.map(({ name, component: Icon }) => {
+                      const selected = newIcon === name
+                      return (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => setNewIcon(name)}
+                          className="flex items-center justify-center rounded-xl w-full aspect-square transition cursor-pointer"
+                          style={{
+                            background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
+                            color: selected ? '#fff' : 'var(--color-text-secondary)',
+                            border: selected ? '1.5px solid var(--color-primary)' : '1.5px solid transparent',
+                          }}
+                        >
+                          <Icon size={18} />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
 
                 <input
                   value={newName}
@@ -242,9 +262,9 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
 
                 <button
                   onClick={createQuest}
-                  disabled={!newName.trim() || !newIcon.trim() || saving}
-                  className="w-full font-semibold text-sm rounded-xl transition bg-primary text-primary-foreground min-h-[48px]"
-                  style={{ opacity: newName.trim() && newIcon.trim() ? 1 : 0.4 }}
+                  disabled={!newName.trim() || saving}
+                  className="w-full font-semibold text-sm rounded-xl transition bg-primary text-primary-foreground min-h-[48px] cursor-pointer"
+                  style={{ opacity: newName.trim() ? 1 : 0.4 }}
                 >
                   {saving ? 'Creating…' : 'Create Quest'}
                 </button>
@@ -257,15 +277,17 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => { setView('list'); setSelectedQuest(null) }}
-                    className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam"
+                    className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam cursor-pointer"
                   >
                     <ArrowLeft size={16} />
                   </button>
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-xl">{selectedQuest.icon}</span>
+                    <span className="text-primary shrink-0">
+                      <QuestIcon name={selectedQuest.icon} size={18} />
+                    </span>
                     <Drawer.Title className="text-base font-semibold text-foreground truncate">{selectedQuest.name}</Drawer.Title>
                   </div>
-                  <Drawer.Close className="flex-shrink-0 flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam">
+                  <Drawer.Close className="flex-shrink-0 flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam cursor-pointer">
                     <X size={16} />
                   </Drawer.Close>
                 </div>
@@ -308,7 +330,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                 {/* Complete quest */}
                 <button
                   onClick={completeQuest}
-                  className="w-full text-sm rounded-xl transition min-h-[44px] border-[1.5px] mt-2"
+                  className="w-full text-sm rounded-xl transition min-h-[44px] border-[1.5px] mt-2 cursor-pointer"
                   style={{
                     color: 'var(--color-completion)',
                     borderColor: 'var(--color-completion)',
