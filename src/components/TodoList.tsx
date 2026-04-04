@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState, useEffect, useMemo } from 'react'
+import { useId, useState, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -70,6 +70,8 @@ export default function TodoList({
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [loading, setLoading] = useState(!todos && !!parentId)
+  const [questLinkMap, setQuestLinkMap] = useState<Record<string, { icon: string; name: string }[]>>({})
+  const prevIdsRef = useRef<string>('')
 
   // Adjust localTodos if props change from above
   if (todos !== prevTodos || parentId !== prevParentId) {
@@ -110,6 +112,31 @@ export default function TodoList({
       return () => { ignore = true }
     }
   }, [todos, parentId, supabase])
+
+  useEffect(() => {
+    const ids = localTodos.map(t => t.id)
+    const key = ids.join(',')
+    if (!ids.length || key === prevIdsRef.current) return
+    prevIdsRef.current = key
+    let ignore = false
+    async function fetchQuestLinks() {
+      const { data } = await supabase
+        .from('quest_tasks')
+        .select('task_id, quests(icon, name)')
+        .in('task_id', ids)
+      if (ignore || !data) return
+      const map: Record<string, { icon: string; name: string }[]> = {}
+      for (const row of data as { task_id: string; quests: { icon: string; name: string } | { icon: string; name: string }[] | null }[]) {
+        const q = Array.isArray(row.quests) ? row.quests[0] : row.quests
+        if (!q) continue
+        if (!map[row.task_id]) map[row.task_id] = []
+        map[row.task_id].push(q)
+      }
+      setQuestLinkMap(map)
+    }
+    fetchQuestLinks()
+    return () => { ignore = true }
+  }, [localTodos, supabase])
 
   function openDetail(todo: Todo) {
     setSelectedTodo(todo)
@@ -155,6 +182,10 @@ export default function TodoList({
       setLocalTodos(prev => prev.map(t => t.id === tempId ? data : t))
     }
     onRefresh()
+  }
+
+  function invalidateQuestLinks() {
+    prevIdsRef.current = ''
   }
 
   async function toggleTodo(todo: Todo) {
@@ -278,6 +309,7 @@ export default function TodoList({
               isSortable={isOwner}
               isDraggable={isOwner}
               isDroppable={isOwner}
+              quests={questLinkMap[todo.id]}
             />
           ))}
         </SortableContext>
@@ -328,7 +360,7 @@ export default function TodoList({
           open={detailOpen}
           isOwner={isOwner}
           onClose={() => setDetailOpen(false)}
-          onRefresh={onRefresh}
+          onRefresh={() => { invalidateQuestLinks(); onRefresh() }}
         />
       )}
     </div>

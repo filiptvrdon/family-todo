@@ -3,11 +3,17 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Todo } from '@/lib/types'
 import { Trash2, Check, Calendar, GripVertical, Pencil } from 'lucide-react'
+import { QuestIcon } from '@/lib/questIcons'
 import { format } from 'date-fns'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { createClient } from '@/lib/supabase/client'
+
+interface QuestLink {
+  icon: string
+  name: string
+}
 
 interface Props {
   todo: Todo
@@ -19,6 +25,7 @@ interface Props {
   isSortable?: boolean
   isDraggable?: boolean
   isDroppable?: boolean
+  quests?: QuestLink[]
 }
 
 const START_MESSAGES = [
@@ -55,6 +62,7 @@ export default function TodoCard({
   isSortable = false,
   isDraggable = false,
   isDroppable = false,
+  quests,
 }: Props) {
   const [completing, setCompleting] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -255,6 +263,15 @@ export default function TodoCard({
 
       {!editing && (
         <div className="flex items-center gap-2 shrink-0">
+          {quests && quests.length > 0 && (
+            <div className="flex items-center gap-1">
+              {quests.slice(0, 3).map(q => (
+                <span key={q.name} title={q.name} style={{ color: 'var(--color-primary)' }}>
+                  <QuestIcon name={q.icon} size={13} />
+                </span>
+              ))}
+            </div>
+          )}
           {todo.recurrence && (
             <span className="text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-foam)', color: 'var(--color-accent)' }}>
               {todo.recurrence.charAt(0).toUpperCase() + todo.recurrence.slice(1)}
