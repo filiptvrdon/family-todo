@@ -1,7 +1,7 @@
 # Feature: Quests
 
 > **File:** `010_quests.md`
-> **Status:** in-progress
+> **Status:** done
 
 ## What & Why
 
