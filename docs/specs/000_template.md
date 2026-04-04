@@ -1,5 +1,6 @@
 # Feature: [Name]
 
+> **File:** `NNN_feature-name.md` — use the next available number; keep files in numeric order
 > **Status:** draft | ready | in-progress | done
 > **Roadmap ref:** [link or section in docs/roadmap.md, if applicable]
 
