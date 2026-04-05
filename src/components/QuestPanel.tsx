@@ -481,9 +481,23 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                   </button>
                 )}
                 {!isEditing && selectedQuest.status === 'completed' && (
-                  <p className="text-xs text-center text-text-disabled pt-1">
-                    Completed {selectedQuest.completed_at ? new Date(selectedQuest.completed_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : ''}
-                  </p>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <p className="text-xs text-center text-text-disabled">
+                      Completed {selectedQuest.completed_at ? new Date(selectedQuest.completed_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : ''}
+                    </p>
+                    <button
+                      onClick={async () => {
+                        await supabase.from('quests').update({ status: 'active', completed_at: null }).eq('id', selectedQuest.id)
+                        const updated = { ...selectedQuest, status: 'active' as const, completed_at: null }
+                        setSelectedQuest(updated)
+                        setQuests(prev => prev.map(q => q.id === selectedQuest.id ? updated : q))
+                        onQuestsChanged()
+                      }}
+                      className="w-full text-sm rounded-xl transition min-h-[44px] border-[1.5px] border-border text-muted-foreground cursor-pointer"
+                    >
+                      Reopen quest
+                    </button>
+                  </div>
                 )}
               </div>
             )}
