@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
 import { refreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar'
-import { CalendarEvent, Quest } from '@/lib/types'
+import { User, CalendarEvent, Quest } from '@/lib/types'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -10,28 +10,28 @@ export default async function Home() {
 
   if (!user) redirect('/login')
 
-  const { error: upsertError } = await supabase.from('profiles').upsert(
+  const { error: upsertError } = await supabase.from('users').upsert(
     { id: user.id, email: user.email! },
     { onConflict: 'id', ignoreDuplicates: true }
   )
 
-  if (upsertError) console.error('[profile upsert]', upsertError)
+  if (upsertError) console.error('[user upsert]', upsertError)
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
+  const { data: dbUser, error: userError } = await supabase
+    .from('users')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  if (profileError) console.error('[profile select]', profileError)
-  if (!profile) redirect('/login?error=profile_missing')
+  if (userError) console.error('[user select]', userError)
+  if (!dbUser) redirect('/login?error=user_missing')
 
   let partner = null
-  if (profile?.partner_id) {
+  if (dbUser?.partner_id) {
     const { data } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
-      .eq('id', profile.partner_id)
+      .eq('id', dbUser.partner_id)
       .single()
     partner = data
   }
@@ -48,8 +48,8 @@ export default async function Home() {
     subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
   }))
 
-  const { data: partnerTodosRaw } = profile?.partner_id
-    ? await supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', profile.partner_id).is('parent_id', null).order('index', { ascending: true })
+  const { data: partnerTodosRaw } = dbUser?.partner_id
+    ? await supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', dbUser.partner_id).is('parent_id', null).order('index', { ascending: true })
     : { data: [] }
 
   const partnerTodos = (partnerTodosRaw ?? []).map(t => ({
@@ -62,8 +62,8 @@ export default async function Home() {
     .select('*')
     .eq('user_id', user.id)
 
-  const { data: partnerEvents } = profile?.partner_id
-    ? await supabase.from('calendar_events').select('*').eq('user_id', profile.partner_id)
+  const { data: partnerEvents } = dbUser?.partner_id
+    ? await supabase.from('calendar_events').select('*').eq('user_id', dbUser.partner_id)
     : { data: [] }
 
   const { data: pinnedQuests } = await supabase
@@ -77,7 +77,7 @@ export default async function Home() {
 
   // Fetch Google Calendar events if the user has connected their account
   let googleEvents: CalendarEvent[] = []
-  const googleRefreshToken = profile.google_refresh_token
+  const googleRefreshToken = dbUser.google_refresh_token
   if (googleRefreshToken) {
     try {
       const accessToken = await refreshAccessToken(googleRefreshToken)
@@ -91,7 +91,7 @@ export default async function Home() {
 
   return (
     <Dashboard
-      profile={profile}
+      user={dbUser}
       partner={partner}
       myTodos={myTodos ?? []}
       partnerTodos={partnerTodos ?? []}

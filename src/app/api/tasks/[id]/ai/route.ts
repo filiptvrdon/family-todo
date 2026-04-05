@@ -30,7 +30,7 @@ export async function POST(
       await supabase.from('todos').update({ completion_nudge: text }).eq('id', taskId)
     }
   } catch (e) {
-    console.error('[nudges] failed to generate completion nudge:', e)
+    console.error('[ai] failed to generate completion nudge:', e)
   }
 
   return new Response('', { status: 200 })

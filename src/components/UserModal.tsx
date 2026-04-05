@@ -2,11 +2,11 @@
 
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Profile } from '@/lib/types'
-import { X, User, Camera, CalendarDays, Loader2, LogOut } from 'lucide-react'
+import { User } from '@/lib/types'
+import { X, User as UserIcon, Camera, CalendarDays, Loader2, LogOut } from 'lucide-react'
 
 interface Props {
-  profile: Profile
+  user: User
   googleConnected: boolean
   onClose: () => void
   onSaved: () => void
@@ -14,14 +14,14 @@ interface Props {
   onSignOut: () => void
 }
 
-export default function ProfileModal({ profile, googleConnected, onClose, onSaved, onGoogleDisconnected, onSignOut }: Props) {
+export default function UserModal({ user, googleConnected, onClose, onSaved, onGoogleDisconnected, onSignOut }: Props) {
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [displayName, setDisplayName] = useState(profile.display_name || '')
-  const [username, setUsername] = useState(profile.username || '')
-  const [customizationPrompt, setCustomizationPrompt] = useState(profile.customization_prompt || '')
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatar_url || null)
+  const [displayName, setDisplayName] = useState(user.display_name || '')
+  const [username, setUsername] = useState(user.username || '')
+  const [customizationPrompt, setCustomizationPrompt] = useState(user.customization_prompt || '')
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar_url || null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -49,11 +49,11 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
     setError('')
     setSaving(true)
 
-    let avatarUrl = profile.avatar_url
+    let avatarUrl = user.avatar_url
 
     if (avatarFile) {
       const ext = avatarFile.name.split('.').pop()
-      const path = `${profile.id}/avatar.${ext}`
+      const path = `${user.id}/avatar.${ext}`
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type })
@@ -70,14 +70,14 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
     }
 
     const { error: updateError } = await supabase
-      .from('profiles')
+      .from('users')
       .update({
         display_name: displayName.trim(),
         username: username.trim() || null,
         customization_prompt: customizationPrompt.trim() || null,
         avatar_url: avatarUrl,
       })
-      .eq('id', profile.id)
+      .eq('id', user.id)
 
     setSaving(false)
 
@@ -100,7 +100,7 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <User size={20} className="text-primary" />
+            <UserIcon size={20} className="text-primary" />
             <h2 className="font-semibold text-foreground text-lg">Your profile</h2>
           </div>
           <button onClick={onClose} className="text-text-disabled transition hover:opacity-70">
@@ -122,7 +122,7 @@ export default function ProfileModal({ profile, googleConnected, onClose, onSave
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarPreview} alt="Profile picture" className="w-full h-full object-cover" />
                 ) : (
-                  <User size={36} className="text-primary" />
+                  <UserIcon size={36} className="text-primary" />
                 )}
               </div>
               {/* Hover overlay — rgba tint, kept inline */}

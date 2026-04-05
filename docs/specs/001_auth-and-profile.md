@@ -1,4 +1,4 @@
-# Feature: Authentication & User Profile
+# Feature: Authentication & User (formerly Profile)
 
 > **Status:** done
 > **Roadmap ref:** n/a (foundational)
@@ -28,7 +28,7 @@ A user can sign up, sign in, and maintain a profile (display name, avatar, AI cu
 5. On first sign-in a profile row is automatically created via a DB trigger (`on_auth_user_created`).
 6. Home page (`/`) upserts the profile on every server render to ensure consistency.
 7. Unauthenticated requests to `/` redirect to `/login`.
-8. **Profile modal** (accessible from header): user can update display name, username, avatar (upload image), and a free-text AI customization prompt that personalizes the companion's tone and greeting.
+8. **User modal** (accessible from header): user can update display name, username, avatar (upload image), and a free-text AI customization prompt that personalizes the companion's tone and greeting.
 9. Avatar uploads go to Supabase Storage bucket `avatars` (max 5 MB, JPEG/PNG/WebP/GIF).
 10. Sign-out clears session and redirects to `/login`.
 
@@ -40,7 +40,7 @@ A user can sign up, sign in, and maintain a profile (display name, avatar, AI cu
 
 ### Data model
 
-Table: `profiles`
+Table: `users`
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid | references `auth.users.id` |
@@ -49,11 +49,14 @@ Table: `profiles`
 | `username` | text | |
 | `customization_prompt` | text | fed into AI system prompt |
 | `avatar_url` | text | public URL from Supabase Storage |
-| `partner_id` | uuid | references another profile's `id` |
+| `partner_id` | uuid | references another user's `id` |
 | `google_refresh_token` | text | stored for Calendar sync |
+| `momentum` | integer | user's current momentum |
+| `day_start_momentum` | integer | momentum at the start of the day |
+| `last_momentum_increase` | timestamptz | for daily decay |
 | `created_at` | timestamptz | |
 
-DB trigger: `on_auth_user_created` → calls `handle_new_user()` to insert a profile row.
+DB trigger: `on_auth_user_created` → calls `handle_new_user()` to insert a user row.
 
 Storage bucket: `avatars` — public read, owner write.
 

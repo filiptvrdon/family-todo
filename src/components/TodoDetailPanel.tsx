@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { X } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
+import { toast } from 'sonner'
 import { Todo, Quest } from '@/lib/types'
+import { triggerAiMetadata } from '@/lib/ai-metadata'
 import { createClient } from '@/lib/supabase/client'
 import { QuestIcon } from '@/lib/questIcons'
 import TodoList from "./TodoList"
@@ -24,6 +26,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
   const [editDescription, setEditDescription] = useState(todo.description ?? '')
   const [editDueDate, setEditDueDate] = useState(todo.due_date ?? '')
   const [editRecurrence, setEditRecurrence] = useState<Recurrence | ''>(todo.recurrence ?? '')
+  const [editEnergyLevel, setEditEnergyLevel] = useState<'low' | 'medium' | 'high'>(todo.energy_level || 'low')
   const [activeQuests, setActiveQuests] = useState<Quest[]>([])
   const [linkedQuestIds, setLinkedQuestIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
@@ -58,12 +61,19 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
   async function handleSave() {
     if (!editTitle.trim()) return
 
-    await supabase.from('todos').update({
+    const { error } = await supabase.from('todos').update({
       title: editTitle.trim(),
       description: editDescription.trim() || null,
       due_date: editDueDate || null,
       recurrence: (editRecurrence as Recurrence) || null,
+      energy_level: editEnergyLevel,
     }).eq('id', todo.id)
+
+    if (error) {
+      console.error('Error updating todo:', error)
+      toast.error('Failed to save changes: ' + error.message)
+      return
+    }
 
     // Sync quest links: delete all existing, re-insert current selection
     await supabase.from('quest_tasks').delete().eq('task_id', todo.id)
@@ -73,20 +83,8 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
       )
     }
 
-    // Regenerate nudges in background (consume stream silently so server can persist)
-    ;(async () => {
-      try {
-        const res = await fetch(`/api/tasks/${todo.id}/nudges/stream`, { method: 'POST' })
-        if (res.body) {
-          const reader = res.body.getReader()
-          while (true) {
-            const { done } = await reader.read()
-            if (done) break
-          }
-        }
-      } catch {}
-    })()
-    fetch(`/api/tasks/${todo.id}/nudges`, { method: 'POST' }).catch(() => {})
+    // Regenerate metadata in background
+    triggerAiMetadata(todo.id)
 
     onRefresh()
     onClose()
@@ -209,6 +207,34 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
               ) : (
                 <p className="text-sm" style={{ color: todo.recurrence ? 'var(--color-text)' : 'var(--color-text-disabled)' }}>
                   {todo.recurrence ? todo.recurrence.charAt(0).toUpperCase() + todo.recurrence.slice(1) : 'Does not repeat'}
+                </p>
+              )}
+            </div>
+
+            {/* Energy Level */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Energy</p>
+              {isOwner ? (
+                <div className="flex gap-2 flex-wrap">
+                  {(['low', 'medium', 'high'] as const).map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setEditEnergyLevel(val)}
+                      className="px-3 py-1.5 rounded-full text-sm font-medium transition min-h-[36px]"
+                      style={{
+                        background: editEnergyLevel === val ? 'var(--color-primary)' : 'var(--color-foam)',
+                        color: editEnergyLevel === val ? '#fff' : 'var(--color-text-secondary)',
+                        border: editEnergyLevel === val ? '1.5px solid var(--color-primary)' : '1.5px solid var(--color-border)',
+                      }}
+                    >
+                      {val.charAt(0).toUpperCase() + val.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm">
+                  {((todo.energy_level || 'low') as string).charAt(0).toUpperCase() + ((todo.energy_level || 'low') as string).slice(1)}
                 </p>
               )}
             </div>

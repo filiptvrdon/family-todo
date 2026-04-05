@@ -10,7 +10,7 @@ export async function POST() {
   }
 
   const { error } = await supabase
-    .from('profiles')
+    .from('users')
     .update({ google_refresh_token: null })
     .eq('id', user.id)
 

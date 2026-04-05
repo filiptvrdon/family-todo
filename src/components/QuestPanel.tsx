@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { X, ArrowLeft, Pin, PinOff, Plus, CheckCircle2, Pencil } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
+import { toast } from 'sonner'
 import { Quest } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { QUEST_ICONS, QuestIcon } from '@/lib/questIcons'
@@ -22,6 +23,19 @@ interface Props {
 }
 
 type View = 'list' | 'detail' | 'create'
+
+function MomentumBadge({ current, start }: { current: number, start: number }) {
+  const diff = current - start
+  if (current === 0 && diff === 0) return null
+  
+  return (
+    <div className="flex items-center gap-1 text-xs font-medium">
+      <span className="text-foreground">{current}</span>
+      {diff > 0 && <span style={{ color: 'var(--color-completion)' }}>↑</span>}
+      {diff < 0 && <span style={{ color: 'var(--color-alert)' }}>↓</span>}
+    </div>
+  )
+}
 
 export default function QuestPanel({ open, userId, initialQuestId, onClose, onQuestsChanged }: Props) {
   const [view, setView] = useState<View>('list')
@@ -91,19 +105,33 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
     if (!quest.pinned && pinned.length >= 3) return
     const newVal = !quest.pinned
     setQuests(prev => prev.map(q => q.id === quest.id ? { ...q, pinned: newVal } : q))
-    await supabase.from('quests').update({ pinned: newVal }).eq('id', quest.id)
+    const { error } = await supabase.from('quests').update({ pinned: newVal }).eq('id', quest.id)
+    if (error) {
+      console.error('Error toggling pin:', error)
+      toast.error('Failed to pin quest: ' + error.message)
+      setQuests(prev => prev.map(q => q.id === quest.id ? { ...q, pinned: !newVal } : q))
+      return
+    }
     onQuestsChanged()
   }
 
   async function createQuest() {
     if (!newName.trim()) return
     setSaving(true)
-    const { data } = await supabase.from('quests').insert({
+    const { data, error } = await supabase.from('quests').insert({
       user_id: userId,
       name: newName.trim(),
       icon: newIcon,
       description: newDescription.trim() || null,
     }).select().single()
+
+    if (error) {
+      console.error('Error creating quest:', error)
+      toast.error('Failed to create quest: ' + error.message)
+      setSaving(false)
+      return
+    }
+
     if (data) {
       setQuests(prev => [data, ...prev])
       onQuestsChanged()
@@ -118,11 +146,18 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
 
   async function completeQuest() {
     if (!selectedQuest) return
-    await supabase.from('quests').update({
+    const { error } = await supabase.from('quests').update({
       status: 'completed',
       completed_at: new Date().toISOString(),
       pinned: false,
     }).eq('id', selectedQuest.id)
+
+    if (error) {
+      console.error('Error completing quest:', error)
+      toast.error('Failed to complete quest: ' + error.message)
+      return
+    }
+
     setQuests(prev => prev.map(q => q.id === selectedQuest.id
       ? { ...q, status: 'completed' as const, pinned: false, completed_at: new Date().toISOString() }
       : q
@@ -145,7 +180,13 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
     if (!selectedQuest || !editName.trim()) return
     setSaving(true)
     const updates = { name: editName.trim(), icon: editIcon, description: editDescription.trim() || null }
-    await supabase.from('quests').update(updates).eq('id', selectedQuest.id)
+    const { error } = await supabase.from('quests').update(updates).eq('id', selectedQuest.id)
+    if (error) {
+      console.error('Error updating quest:', error)
+      toast.error('Failed to save changes: ' + error.message)
+      setSaving(false)
+      return
+    }
     const updated = { ...selectedQuest, ...updates }
     setSelectedQuest(updated)
     setQuests(prev => prev.map(q => q.id === selectedQuest.id ? updated : q))
@@ -231,7 +272,10 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                         <span className="shrink-0 text-primary">
                           <QuestIcon name={quest.icon} size={18} />
                         </span>
-                        <span className="text-sm font-medium text-foreground truncate">{quest.name}</span>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="text-sm font-medium text-foreground truncate w-full">{quest.name}</span>
+                          <MomentumBadge current={quest.momentum || 0} start={quest.day_start_momentum || 0} />
+                        </div>
                       </button>
                       <button
                         onClick={() => togglePin(quest)}

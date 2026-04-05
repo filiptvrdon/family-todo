@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Profile, Todo, CalendarEvent } from '@/lib/types'
+import { User, Todo, CalendarEvent } from '@/lib/types'
 import TaskBoard from '@/components/TaskBoard'
 import CalendarSuite from '@/components/CalendarSuite'
 import FocusMode from '@/components/FocusMode'
@@ -10,8 +10,8 @@ import { Calendar, Focus, ListTodo } from 'lucide-react'
 type MainTab = 'tasks' | 'schedule' | 'focus'
 
 interface Props {
-  profile: Profile
-  partner: Profile | null
+  user: User
+  partner: User | null
   myTodos: Todo[]
   partnerTodos: Todo[]
   allEvents: CalendarEvent[]
@@ -33,7 +33,7 @@ export default function ResponsiveDashboard(props: Props) {
   const [desktopTab, setDesktopTab] = useState<'schedule' | 'focus'>('schedule')
 
   const {
-    profile, partner, myTodos, partnerTodos, myName, partnerName, onRefresh
+    user, partner, myTodos, partnerTodos, myName, partnerName, onRefresh
   } = props
 
   return (
@@ -69,7 +69,7 @@ export default function ResponsiveDashboard(props: Props) {
           }`}
         >
           <TaskBoard 
-            profile={profile}
+            user={user}
             partner={partner}
             myTodos={myTodos}
             partnerTodos={partnerTodos}
@@ -122,7 +122,7 @@ export default function ResponsiveDashboard(props: Props) {
                   myTodos={myTodos}
                   partnerTodos={partnerTodos}
                   partnerName={partnerName}
-                  myUserId={profile.id}
+                  myUserId={user.id}
                   onRefresh={onRefresh}
                 />
               )}
@@ -138,7 +138,7 @@ export default function ResponsiveDashboard(props: Props) {
                   myTodos={myTodos}
                   partnerTodos={partnerTodos}
                   partnerName={partnerName}
-                  myUserId={profile.id}
+                  myUserId={user.id}
                   onRefresh={onRefresh}
                 />
               )}

@@ -1,4 +1,4 @@
-export interface Profile {
+export interface User {
   id: string
   email: string
   display_name: string
@@ -7,6 +7,9 @@ export interface Profile {
   avatar_url: string | null
   partner_id: string | null
   google_refresh_token: string | null
+  momentum: number
+  day_start_momentum: number
+  last_momentum_increase: string
 }
 
 export interface Todo {
@@ -24,6 +27,8 @@ export interface Todo {
   subtasks_count?: number        // calculated field from Supabase
   motivation_nudge: string | null
   completion_nudge: string | null
+  energy_level: 'low' | 'medium' | 'high'
+  momentum_contribution: number
 }
 
 
@@ -37,6 +42,9 @@ export interface Quest {
   pinned: boolean
   completed_at: string | null
   created_at: string
+  momentum: number
+  day_start_momentum: number
+  last_momentum_increase: string
 }
 
 export interface CalendarEvent {

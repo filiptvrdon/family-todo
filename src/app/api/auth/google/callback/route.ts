@@ -47,7 +47,7 @@ export async function GET(request: Request) {
   }
 
   const { error: dbError } = await supabase
-    .from('profiles')
+    .from('users')
     .update({ google_refresh_token: refresh_token })
     .eq('id', user.id)
 

@@ -16,10 +16,13 @@ export async function POST(
   const ctx = await buildNudgeContext(supabase, taskId, user.id)
   if (!ctx) return new Response('', { status: 200 })
 
+  const bonusRange = ctx.energyLevel === 'low' ? '1-5' : ctx.energyLevel === 'medium' ? '5-10' : '10-20'
+  const baseMomentum = ctx.energyLevel === 'low' ? 10 : ctx.energyLevel === 'medium' ? 20 : 30
+
   const messages: AIMessage[] = [
     {
       role: 'system',
-      content: `You are a warm, supportive companion for ${ctx.firstName}. Write a short, warm nudge (1–2 sentences) explaining how completing this task helps ${ctx.firstName} move forward. Reference the parent task if there is one, and the quest(s) if linked. Address ${ctx.firstName} by first name. Never use the word "productivity". Tone: encouraging, personal, never generic. Return only the nudge text, nothing else.`,
+      content: `You are a warm, supportive companion for ${ctx.firstName}. Write a short, warm nudge (1–2 sentences) explaining how completing this task helps ${ctx.firstName} move forward. Reference the parent task if there is one, and the quest(s) if linked. Address ${ctx.firstName} by first name. Never use the word "productivity". Tone: encouraging, personal, never generic. Always respond in English. After the nudge, on a new line, add exactly "[BONUS: X]" where X is an integer in the range ${bonusRange} reflecting how meaningful or impactful this specific task context is. Example: "Go for it! [BONUS: 3]"`,
     },
     { role: 'user', content: buildContextString(ctx) },
   ]
@@ -40,10 +43,17 @@ export async function POST(
           text += decoder.decode(value, { stream: true })
         }
         if (text) {
-          await supabase.from('todos').update({ motivation_nudge: text }).eq('id', taskId)
+          const bonusMatch = text.match(/\[BONUS:\s*(\d+)\]/)
+          const bonus = bonusMatch ? parseInt(bonusMatch[1]) : 0
+          const nudgeText = text.replace(/\[BONUS:\s*\d+\]/g, '').trim()
+          
+          await supabase.from('todos').update({ 
+            motivation_nudge: nudgeText,
+            momentum_contribution: baseMomentum + bonus
+          }).eq('id', taskId)
         }
       } catch (e) {
-        console.error('[nudges/stream] failed to persist motivation nudge:', e)
+        console.error('[ai/stream] failed to persist metadata:', e)
       }
     })()
 
@@ -51,7 +61,7 @@ export async function POST(
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     })
   } catch (e) {
-    console.error('[nudges/stream] failed to generate motivation nudge:', e)
+    console.error('[ai/stream] failed to generate metadata:', e)
     return new Response('', { status: 200 })
   }
 }

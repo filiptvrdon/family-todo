@@ -287,6 +287,14 @@ export default function TodoCard({
               ))}
             </div>
           )}
+          {todo.energy_level && todo.energy_level !== 'low' && (
+            <span 
+              className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded"
+              style={{ background: 'var(--color-foam)', color: 'var(--color-text-secondary)' }}
+            >
+              {todo.energy_level}
+            </span>
+          )}
           {todo.recurrence && (
             <span className="text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-foam)', color: 'var(--color-accent)' }}>
               {todo.recurrence.charAt(0).toUpperCase() + todo.recurrence.slice(1)}

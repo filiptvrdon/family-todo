@@ -1,30 +1,68 @@
--- Run this in your Supabase SQL editor
+-- Run this in your Supabase SQL editor to create the base schema
+-- This schema reflects the state of the project as of 2026-04-05
 
--- Profiles table (extends auth.users)
-create table public.profiles (
+-- 1. Users table (formerly profiles)
+create table public.users (
   id uuid references auth.users on delete cascade primary key,
   email text not null,
   display_name text not null default '',
-  partner_id uuid references public.profiles(id) on delete set null,
+  username text,
+  customization_prompt text,
+  avatar_url text,
+  partner_id uuid references public.users(id) on delete set null,
+  google_refresh_token text,
+  momentum integer default 0,
+  last_momentum_increase timestamp with time zone default now(),
+  day_start_momentum integer default 0,
   created_at timestamptz default now()
 );
 
--- Todos table
+-- 2. Todos table
 create table public.todos (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references public.profiles(id) on delete cascade not null,
+  user_id uuid references public.users(id) on delete cascade not null,
   title text not null,
   description text,
   completed boolean default false,
-  priority text check (priority in ('low', 'medium', 'high')) default 'medium',
   due_date date,
+  recurrence text check (recurrence in ('daily', 'weekly', 'monthly')),
+  scheduled_time text, -- HH:MM:SS format for daily scheduling
+  parent_id uuid references public.todos(id) on delete cascade, -- for sub-tasks
+  "index" text not null default '', -- fractional index for ordering
+  motivation_nudge text,
+  completion_nudge text,
+  energy_level text check (energy_level in ('low', 'medium', 'high')) default 'medium',
+  momentum_contribution integer default 0,
   created_at timestamptz default now()
 );
 
--- Calendar events table
+-- 3. Quests table
+create table public.quests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.users(id) on delete cascade not null,
+  name text not null,
+  icon text not null,
+  description text,
+  status text not null default 'active' check (status in ('active', 'completed')),
+  pinned boolean not null default false,
+  momentum integer default 0,
+  last_momentum_increase timestamp with time zone default now(),
+  day_start_momentum integer default 0,
+  completed_at timestamptz,
+  created_at timestamptz default now()
+);
+
+-- 4. Quest_tasks join table
+create table public.quest_tasks (
+  quest_id uuid references public.quests(id) on delete cascade not null,
+  task_id uuid references public.todos(id) on delete cascade not null,
+  primary key (quest_id, task_id)
+);
+
+-- 5. Calendar events table
 create table public.calendar_events (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references public.profiles(id) on delete cascade not null,
+  user_id uuid references public.users(id) on delete cascade not null,
   title text not null,
   description text,
   start_time timestamptz not null,
@@ -33,73 +71,48 @@ create table public.calendar_events (
   created_at timestamptz default now()
 );
 
--- Enable Row Level Security
-alter table public.profiles enable row level security;
+-- 6. Enable Row Level Security
+alter table public.users enable row level security;
 alter table public.todos enable row level security;
+alter table public.quests enable row level security;
+alter table public.quest_tasks enable row level security;
 alter table public.calendar_events enable row level security;
 
--- Profiles policies: users can see their own profile and their partner's
-create policy "Users can view own profile" on public.profiles
-  for select using (auth.uid() = id);
+-- 7. RLS Policies
 
-create policy "Users can view partner profile" on public.profiles
-  for select using (
-    id in (
-      select partner_id from public.profiles where id = auth.uid()
-    )
-  );
+-- Users
+create or replace function public.get_my_partner_id()
+returns uuid as $$
+  select partner_id from public.users where id = auth.uid();
+$$ language sql security definer set search_path = public stable;
 
-create policy "Users can insert own profile" on public.profiles
-  for insert with check (auth.uid() = id);
+create policy "Users can view own user" on public.users for select using (auth.uid() = id);
+create policy "Users can view partner user" on public.users for select using (id = public.get_my_partner_id());
+create policy "Users can insert own user" on public.users for insert with check (auth.uid() = id);
+create policy "Users can update own user" on public.users for update using (auth.uid() = id);
+create policy "Authenticated users can view all users" on public.users for select using (auth.role() = 'authenticated');
 
-create policy "Users can update own profile" on public.profiles
-  for update using (auth.uid() = id);
+-- Todos
+create policy "Users can view own todos" on public.todos for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users can view partner todos" on public.todos for select using (user_id = public.get_my_partner_id());
 
--- Todos policies: users can see their own todos and their partner's
-create policy "Users can view own todos" on public.todos
-  for select using (auth.uid() = user_id);
+-- Quests
+create policy "Users can manage own quests" on public.quests for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
-create policy "Users can view partner todos" on public.todos
-  for select using (
-    user_id in (
-      select partner_id from public.profiles where id = auth.uid()
-    )
-  );
+-- Quest_tasks
+create policy "Users can manage quest_tasks for own quests" on public.quest_tasks for all using (quest_id in (select id from public.quests where user_id = auth.uid())) with check (quest_id in (select id from public.quests where user_id = auth.uid()));
 
-create policy "Users can insert own todos" on public.todos
-  for insert with check (auth.uid() = user_id);
+-- Calendar events
+create policy "Users can view own events" on public.calendar_events for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users can view partner events" on public.calendar_events for select using (user_id = public.get_my_partner_id());
 
-create policy "Users can update own todos" on public.todos
-  for update using (auth.uid() = user_id);
+-- 8. Functions and Triggers
 
-create policy "Users can delete own todos" on public.todos
-  for delete using (auth.uid() = user_id);
-
--- Calendar events policies (same pattern)
-create policy "Users can view own events" on public.calendar_events
-  for select using (auth.uid() = user_id);
-
-create policy "Users can view partner events" on public.calendar_events
-  for select using (
-    user_id in (
-      select partner_id from public.profiles where id = auth.uid()
-    )
-  );
-
-create policy "Users can insert own events" on public.calendar_events
-  for insert with check (auth.uid() = user_id);
-
-create policy "Users can update own events" on public.calendar_events
-  for update using (auth.uid() = user_id);
-
-create policy "Users can delete own events" on public.calendar_events
-  for delete using (auth.uid() = user_id);
-
--- Auto-create profile on signup
+-- Auto-create user on signup
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, display_name)
+  insert into public.users (id, email, display_name)
   values (new.id, new.email, split_part(new.email, '@', 1));
   return new;
 end;
@@ -108,3 +121,65 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Momentum updates on task completion
+create or replace function public.handle_todo_completion_momentum()
+returns trigger as $$
+begin
+  if new.completed = true and (old.completed = false or old.completed is null) then
+    -- Increase user momentum
+    update public.users
+    set momentum = momentum + new.momentum_contribution,
+        last_momentum_increase = now()
+    where id = new.user_id;
+
+    -- Increase quest momentum for linked quests
+    update public.quests
+    set momentum = momentum + new.momentum_contribution,
+        last_momentum_increase = now()
+    where id in (
+      select quest_id from public.quest_tasks where task_id = new.id
+    );
+  elsif new.completed = false and old.completed = true then
+    -- Decrease user momentum
+    update public.users
+    set momentum = greatest(0, momentum - new.momentum_contribution)
+    where id = new.user_id;
+
+    -- Decrease quest momentum
+    update public.quests
+    set momentum = greatest(0, momentum - new.momentum_contribution)
+    where id in (
+      select quest_id from public.quest_tasks where task_id = new.id
+    );
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_todo_completed_momentum
+  after update on public.todos
+  for each row execute procedure public.handle_todo_completion_momentum();
+
+-- Daily decay function (should be scheduled)
+create or replace function public.process_daily_momentum()
+returns void as $$
+begin
+  -- Apply decay to users
+  update public.users
+  set momentum = greatest(0, momentum - greatest(1, floor(momentum * 0.01)))
+  where last_momentum_increase < now() - interval '24 hours'
+    and momentum > 0;
+
+  -- Apply decay to quests
+  update public.quests
+  set momentum = greatest(0, momentum - greatest(1, floor(momentum * 0.01)))
+  where last_momentum_increase < now() - interval '24 hours'
+    and momentum > 0
+    and status = 'active';
+
+  -- Update day start momentum
+  update public.users set day_start_momentum = momentum;
+  update public.quests set day_start_momentum = momentum;
+end;
+$$ language plpgsql security definer;

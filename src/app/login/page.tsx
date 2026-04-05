@@ -90,7 +90,7 @@ function LoginForm() {
               border: '1px solid rgba(255,159,127,0.3)',
             }}
           >
-            {submitError ?? (error === 'profile_missing' ? 'Account setup incomplete — please try signing in again.' : 'That link has expired. Please request a new one.')}
+            {submitError ?? (error === 'user_missing' || error === 'profile_missing' ? 'Account setup incomplete — please try signing in again.' : 'That link has expired. Please request a new one.')}
           </div>
         )}
 

@@ -1,14 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Profile, Todo } from '@/lib/types'
+import { User, Todo } from '@/lib/types'
 import TodoList from '@/components/TodoList'
 import PartnerConnect from '@/components/PartnerConnect'
-import { X, Users, User } from 'lucide-react'
+import { X, Users, User as UserIcon } from 'lucide-react'
 
 interface Props {
-  profile: Profile
-  partner: Profile | null
+  user: User
+  partner: User | null
   myTodos: Todo[]
   partnerTodos: Todo[]
   myName: string
@@ -17,14 +17,14 @@ interface Props {
 }
 
 export default function TaskBoard({
-  profile, partner, myTodos, partnerTodos, myName, partnerName, onRefresh
+  user, partner, myTodos, partnerTodos, myName, partnerName, onRefresh
 }: Props) {
   const [view, setView] = useState<'me' | 'partner'>('me')
   const [showConnect, setShowConnect] = useState(false)
 
   const activeTodos = view === 'me' ? myTodos : partnerTodos
   const isOwner = view === 'me'
-  const activeUserId = view === 'me' ? profile.id : (partner?.id || '')
+  const activeUserId = view === 'me' ? user.id : (partner?.id || '')
 
   return (
     <div className="flex flex-col h-full overflow-hidden min-w-0">
@@ -40,7 +40,7 @@ export default function TaskBoard({
               boxShadow: view === 'me' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
             }}
           >
-            <User size={14} className="shrink-0" />
+            <UserIcon size={14} className="shrink-0" />
             <span className="truncate">{myName}</span>
           </button>
           {partner && (
@@ -79,7 +79,7 @@ export default function TaskBoard({
               <X size={16} />
             </button>
             <PartnerConnect
-              myId={profile.id}
+              myId={user.id}
               onConnected={() => { setShowConnect(false); onRefresh() }}
             />
           </div>

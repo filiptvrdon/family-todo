@@ -3,9 +3,9 @@
 import { useState, useCallback, useEffect, useId } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, Todo, CalendarEvent, Quest } from '@/lib/types'
+import { User, Todo, CalendarEvent, Quest } from '@/lib/types'
 import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
-import ProfileModal from '@/components/ProfileModal'
+import UserModal from '@/components/UserModal'
 import QuestPanel from '@/components/QuestPanel'
 import ResponsiveDashboard from '@/components/ResponsiveDashboard'
 import { Heart, UserCircle, Moon, Sun, Swords } from 'lucide-react'
@@ -24,8 +24,8 @@ import { format } from 'date-fns'
 import { generateKeyBetween } from 'fractional-indexing'
 
 interface Props {
-  profile: Profile
-  partner: Profile | null
+  user: User
+  partner: User | null
   myTodos: Todo[]
   partnerTodos: Todo[]
   allEvents: CalendarEvent[]
@@ -33,7 +33,7 @@ interface Props {
   pinnedQuests: Quest[]
 }
 
-export default function Dashboard({ profile, partner, myTodos, partnerTodos, allEvents, googleConnected, pinnedQuests }: Props) {
+export default function Dashboard({ user, partner, myTodos, partnerTodos, allEvents, googleConnected, pinnedQuests }: Props) {
   const [localMyTodos, setLocalMyTodos] = useState<Todo[]>(myTodos)
   const [localPartnerTodos, setLocalPartnerTodos] = useState<Todo[]>(partnerTodos)
   const [prevMyTodos, setPrevMyTodos] = useState(myTodos)
@@ -68,7 +68,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
 
   const refreshLocal = useCallback(async () => {
     const [{ data: mineRaw }, { data: theirsRaw }] = await Promise.all([
-      supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', profile.id).is('parent_id', null).order('index', { ascending: true }),
+      supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', user.id).is('parent_id', null).order('index', { ascending: true }),
       partner?.id
         ? supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', partner.id).is('parent_id', null).order('index', { ascending: true })
         : Promise.resolve({ data: [] as unknown as { count: number }[][] }),
@@ -85,7 +85,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
 
     if (mine) setLocalMyTodos(mine)
     if (theirs) setLocalPartnerTodos(theirs ?? [])
-  }, [supabase, profile.id, partner])
+  }, [supabase, user.id, partner])
 
   const refresh = useCallback(() => router.refresh(), [router])
 
@@ -98,13 +98,13 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
     const { data } = await supabase
       .from('quests')
       .select('*')
-      .eq('user_id', profile.id)
+      .eq('user_id', user.id)
       .eq('status', 'active')
       .eq('pinned', true)
       .order('created_at', { ascending: true })
       .limit(3)
     setLocalPinnedQuests(data ?? [])
-  }, [supabase, profile.id])
+  }, [supabase, user.id])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     if (event.active.data.current?.source === 'todo-column') {
@@ -197,13 +197,13 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
     router.push('/login')
   }
 
-  const myName = profile?.display_name || profile?.email?.split('@')[0] || 'You'
+  const myName = user?.display_name || user?.email?.split('@')[0] || 'You'
   const partnerName = partner?.display_name || partner?.email?.split('@')[0] || 'Partner'
 
   const draggingTodo = draggingTodoId ? localMyTodos.find(t => t.id === draggingTodoId) ?? null : null
 
   const sharedProps = {
-    profile,
+    user,
     partner,
     myTodos: localMyTodos,
     partnerTodos: localPartnerTodos,
@@ -255,6 +255,11 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-foam/50 border border-foam">
+                <span className="text-xs font-bold text-foreground">{user.momentum || 0}</span>
+                {user.momentum - user.day_start_momentum > 0 && <span className="text-[10px]" style={{ color: 'var(--color-completion)' }}>↑</span>}
+                {user.momentum - user.day_start_momentum < 0 && <span className="text-[10px]" style={{ color: 'var(--color-alert)' }}>↓</span>}
+              </div>
               <button
                 onClick={toggleTheme}
                 className="transition hover:opacity-80 text-muted-foreground"
@@ -265,13 +270,13 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
               <button
                 onClick={() => setShowProfile(true)}
                 className="transition hover:opacity-80"
-                title="Your profile"
+                title="Your settings"
               >
-                {profile.avatar_url ? (
+                {user.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={profile.avatar_url}
-                    alt="Profile"
+                    src={user.avatar_url}
+                    alt="User"
                     className="rounded-full object-cover size-7 border-2 border-foam"
                   />
                 ) : (
@@ -287,7 +292,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
 
         {showProfile && (
           <ProfileModal
-            profile={profile}
+            user={user}
             googleConnected={googleConnected}
             onClose={() => setShowProfile(false)}
             onSaved={refresh}
@@ -299,7 +304,7 @@ export default function Dashboard({ profile, partner, myTodos, partnerTodos, all
         {showQuests && (
           <QuestPanel
             open={showQuests}
-            userId={profile.id}
+            userId={user.id}
             initialQuestId={questPanelInitialId}
             onClose={() => { setShowQuests(false); setQuestPanelInitialId(null) }}
             onQuestsChanged={refreshPinnedQuests}

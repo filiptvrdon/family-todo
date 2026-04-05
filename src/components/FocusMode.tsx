@@ -106,23 +106,30 @@ export default function FocusMode({ myTodos, partnerTodos, partnerName, myUserId
     // Optimistically mark completed so next task surfaces immediately
     setLocalTodos(prev => prev.map(t => t.id === task.id ? { ...t, completed: true } : t))
 
-    supabase.from('todos').update({ completed: true }).eq('id', task.id).then(() => {
-      if (task.recurrence) {
-        const days = task.recurrence === 'daily' ? 1 : task.recurrence === 'weekly' ? 7 : 30
-        const due = format(addDays(new Date(), days), 'yyyy-MM-dd')
-        setTimeout(async () => {
-          await supabase.from('todos').update({ completed: false, due_date: due }).eq('id', task.id)
-          setLocalTodos(prev =>
-            prev.map(t => t.id === task.id ? { ...t, completed: false, due_date: due } : t)
-          )
-          setCompleting(false)
-          onRefresh()
-        }, 1500)
-      } else {
+    const { error } = await supabase.from('todos').update({ completed: true }).eq('id', task.id)
+    if (error) {
+      console.error('Error completing task:', error)
+      toast.error('Failed to complete task: ' + error.message)
+      setLocalTodos(prev => prev.map(t => t.id === task.id ? { ...t, completed: false } : t))
+      setCompleting(false)
+      return
+    }
+
+    if (task.recurrence) {
+      const days = task.recurrence === 'daily' ? 1 : task.recurrence === 'weekly' ? 7 : 30
+      const due = format(addDays(new Date(), days), 'yyyy-MM-dd')
+      setTimeout(async () => {
+        await supabase.from('todos').update({ completed: false, due_date: due }).eq('id', task.id)
+        setLocalTodos(prev =>
+          prev.map(t => t.id === task.id ? { ...t, completed: false, due_date: due } : t)
+        )
         setCompleting(false)
         onRefresh()
-      }
-    })
+      }, 1500)
+    } else {
+      setCompleting(false)
+      onRefresh()
+    }
   }
 
   function handleSkip() {
@@ -149,7 +156,16 @@ export default function FocusMode({ myTodos, partnerTodos, partnerName, myUserId
     saveSkippedIds(next)
     setSkipped(next)
 
-    supabase.from('todos').update({ due_date: newDate }).eq('id', task.id).then(() => onRefresh())
+    const { error } = await supabase.from('todos').update({ due_date: newDate }).eq('id', task.id)
+    if (error) {
+      console.error('Error postponing task:', error)
+      toast.error('Failed to postpone task: ' + error.message)
+      setLocalTodos(prev =>
+        prev.map(t => t.id === task.id ? { ...t, due_date: task.due_date } : t)
+      )
+      return
+    }
+    onRefresh()
   }
 
   if (!task) {

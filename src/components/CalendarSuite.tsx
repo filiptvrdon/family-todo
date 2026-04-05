@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Profile, Todo, CalendarEvent } from '@/lib/types'
+import { User, Todo, CalendarEvent } from '@/lib/types'
 import DayTimeline from '@/components/DayTimeline'
 import WeekCalendar from '@/components/calendar/WeekCalendar'
 import MonthCalendar from '@/components/calendar/MonthCalendar'
@@ -11,8 +11,8 @@ import MonthCalendar from '@/components/calendar/MonthCalendar'
 type CalendarTab = 'day' | 'week' | 'month'
 
 interface Props {
-  profile: Profile
-  partner: Profile | null
+  profile: User
+  partner: User | null
   myTodos: Todo[]
   allEvents: CalendarEvent[]
   onRefresh: () => void

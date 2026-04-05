@@ -21,7 +21,7 @@ import {
 import { generateKeyBetween } from 'fractional-indexing'
 import TodoDetailPanel from '@/components/TodoDetailPanel'
 import TodoCard from '@/components/TodoCard'
-import { triggerNudges } from '@/lib/nudges'
+import { triggerAiMetadata } from '@/lib/ai-metadata'
 
 const CELEBRATIONS = [
   'Badass 🍑',
@@ -70,6 +70,7 @@ export default function TodoList({
   const [title, setTitle] = useState('')
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [energyFilter, setEnergyFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all')
   const [loading, setLoading] = useState(!todos && !!parentId)
   const [questLinkMap, setQuestLinkMap] = useState<Record<string, { icon: string; name: string; status: string }[]>>({})
   const prevIdsRef = useRef<string>('')
@@ -150,8 +151,8 @@ export default function TodoList({
     return () => { ignore = true }
   }, [localTodos, supabase])
 
-  const startNudgeStream = useCallback((taskId: string) => {
-    triggerNudges(taskId, {
+  const startAiMetadataStream = useCallback((taskId: string) => {
+    triggerAiMetadata(taskId, {
       onToken: (id, token) => {
         if (unmountedRef.current) return
         setStreamingNudges(prev => {
@@ -228,22 +229,31 @@ export default function TodoList({
       completed: false,
       motivation_nudge: null,
       completion_nudge: null,
+      energy_level: 'low',
     }
 
     setLocalTodos(prev => [...prev, optimistic])
     setTitle('')
 
-    const { data } = await supabase.from('todos').insert({
+    const { data, error } = await supabase.from('todos').insert({
       user_id: userId,
       title: optimistic.title,
       due_date: optimistic.due_date,
       parent_id: parentId,
       index: newIndex,
+      energy_level: optimistic.energy_level,
     }).select().single()
+
+    if (error) {
+      console.error('Error adding todo:', error)
+      toast.error('Failed to add task: ' + error.message)
+      setLocalTodos(prev => prev.filter(t => t.id !== tempId))
+      return
+    }
 
     if (data) {
       setLocalTodos(prev => prev.map(t => t.id === tempId ? { ...data, motivation_nudge: null, completion_nudge: null } : t))
-      startNudgeStream(data.id)
+      startAiMetadataStream(data.id)
     }
     onRefresh()
   }
@@ -354,9 +364,18 @@ export default function TodoList({
   }
 
   const today = format(new Date(), 'yyyy-MM-dd')
-  const displayTodos = parentId 
-    ? localTodos 
-    : localTodos.filter(todo => !todo.completed || todo.due_date === today)
+  const filteredTodos = useMemo(() => {
+    let list = parentId 
+      ? localTodos 
+      : localTodos.filter(todo => !todo.completed || todo.due_date === today)
+    
+    if (energyFilter !== 'all') {
+      return list.filter(t => t.energy_level === energyFilter)
+    }
+    return list
+  }, [localTodos, parentId, today, energyFilter])
+
+  const displayTodos = filteredTodos
 
   const completedCount = localTodos.filter(t => t.completed).length
   const totalCount = localTodos.length
@@ -366,6 +385,25 @@ export default function TodoList({
     <>
       <DndMonitor onDragEnd={handleDragEnd} />
       <div className="flex flex-col gap-2">
+        {!parentId && (
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {(['all', 'low', 'medium', 'high'] as const).map(val => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setEnergyFilter(val)}
+                className="px-3 py-1 rounded-full text-xs font-medium transition whitespace-nowrap"
+                style={{
+                  background: energyFilter === val ? 'var(--color-primary)' : 'var(--color-foam)',
+                  color: energyFilter === val ? '#fff' : 'var(--color-text-secondary)',
+                  border: energyFilter === val ? '1.5px solid var(--color-primary)' : '1.5px solid var(--color-border)',
+                }}
+              >
+                {val === 'all' ? 'All' : val === 'low' ? 'Doable Now (Low)' : val.charAt(0).toUpperCase() + val.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
         {displayTodos.length === 0 && !loading && (
           <p className="text-sm text-center py-6 text-text-disabled">No tasks yet</p>
         )}

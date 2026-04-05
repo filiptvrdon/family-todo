@@ -21,7 +21,7 @@ export default function PartnerConnect({ myId, onConnected }: Props) {
     setLoading(true)
 
     const { data: partner } = await supabase
-      .from('profiles')
+      .from('users')
       .select('id')
       .eq('email', email.trim())
       .single()
@@ -39,8 +39,8 @@ export default function PartnerConnect({ myId, onConnected }: Props) {
     }
 
     // Link both directions
-    await supabase.from('profiles').update({ partner_id: partner.id }).eq('id', myId)
-    await supabase.from('profiles').update({ partner_id: myId }).eq('id', partner.id)
+    await supabase.from('users').update({ partner_id: partner.id }).eq('id', myId)
+    await supabase.from('users').update({ partner_id: myId }).eq('id', partner.id)
 
     setLoading(false)
     onConnected()
