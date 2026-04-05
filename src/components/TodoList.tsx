@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState, useEffect, useMemo, useRef } from 'react'
+import { useId, useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -21,6 +21,7 @@ import {
 import { generateKeyBetween } from 'fractional-indexing'
 import TodoDetailPanel from '@/components/TodoDetailPanel'
 import TodoCard from '@/components/TodoCard'
+import { triggerNudges } from '@/lib/nudges'
 
 const CELEBRATIONS = [
   'Badass 🍑',
@@ -72,6 +73,17 @@ export default function TodoList({
   const [loading, setLoading] = useState(!todos && !!parentId)
   const [questLinkMap, setQuestLinkMap] = useState<Record<string, { icon: string; name: string; status: string }[]>>({})
   const prevIdsRef = useRef<string>('')
+  const [streamingNudges, setStreamingNudges] = useState<Map<string, string>>(new Map())
+  const intervalsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set())
+  const unmountedRef = useRef(false)
+
+  useEffect(() => {
+    const intervals = intervalsRef.current
+    return () => {
+      unmountedRef.current = true
+      intervals.forEach(id => clearInterval(id))
+    }
+  }, [])
 
   // Adjust localTodos if props change from above
   if (todos !== prevTodos || parentId !== prevParentId) {
@@ -138,6 +150,55 @@ export default function TodoList({
     return () => { ignore = true }
   }, [localTodos, supabase])
 
+  const startNudgeStream = useCallback((taskId: string) => {
+    triggerNudges(taskId, {
+      onToken: (id, token) => {
+        if (unmountedRef.current) return
+        setStreamingNudges(prev => {
+          const next = new Map(prev)
+          next.set(id, (next.get(id) ?? '') + token)
+          return next
+        })
+      },
+      onDone: (id, text) => {
+        if (unmountedRef.current) return
+        setStreamingNudges(prev => {
+          const next = new Map(prev)
+          next.delete(id)
+          return next
+        })
+        if (text) {
+          setLocalTodos(prev => prev.map(t =>
+            t.id === id ? { ...t, motivation_nudge: text } : t
+          ))
+        }
+      },
+    })
+  }, [])
+
+  const pollCompletionNudge = useCallback((todoId: string) => {
+    let attempts = 0
+    const iv = setInterval(async () => {
+      if (unmountedRef.current) { clearInterval(iv); return }
+      attempts++
+      if (attempts > 20) { clearInterval(iv); intervalsRef.current.delete(iv); return }
+      const { data } = await supabase
+        .from('todos')
+        .select('completion_nudge')
+        .eq('id', todoId)
+        .single()
+      if (data?.completion_nudge) {
+        clearInterval(iv)
+        intervalsRef.current.delete(iv)
+        toast(data.completion_nudge, {
+          duration: 4000,
+          style: { color: 'var(--color-primary-dark)', fontWeight: '500' },
+        })
+      }
+    }, 1000)
+    intervalsRef.current.add(iv)
+  }, [supabase])
+
   function openDetail(todo: Todo) {
     setSelectedTodo(todo)
     setDetailOpen(true)
@@ -164,7 +225,9 @@ export default function TodoList({
       index: newIndex,
       created_at: new Date().toISOString(),
       subtasks_count: 0,
-      completed: false
+      completed: false,
+      motivation_nudge: null,
+      completion_nudge: null,
     }
 
     setLocalTodos(prev => [...prev, optimistic])
@@ -179,7 +242,8 @@ export default function TodoList({
     }).select().single()
 
     if (data) {
-      setLocalTodos(prev => prev.map(t => t.id === tempId ? data : t))
+      setLocalTodos(prev => prev.map(t => t.id === tempId ? { ...data, motivation_nudge: null, completion_nudge: null } : t))
+      startNudgeStream(data.id)
     }
     onRefresh()
   }
@@ -205,6 +269,16 @@ export default function TodoList({
       })
 
       await supabase.from('todos').update({ completed: true }).eq('id', todo.id)
+
+      // Completion nudge
+      if (todo.completion_nudge) {
+        setTimeout(() => toast(todo.completion_nudge!, {
+          duration: 4000,
+          style: { color: 'var(--color-primary-dark)', fontWeight: '500' },
+        }), 400)
+      } else {
+        pollCompletionNudge(todo.id)
+      }
 
       // Quest nudge: check if task is linked to any quests
       const { data: links } = await supabase
@@ -247,6 +321,7 @@ export default function TodoList({
   async function editTodo(id: string, newTitle: string) {
     setLocalTodos(prev => prev.map(t => t.id === id ? { ...t, title: newTitle } : t))
     await supabase.from('todos').update({ title: newTitle }).eq('id', id)
+    startNudgeStream(id)
     onRefresh()
   }
 
@@ -310,6 +385,7 @@ export default function TodoList({
               isDraggable={isOwner}
               isDroppable={isOwner}
               quests={questLinkMap[todo.id]}
+              streamingNudge={streamingNudges.get(todo.id)}
             />
           ))}
         </SortableContext>

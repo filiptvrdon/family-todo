@@ -27,6 +27,7 @@ interface Props {
   isDraggable?: boolean
   isDroppable?: boolean
   quests?: QuestLink[]
+  streamingNudge?: string
 }
 
 const START_MESSAGES = [
@@ -64,6 +65,7 @@ export default function TodoCard({
   isDraggable = false,
   isDroppable = false,
   quests,
+  streamingNudge,
 }: Props) {
   const [completing, setCompleting] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -244,6 +246,11 @@ export default function TodoCard({
             >
               {todo.title}
             </p>
+            {!todo.completed && (todo.motivation_nudge || streamingNudge) && (
+              <p className="text-[11px] italic mt-0.5 line-clamp-2" style={{ color: 'var(--color-text-secondary)' }}>
+                {todo.motivation_nudge || streamingNudge}
+              </p>
+            )}
             {todo.subtasks_count !== undefined && todo.subtasks_count > 0 && subtaskTotals && (
               <div className="mt-1">
                 <div className="flex justify-between text-[10px] text-muted-foreground">

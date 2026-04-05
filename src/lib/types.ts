@@ -22,6 +22,8 @@ export interface Todo {
   index: string                  // fractional index for ordering within parent
   created_at: string
   subtasks_count?: number        // calculated field from Supabase
+  motivation_nudge: string | null
+  completion_nudge: string | null
 }
 
 

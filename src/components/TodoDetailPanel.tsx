@@ -73,6 +73,21 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
       )
     }
 
+    // Regenerate nudges in background (consume stream silently so server can persist)
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/tasks/${todo.id}/nudges/stream`, { method: 'POST' })
+        if (res.body) {
+          const reader = res.body.getReader()
+          while (true) {
+            const { done } = await reader.read()
+            if (done) break
+          }
+        }
+      } catch {}
+    })()
+    fetch(`/api/tasks/${todo.id}/nudges`, { method: 'POST' }).catch(() => {})
+
     onRefresh()
     onClose()
   }
@@ -140,6 +155,16 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
             ) : (
               <p className="text-sm" style={{ color: todo.description ? 'var(--color-text)' : 'var(--color-text-disabled)' }}>
                 {todo.description || 'No notes'}
+              </p>
+            )}
+
+            {/* AI nudge */}
+            {(todo.completed ? todo.completion_nudge : todo.motivation_nudge) && (
+              <p
+                className="text-sm italic rounded-xl px-4 py-3"
+                style={{ background: 'var(--color-foam)', color: 'var(--color-primary-dark)' }}
+              >
+                {todo.completed ? todo.completion_nudge : todo.motivation_nudge}
               </p>
             )}
 

@@ -15,6 +15,20 @@ export async function aiJSON(messages: AIMessage[]): Promise<string> {
   return data.message?.content ?? ''
 }
 
+// Non-streaming plain-text call — collects stream output into a string
+export async function aiText(messages: AIMessage[]): Promise<string> {
+  const stream = await aiStream(messages)
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let text = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    text += decoder.decode(value, { stream: true })
+  }
+  return text
+}
+
 // Streaming call — returns a ReadableStream of raw text tokens
 export async function aiStream(messages: AIMessage[]): Promise<ReadableStream<Uint8Array>> {
   const res = await fetch(AI_URL, {

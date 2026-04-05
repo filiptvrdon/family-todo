@@ -1,7 +1,7 @@
 # Feature: AI-Generated Nudges
 
 > **File:** `011_AI-genarated-nudges.md`
-> **Status:** draft
+> **Status:** done
 
 ## What & Why
 
@@ -127,4 +127,10 @@ No new tables needed.
 - Rate-limit / cost guard: skip generation for sub-tasks beyond a certain depth? — defer.
 
 **Implementation notes**
-_Filled in during/after implementation._
+- `aiText` helper added to `src/lib/ai.ts` (collects aiStream output into a string without JSON constraint).
+- Shared context builder in `src/app/api/tasks/[id]/_context.ts` — used by both API routes.
+- `src/lib/nudges.ts` — client-side helper that opens the motivation stream and fires the completion fetch independently.
+- `TodoList` manages `streamingNudges: Map<taskId, string>` state; tokens are applied per task; local todo is patched with final text on stream end so subsequent renders don't re-stream.
+- Polling for completion nudge capped at 20 attempts (20 s) with cleanup on unmount.
+- Detail panel triggers silent stream consumption + completion fetch on save (server persists, card updates on next load).
+- Minor known gap: after a detail-panel save, the motivation nudge on the card is stale until next page load.
