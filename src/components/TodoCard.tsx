@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 interface QuestLink {
   icon: string
   name: string
+  status: string
 }
 
 interface Props {
@@ -266,7 +267,14 @@ export default function TodoCard({
           {quests && quests.length > 0 && (
             <div className="flex items-center gap-1">
               {quests.slice(0, 3).map(q => (
-                <span key={q.name} title={q.name} style={{ color: 'var(--color-primary)' }}>
+                <span
+                  key={q.name}
+                  title={q.name}
+                  style={{
+                    color: q.status === 'completed' ? 'var(--color-text-disabled)' : 'var(--color-primary)',
+                    opacity: q.status === 'completed' ? 0.5 : 1,
+                  }}
+                >
                   <QuestIcon name={q.icon} size={13} />
                 </span>
               ))}

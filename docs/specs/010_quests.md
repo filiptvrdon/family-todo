@@ -22,35 +22,42 @@ Individual tasks feel disconnected and low-meaning. For users who think in terms
 
 ### Creating a quest
 
-1. User taps "New Quest" (entry: navbar quests menu).
-2. Fills in: **name** (required), **emoji icon** (required, stored as a Unicode string), **description** (optional).
+1. User taps "New Quest" via the `Swords` icon in the navbar.
+   - **LATER:** one-tap quick creation — a single input field in the navbar dropdown that creates a quest with just a name (icon defaults, description skipped). Same fast-path philosophy as task creation.
+2. Fills in: **name** (required), **Lucide icon** (required, selected from a 30-icon grid, stored as icon name string e.g. `"swords"`), **description** (optional).
 3. Quest is created with `status = active` and appears in the quests list.
-4. From the quests list, the user can **pin up to 3 quests to the navbar**. The navbar shows the emoji + name of each pinned quest plus a link to the full quests list.
+4. From the quests list, the user can **pin up to 3 quests to the navbar**. The navbar shows the icon + name of each pinned quest.
+
+### Editing a quest
+
+- Pencil button in the quest detail header enters edit mode.
+- Edit mode shows the icon picker, name input, and description textarea. Header previews changes live.
+- Linked tasks show an unlink (X) button in edit mode — removes immediately from `quest_tasks`.
+- Save / Cancel buttons commit or discard changes.
 
 ### Linking a task to a quest
 
-- When creating or editing a task, an optional quest picker lists all active quests only. Completed quests are not shown.
-- A task can be linked to **multiple quests** (many-to-many).
-- Tasks linked to any quest display the quest's emoji icon(s) as a visual indicator in the task list.
+- In the task detail panel, a quest picker (pill buttons) lists all active quests. Completed quests not shown.
+- A task can be linked to **multiple quests** (many-to-many via `quest_tasks`).
+- Quest links are synced on task save (delete all + re-insert selected).
+- Task cards show the linked quest icon(s) in primary blue (up to 3, with quest name as tooltip).
 
 ### Completing a quest-linked task
 
 1. User completes a task linked to one or more quests.
-2. A warm, transient nudge appears — one message mentioning all linked quests by name:
-   - e.g. *"That moves you closer to 🏖️ Beach house and 🛠️ Fix the flat."*
-   - Tone: encouraging, personal. Never generic. Always names the quest(s).
-3. The nudge is non-blocking — a brief overlay or inline toast, auto-dismissed. No modal.
+2. A warm, transient toast nudge appears naming all linked quests:
+   - e.g. *"That moves you closer to Beach house and Fix the flat."*
+3. Non-blocking, auto-dismissed. No modal.
 
 ### Viewing a quest
 
-- Quest detail shows: name, emoji, description, linked tasks (open and completed).
-- Progress framed as prose: *"You've taken 3 steps toward this."* — never a percentage or count bar.
+- Quest detail shows: icon, name, description, prose progress, linked tasks (open and completed with checkmark).
+- Progress framed as prose: *"You've taken 3 steps toward this."* — never a percentage or count.
 
 ### Closing a quest
 
-- Quest completion is **always manual** — user explicitly marks it as complete.
-- Triggers a celebration moment (wording TBD — warm, not over-the-top).
-- Completed quests move to an archive view, never deleted.
+- Quest completion is **always manual** — user taps "Mark quest as complete" in the detail view.
+- Completed quests are filtered out of the active list and archived (status = `completed`), never deleted.
 
 ---
 
@@ -63,7 +70,7 @@ Individual tasks feel disconnected and low-meaning. For users who think in terms
 | `id` | `uuid` | PK |
 | `user_id` | `uuid` | FK → `profiles.id` |
 | `name` | `text` | required |
-| `icon` | `text` | emoji string, e.g. `"🏖️"` |
+| `icon` | `text` | Lucide icon name, e.g. `"swords"` — rendered via `QuestIcon` in `src/lib/questIcons.tsx` |
 | `description` | `text` | nullable |
 | `status` | `text` | `active` \| `completed`, default `active` |
 | `pinned` | `boolean` | default `false` — user pins up to 3 to navbar |
@@ -106,19 +113,24 @@ Migration: `supabase migration new add_quests`
 
 ## Done When
 
-- [ ] User can create a quest with name, emoji, and optional description.
-- [ ] User can pin up to 3 quests to the navbar; navbar shows emoji + name + link to list.
-- [ ] When creating/editing a task, user can link it to one or more quests via a picker.
-- [ ] Tasks with quest links display the quest emoji(s) as a visual indicator.
-- [ ] Completing a quest-linked task shows a warm, transient nudge naming all linked quests.
-- [ ] Nudge is non-blocking and auto-dismissed; no modal.
-- [ ] Quest detail view shows linked tasks and progress in prose (no percentages).
-- [ ] User can manually mark a quest as complete; triggers a celebration moment.
-- [ ] Completed quests are archived, not deleted.
-- [ ] Max 3 quests can be pinned; UI prevents pinning a 4th.
+- [x] User can create a quest with name, Lucide icon, and optional description.
+- [x] User can pin up to 3 quests to the navbar; navbar shows icon + name.
+- [x] User can edit quest name, icon, description from the detail view.
+- [x] When editing a task, user can link it to one or more quests via a picker.
+- [x] Tasks with quest links display the quest icon(s) in the task card.
+- [x] Completing a quest-linked task shows a warm, transient nudge naming all linked quests.
+- [x] Nudge is non-blocking and auto-dismissed; no modal.
+- [x] Quest detail view shows linked tasks and progress in prose (no percentages).
+- [x] User can unlink tasks from the quest detail edit mode.
+- [x] User can manually mark a quest as complete.
+- [x] Completed quests are archived, not deleted.
+- [x] Max 3 quests can be pinned; UI prevents pinning a 4th.
 
 **Open questions**
 - None.
 
 **Implementation notes**
-_To be filled during implementation._
+- Icons use Lucide React, mapped in `src/lib/questIcons.tsx` via `QUEST_ICONS` array and `QuestIcon` component.
+- Quest link icons on task cards are batch-fetched in `TodoList` (one query for all visible todo IDs) — not per-card. Map invalidates when task detail is saved.
+- Quest link sync on task save: delete-all + re-insert pattern (simple, no diffing needed at this scale).
+- Pinned quests are re-fetched client-side in `Dashboard.refreshPinnedQuests()` after any quest change; initial value comes from SSR in `page.tsx`.

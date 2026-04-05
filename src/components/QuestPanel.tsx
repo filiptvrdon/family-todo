@@ -119,10 +119,14 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
       completed_at: new Date().toISOString(),
       pinned: false,
     }).eq('id', selectedQuest.id)
-    setQuests(prev => prev.filter(q => q.id !== selectedQuest.id))
+    setQuests(prev => prev.map(q => q.id === selectedQuest.id
+      ? { ...q, status: 'completed' as const, pinned: false, completed_at: new Date().toISOString() }
+      : q
+    ))
     onQuestsChanged()
     setView('list')
     setSelectedQuest(null)
+    setIsEditing(false)
   }
 
   function startEdit() {
@@ -161,6 +165,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
   }
 
   const activeQuests = quests.filter(q => q.status === 'active')
+  const completedQuests = quests.filter(q => q.status === 'completed')
   const pinnedCount = quests.filter(q => q.pinned).length
 
   return (
@@ -237,6 +242,24 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                     </div>
                   ))}
                 </div>
+
+                {completedQuests.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Completed</p>
+                    {completedQuests.map(quest => (
+                      <button
+                        key={quest.id}
+                        onClick={() => openDetail(quest)}
+                        className="flex items-center gap-3 rounded-xl px-4 py-3 border border-border bg-card text-left cursor-pointer opacity-50"
+                      >
+                        <span className="shrink-0 text-text-disabled">
+                          <QuestIcon name={quest.icon} size={18} />
+                        </span>
+                        <span className="text-sm font-medium text-text-disabled line-through truncate">{quest.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -323,7 +346,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                     </Drawer.Title>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {!isEditing && (
+                    {!isEditing && selectedQuest.status === 'active' && (
                       <button
                         onClick={startEdit}
                         className="flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam cursor-pointer"
@@ -447,8 +470,8 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                   ))}
                 </div>
 
-                {/* Complete quest — only in read mode */}
-                {!isEditing && (
+                {/* Complete quest — only in read mode, only for active quests */}
+                {!isEditing && selectedQuest.status === 'active' && (
                   <button
                     onClick={completeQuest}
                     className="w-full text-sm rounded-xl transition min-h-[44px] border-[1.5px] mt-2 cursor-pointer"
@@ -456,6 +479,11 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                   >
                     Mark quest as complete
                   </button>
+                )}
+                {!isEditing && selectedQuest.status === 'completed' && (
+                  <p className="text-xs text-center text-text-disabled pt-1">
+                    Completed {selectedQuest.completed_at ? new Date(selectedQuest.completed_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : ''}
+                  </p>
                 )}
               </div>
             )}

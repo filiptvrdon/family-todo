@@ -70,7 +70,7 @@ export default function TodoList({
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [loading, setLoading] = useState(!todos && !!parentId)
-  const [questLinkMap, setQuestLinkMap] = useState<Record<string, { icon: string; name: string }[]>>({})
+  const [questLinkMap, setQuestLinkMap] = useState<Record<string, { icon: string; name: string; status: string }[]>>({})
   const prevIdsRef = useRef<string>('')
 
   // Adjust localTodos if props change from above
@@ -122,11 +122,11 @@ export default function TodoList({
     async function fetchQuestLinks() {
       const { data } = await supabase
         .from('quest_tasks')
-        .select('task_id, quests(icon, name)')
+        .select('task_id, quests(icon, name, status)')
         .in('task_id', ids)
       if (ignore || !data) return
-      const map: Record<string, { icon: string; name: string }[]> = {}
-      for (const row of data as { task_id: string; quests: { icon: string; name: string } | { icon: string; name: string }[] | null }[]) {
+      const map: Record<string, { icon: string; name: string; status: string }[]> = {}
+      for (const row of data as { task_id: string; quests: { icon: string; name: string; status: string } | { icon: string; name: string; status: string }[] | null }[]) {
         const q = Array.isArray(row.quests) ? row.quests[0] : row.quests
         if (!q) continue
         if (!map[row.task_id]) map[row.task_id] = []
