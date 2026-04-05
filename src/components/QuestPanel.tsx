@@ -287,7 +287,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                   <button
                     type="button"
                     onClick={() => setShowCreateIconPicker(v => !v)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border-[1.5px] border-border bg-card cursor-pointer transition w-fit"
+                    className="flex items-center gap-3 px-4 py-3 rounded-full border-[1.5px] border-border bg-card cursor-pointer transition w-fit"
                   >
                     <span style={{ color: 'var(--color-primary)' }}>
                       <QuestIcon name={newIcon} size={20} />
@@ -303,7 +303,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                             key={name}
                             type="button"
                             onClick={() => { setNewIcon(name); setShowCreateIconPicker(false) }}
-                            className="flex items-center justify-center rounded-xl w-10 h-10 transition cursor-pointer"
+                            className="flex items-center justify-center rounded-full w-10 h-10 transition cursor-pointer"
                             style={{
                               background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
                               color: selected ? '#fff' : 'var(--color-text-secondary)',
@@ -386,7 +386,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                       <button
                         type="button"
                         onClick={() => setShowEditIconPicker(v => !v)}
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl border-[1.5px] border-border bg-card cursor-pointer transition w-fit"
+                        className="flex items-center gap-3 px-4 py-3 rounded-full border-[1.5px] border-border bg-card cursor-pointer transition w-fit"
                       >
                         <span style={{ color: 'var(--color-primary)' }}>
                           <QuestIcon name={editIcon} size={20} />
@@ -402,7 +402,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                                 key={name}
                                 type="button"
                                 onClick={() => { setEditIcon(name); setShowEditIconPicker(false) }}
-                                className="flex items-center justify-center rounded-xl w-10 h-10 transition cursor-pointer"
+                                className="flex items-center justify-center rounded-full w-10 h-10 transition cursor-pointer"
                                 style={{
                                   background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
                                   color: selected ? '#fff' : 'var(--color-text-secondary)',
