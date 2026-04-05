@@ -42,6 +42,9 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
   const [editIcon, setEditIcon] = useState(QUEST_ICONS[0].name)
   const [editDescription, setEditDescription] = useState('')
 
+  const [showCreateIconPicker, setShowCreateIconPicker] = useState(false)
+  const [showEditIconPicker, setShowEditIconPicker] = useState(false)
+
   const supabase = createClient()
 
   const loadQuests = useCallback(async () => {
@@ -109,6 +112,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
     setNewIcon(QUEST_ICONS[0].name)
     setNewDescription('')
     setSaving(false)
+    setShowCreateIconPicker(false)
     setView('list')
   }
 
@@ -148,6 +152,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
     onQuestsChanged()
     setSaving(false)
     setIsEditing(false)
+    setShowEditIconPicker(false)
   }
 
   async function unlinkTask(taskId: string) {
@@ -279,26 +284,38 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                 {/* Icon picker */}
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Icon</p>
-                  <div className="grid grid-cols-6 gap-2">
-                    {QUEST_ICONS.map(({ name, component: Icon }) => {
-                      const selected = newIcon === name
-                      return (
-                        <button
-                          key={name}
-                          type="button"
-                          onClick={() => setNewIcon(name)}
-                          className="flex items-center justify-center rounded-xl w-full aspect-square transition cursor-pointer"
-                          style={{
-                            background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
-                            color: selected ? '#fff' : 'var(--color-text-secondary)',
-                            border: selected ? '1.5px solid var(--color-primary)' : '1.5px solid transparent',
-                          }}
-                        >
-                          <Icon size={18} />
-                        </button>
-                      )
-                    })}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateIconPicker(v => !v)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border-[1.5px] border-border bg-card cursor-pointer transition w-fit"
+                  >
+                    <span style={{ color: 'var(--color-primary)' }}>
+                      <QuestIcon name={newIcon} size={20} />
+                    </span>
+                    <span className="text-sm text-muted-foreground">{showCreateIconPicker ? 'Close' : 'Change'}</span>
+                  </button>
+                  {showCreateIconPicker && (
+                    <div className="grid grid-cols-6 gap-2">
+                      {QUEST_ICONS.map(({ name, component: Icon }) => {
+                        const selected = newIcon === name
+                        return (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => { setNewIcon(name); setShowCreateIconPicker(false) }}
+                            className="flex items-center justify-center rounded-xl w-full aspect-square transition cursor-pointer"
+                            style={{
+                              background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
+                              color: selected ? '#fff' : 'var(--color-text-secondary)',
+                              border: selected ? '1.5px solid var(--color-primary)' : '1.5px solid transparent',
+                            }}
+                          >
+                            <Icon size={18} />
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <input
@@ -366,26 +383,38 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                   <>
                     <div className="flex flex-col gap-2">
                       <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Icon</p>
-                      <div className="grid grid-cols-6 gap-2">
-                        {QUEST_ICONS.map(({ name, component: Icon }) => {
-                          const selected = editIcon === name
-                          return (
-                            <button
-                              key={name}
-                              type="button"
-                              onClick={() => setEditIcon(name)}
-                              className="flex items-center justify-center rounded-xl w-full aspect-square transition cursor-pointer"
-                              style={{
-                                background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
-                                color: selected ? '#fff' : 'var(--color-text-secondary)',
-                                border: selected ? '1.5px solid var(--color-primary)' : '1.5px solid transparent',
-                              }}
-                            >
-                              <Icon size={18} />
-                            </button>
-                          )
-                        })}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowEditIconPicker(v => !v)}
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl border-[1.5px] border-border bg-card cursor-pointer transition w-fit"
+                      >
+                        <span style={{ color: 'var(--color-primary)' }}>
+                          <QuestIcon name={editIcon} size={20} />
+                        </span>
+                        <span className="text-sm text-muted-foreground">{showEditIconPicker ? 'Close' : 'Change'}</span>
+                      </button>
+                      {showEditIconPicker && (
+                        <div className="grid grid-cols-6 gap-2">
+                          {QUEST_ICONS.map(({ name, component: Icon }) => {
+                            const selected = editIcon === name
+                            return (
+                              <button
+                                key={name}
+                                type="button"
+                                onClick={() => { setEditIcon(name); setShowEditIconPicker(false) }}
+                                className="flex items-center justify-center rounded-xl w-full aspect-square transition cursor-pointer"
+                                style={{
+                                  background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
+                                  color: selected ? '#fff' : 'var(--color-text-secondary)',
+                                  border: selected ? '1.5px solid var(--color-primary)' : '1.5px solid transparent',
+                                }}
+                              >
+                                <Icon size={18} />
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     <input
