@@ -303,7 +303,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                             key={name}
                             type="button"
                             onClick={() => { setNewIcon(name); setShowCreateIconPicker(false) }}
-                            className="flex items-center justify-center rounded-xl w-full aspect-square transition cursor-pointer"
+                            className="flex items-center justify-center rounded-xl w-10 h-10 transition cursor-pointer"
                             style={{
                               background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
                               color: selected ? '#fff' : 'var(--color-text-secondary)',
@@ -402,7 +402,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                                 key={name}
                                 type="button"
                                 onClick={() => { setEditIcon(name); setShowEditIconPicker(false) }}
-                                className="flex items-center justify-center rounded-xl w-full aspect-square transition cursor-pointer"
+                                className="flex items-center justify-center rounded-xl w-10 h-10 transition cursor-pointer"
                                 style={{
                                   background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
                                   color: selected ? '#fff' : 'var(--color-text-secondary)',
