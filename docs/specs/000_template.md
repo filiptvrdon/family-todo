@@ -1,57 +1,24 @@
 # Feature: [Name]
 
-> **File:** `NNN_feature-name.md` — use the next available number; keep files in numeric order
+> **File:** `NNN_feature-name.md`
 > **Status:** draft | ready | in-progress | done
-> **Roadmap ref:** [link or section in docs/roadmap.md, if applicable]
 
-## Problem
+## What & Why
 
-_What pain or gap does this solve? Who feels it and when?_
+_Problem this solves. Goal in one sentence. What it explicitly does NOT cover._
 
-## Goal
+## How It Works
 
-_One sentence: what should be true after this feature ships?_
+_User flows step by step. UI/UX notes. Data model changes. Any new server actions or hooks._
 
-## Non-goals
+## Done When
 
-_Explicitly list what this feature does NOT cover, to prevent scope creep._
-
-## Design
-
-### User-facing behavior
-
-_Describe the feature from the user's perspective. Walk through the main flows step by step. Include edge cases._
-
-### UI / UX notes
-
-_Wireframes, layout ideas, component names, or references to design guidelines in `docs/design-visual-guidelines.md` and `docs/design-adhd-principles.md`._
-
-### Data model
-
-_Any new or modified DB tables/columns. Reference relevant migrations in `supabase/migrations/`. If a migration is needed, note it here._
-
-### API / Server actions
-
-_Any new server actions, API routes, or Supabase queries required._
-
-### State & client logic
-
-_How does client state change? Any new hooks, context, or store slices?_
-
-## Acceptance criteria
-
-_Concrete, testable statements. Each line should be independently verifiable._
+_Acceptance criteria as a checklist. Open questions at the bottom._
 
 - [ ] ...
-- [ ] ...
-- [ ] ...
 
-## Open questions
-
-_Decisions not yet made. Remove entries once resolved._
-
+**Open questions**
 - ...
 
-## Implementation notes
-
-_Written by the agent during or after implementation. Record decisions made, gotchas hit, components created/modified, and anything that future work should know._
+**Implementation notes**
+_Filled in during/after implementation._
