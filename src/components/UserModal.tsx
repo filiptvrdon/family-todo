@@ -103,6 +103,10 @@ export default function UserModal({ user, googleConnected, onClose, onSaved, onG
             <UserIcon size={20} className="text-primary" />
             <h2 className="font-semibold text-foreground text-lg">Your profile</h2>
           </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-foam border border-foam">
+            <span className="text-xs font-bold text-foreground">{user.momentum || 0}</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">Momentum</span>
+          </div>
           <button onClick={onClose} className="text-text-disabled transition hover:opacity-70">
             <X size={20} />
           </button>
@@ -147,7 +151,7 @@ export default function UserModal({ user, googleConnected, onClose, onSaved, onG
           <div>
             <label className="block text-xs font-medium mb-1 text-muted-foreground">Email</label>
             <div className="px-3 py-2 rounded-lg text-sm bg-background text-text-disabled border border-border">
-              {profile.email}
+              {user.email}
             </div>
           </div>
 

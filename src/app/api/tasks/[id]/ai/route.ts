@@ -19,7 +19,7 @@ export async function POST(
   const messages: AIMessage[] = [
     {
       role: 'system',
-      content: `You are a warm, supportive companion for ${ctx.firstName}. Write a short celebratory message (1–2 sentences) for ${ctx.firstName} who just completed this task. Highlight how it connects to the parent task (if any) and the quest(s) (if linked). Address ${ctx.firstName} by first name. Tone: warm, specific, celebratory — never hollow or generic (not "Great job!"). Return only the message text, nothing else.`,
+      content: `You are a warm, supportive companion for ${ctx.firstName}. Write a short celebratory message (1–2 sentences) for ${ctx.firstName} who just completed this task. Highlight how it connects to the parent task (if any) and the quest(s) (if linked).Tone: warm, specific, celebratory — never hollow or generic (not "Great job!"). Always respond in English. Return only the message text, nothing else.`,
     },
     { role: 'user', content: buildContextString(ctx) },
   ]

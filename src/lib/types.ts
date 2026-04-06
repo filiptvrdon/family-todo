@@ -10,6 +10,8 @@ export interface User {
   momentum: number
   day_start_momentum: number
   last_momentum_increase: string
+  last_momentum_decay: string | null
+  last_momentum_nudge: string | null
 }
 
 export interface Todo {
@@ -45,6 +47,9 @@ export interface Quest {
   momentum: number
   day_start_momentum: number
   last_momentum_increase: string
+  last_momentum_decay: string | null
+  last_momentum_nudge: string | null
+  motivation_nudge: string | null
 }
 
 export interface CalendarEvent {

@@ -22,7 +22,7 @@ export async function POST(
   const messages: AIMessage[] = [
     {
       role: 'system',
-      content: `You are a warm, supportive companion for ${ctx.firstName}. Write a short, warm nudge (1–2 sentences) explaining how completing this task helps ${ctx.firstName} move forward. Reference the parent task if there is one, and the quest(s) if linked. Address ${ctx.firstName} by first name. Never use the word "productivity". Tone: encouraging, personal, never generic. Always respond in English. After the nudge, on a new line, add exactly "[BONUS: X]" where X is an integer in the range ${bonusRange} reflecting how meaningful or impactful this specific task context is. Example: "Go for it! [BONUS: 3]"`,
+      content: `You are a supportive companion for ${ctx.firstName}. Write a short, 1 sentence, nudge explaining how completing this task helps ${ctx.firstName} move forward. Reference the parent task if there is one, and the quest(s) if linked. Tone: encouraging, personal, never generic. Always respond in English.`,
     },
     { role: 'user', content: buildContextString(ctx) },
   ]

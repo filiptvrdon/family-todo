@@ -508,6 +508,15 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                     >
                       {loadingTasks ? '…' : progressProse(linkedTasks)}
                     </p>
+
+                    {selectedQuest.motivation_nudge && (
+                      <p
+                        className="text-sm italic rounded-xl px-4 py-3"
+                        style={{ background: 'var(--color-foam)', color: 'var(--color-primary-dark)', border: '1.5px dashed var(--color-primary)' }}
+                      >
+                        {selectedQuest.motivation_nudge}
+                      </p>
+                    )}
                   </>
                 )}
 

@@ -178,7 +178,7 @@ Ask what else is on their mind — new tasks, thoughts, plans, anything.
     return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
   }
 
-  // ── Finalize (apply overdue decisions) ──────────────────────────────────────
+  // ── Finalize (apply overdue decisions + momentum maintenance) ───────────────
   if (action === 'finalize') {
     const { messages, overdueTodos } = body as {
       messages: Message[]
@@ -188,6 +188,23 @@ Ask what else is on their mind — new tasks, thoughts, plans, anything.
     if (deleteIds.length > 0) {
       await supabase.from('todos').delete().in('id', deleteIds)
     }
+
+    // Momentum maintenance
+    await supabase.rpc('process_daily_momentum')
+    
+    // Reset day start momentum for the user now that they've checked in
+    await supabase.from('users').update({ 
+      day_start_momentum: (await supabase.from('users').select('momentum').eq('id', user.id).single()).data?.momentum || 0 
+    }).eq('id', user.id)
+
+    // Also reset for their active quests
+    const { data: activeQuests } = await supabase.from('quests').select('id, momentum').eq('user_id', user.id).eq('status', 'active')
+    if (activeQuests) {
+      for (const q of activeQuests) {
+        await supabase.from('quests').update({ day_start_momentum: q.momentum }).eq('id', q.id)
+      }
+    }
+
     return NextResponse.json({ ok: true, deleted: deleteIds.length })
   }
 

@@ -1,7 +1,7 @@
 # Feature: Momentum & Energy
 
 > **File:** `012_momentum_and_energy.md`
-> **Status:** in-progress
+> **Status:** completed
 
 ## What & Why
 
@@ -60,17 +60,17 @@ There is an existing call to AI on task creation or update. We need to extend th
 ## Done When
 
 ### Phase 1: Task Energy Level
-- [ ] `energy_level` field (enum: low, medium, high) added to `todos` table in Supabase.
-- [ ] TypeScript types updated to include `energy_level`.
-- [ ] UI added to `TodoDetailPanel` to select an energy level.
-- [ ] Task card shows a subtle indicator of the energy level.
-- [ ] Task list filtering by energy level is functional ("Doable Now" filter).
+- [x] `energy_level` field (enum: low, medium, high) added to `todos` table in Supabase.
+- [x] TypeScript types updated to include `energy_level`.
+- [x] UI added to `TodoDetailPanel` to select an energy level.
+- [x] Task card shows a subtle indicator of the energy level.
+- [x] Task list filtering by energy level is functional ("Doable Now" filter).
 
 ### Phase 2: Quest Momentum
-- [ ] `momentum` attribute (integer) added to `quests` table.
-- [ ] Completing a task increases the linked quest's momentum according to the energy scale.
-- [ ] Momentum decay logic implemented (cron job or background check every 24h).
-- [ ] Nudge/notification sent before momentum decay begins.
+- [x] `momentum` attribute (integer) added to `quests` table.
+- [x] Completing a task increases the linked quest's momentum according to the energy scale.
+- [x] Momentum decay logic implemented (cron job or background check every 24h).
+- [x] Nudge/notification sent before momentum decay begins.
 
 **Open questions**
 - Should momentum have a "Max" cap (e.g. 100)?
