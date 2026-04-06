@@ -291,7 +291,7 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
         <ResponsiveDashboard {...sharedProps} onTodoComplete={completeTodo} />
 
         {showProfile && (
-          <ProfileModal
+          <UserModal
             user={user}
             googleConnected={googleConnected}
             onClose={() => setShowProfile(false)}

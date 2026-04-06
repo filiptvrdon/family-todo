@@ -230,6 +230,7 @@ export default function TodoList({
       motivation_nudge: null,
       completion_nudge: null,
       energy_level: 'low',
+      momentum_contribution: 0,
     }
 
     setLocalTodos(prev => [...prev, optimistic])
@@ -331,7 +332,7 @@ export default function TodoList({
   async function editTodo(id: string, newTitle: string) {
     setLocalTodos(prev => prev.map(t => t.id === id ? { ...t, title: newTitle } : t))
     await supabase.from('todos').update({ title: newTitle }).eq('id', id)
-    startNudgeStream(id)
+    startAiMetadataStream(id)
     onRefresh()
   }
 
@@ -365,7 +366,7 @@ export default function TodoList({
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const filteredTodos = useMemo(() => {
-    let list = parentId 
+    const list = parentId 
       ? localTodos 
       : localTodos.filter(todo => !todo.completed || todo.due_date === today)
     

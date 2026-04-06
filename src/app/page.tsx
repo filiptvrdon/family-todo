@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
 import { refreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar'
-import { User, CalendarEvent, Quest } from '@/lib/types'
+import { CalendarEvent, Quest } from '@/lib/types'
 import { maintainMomentum } from '@/lib/momentum'
 
 export default async function Home() {

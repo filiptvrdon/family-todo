@@ -16,7 +16,6 @@ export async function POST(
   const ctx = await buildNudgeContext(supabase, taskId, user.id)
   if (!ctx) return new Response('', { status: 200 })
 
-  const bonusRange = ctx.energyLevel === 'low' ? '1-5' : ctx.energyLevel === 'medium' ? '5-10' : '10-20'
   const baseMomentum = ctx.energyLevel === 'low' ? 10 : ctx.energyLevel === 'medium' ? 20 : 30
 
   const messages: AIMessage[] = [

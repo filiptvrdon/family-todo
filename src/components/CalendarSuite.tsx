@@ -11,7 +11,7 @@ import MonthCalendar from '@/components/calendar/MonthCalendar'
 type CalendarTab = 'day' | 'week' | 'month'
 
 interface Props {
-  profile: User
+  user: User
   partner: User | null
   myTodos: Todo[]
   allEvents: CalendarEvent[]
@@ -27,7 +27,7 @@ interface Props {
 }
 
 export default function CalendarSuite({
-  profile, partner, myTodos, allEvents, onRefresh, onTodoComplete,
+  user, partner, myTodos, allEvents, onRefresh, onTodoComplete,
   dayDate, setDayDate, weekCalDate, setWeekCalDate, monthCalDate, setMonthCalDate, isDragging
 }: Props) {
   const [tab, setTab] = useState<CalendarTab>('day')
@@ -120,7 +120,7 @@ export default function CalendarSuite({
             <WeekCalendar
               events={allEvents}
               todos={myTodos}
-              myUserId={profile.id}
+              myUserId={user.id}
               partnerUserId={partner?.id ?? null}
               myColor="var(--color-primary)"
               partnerColor="var(--color-completion)"
@@ -137,7 +137,7 @@ export default function CalendarSuite({
             <MonthCalendar
               events={allEvents}
               todos={myTodos}
-              myUserId={profile.id}
+              myUserId={user.id}
               partnerUserId={partner?.id ?? null}
               myColor="var(--color-primary)"
               partnerColor="var(--color-completion)"
