@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { format, addDays } from 'date-fns'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   DndContext,
   DragEndEvent,
@@ -263,6 +264,9 @@ export default function TodoList({
     prevIdsRef.current = ''
   }
 
+  const [onARoll, setOnARoll] = useState(false)
+  const lastCompletionsRef = useRef<number[]>([])
+
   async function toggleTodo(todo: Todo) {
     const completing = !todo.completed
 
@@ -271,6 +275,18 @@ export default function TodoList({
     )
 
     if (completing) {
+      // "On a roll" logic
+      const now = Date.now()
+      const recent = lastCompletionsRef.current.filter(t => now - t < 60000) // 1 minute
+      recent.push(now)
+      lastCompletionsRef.current = recent
+      
+      if (recent.length >= 3) {
+        setOnARoll(true)
+        setTimeout(() => setOnARoll(false), 3000)
+        lastCompletionsRef.current = [] // reset
+      }
+
       toast(CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)], {
         duration: 2000,
         style: {
@@ -411,39 +427,70 @@ export default function TodoList({
         {loading && <p className="text-sm text-center py-6 text-text-disabled">Loading tasks…</p>}
         
         <SortableContext items={displayTodos.map(t => t.id)} strategy={verticalListSortingStrategy}>
-          {displayTodos.map(todo => (
-            <TodoCard
-              key={todo.id}
-              todo={todo}
-              isOwner={isOwner}
-              onToggle={toggleTodo}
-              onDelete={deleteTodo}
-              onOpen={openDetail}
-              onEdit={editTodo}
-              isSortable={isOwner}
-              isDraggable={isOwner}
-              isDroppable={isOwner}
-              quests={questLinkMap[todo.id]}
-              streamingNudge={streamingNudges.get(todo.id)}
-            />
-          ))}
+          <AnimatePresence initial={false}>
+            {displayTodos.map(todo => (
+              <motion.div
+                key={todo.id}
+                layout
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+              >
+                <TodoCard
+                  todo={todo}
+                  isOwner={isOwner}
+                  onToggle={toggleTodo}
+                  onDelete={deleteTodo}
+                  onOpen={openDetail}
+                  onEdit={editTodo}
+                  isSortable={isOwner}
+                  isDraggable={isOwner}
+                  isDroppable={isOwner}
+                  quests={questLinkMap[todo.id]}
+                  streamingNudge={streamingNudges.get(todo.id)}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </SortableContext>
       </div>
     </>
   )
 
   return (
-    <div className="flex flex-col gap-3 min-w-0">
+    <div className="flex flex-col gap-3 min-w-0 relative">
+      <AnimatePresence>
+        {onARoll && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="absolute -top-10 left-1/2 -translate-x-1/2 z-50 bg-white px-4 py-2 rounded-full shadow-lg border border-primary flex items-center gap-2 pointer-events-none"
+          >
+            <span className="text-sm font-bold text-primary flex items-center gap-1">
+              🔥 You&apos;re on a roll
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {parentId && totalCount > 0 && !hideProgress && (
         <div className="flex flex-col gap-1.5 mb-1">
           <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             <span>Progress</span>
             <span>{completedCount}/{totalCount}</span>
           </div>
-          <div className="h-1.5 w-full bg-foam rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-500 ease-out" 
-              style={{ width: `${progress}%` }}
+          <div className="h-1.5 w-full bg-foam rounded-full overflow-hidden relative">
+            <motion.div 
+              className="h-full bg-primary" 
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            />
+            <motion.div
+              className="absolute top-0 bottom-0 bg-white/30 w-3 blur-[2px]"
+              animate={{ left: `${progress}%` }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             />
           </div>
         </div>

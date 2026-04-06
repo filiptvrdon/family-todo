@@ -9,6 +9,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { createClient } from '@/lib/supabase/client'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface QuestLink {
   icon: string
@@ -130,7 +131,12 @@ export default function TodoCard({
     e.stopPropagation()
     if (!todo.completed && !completing) {
       setCompleting(true)
-      setTimeout(() => onToggle(todo), 300)
+      // Sequence timing:
+      // 0-120ms: Checkbox (Step 1)
+      // 120-300ms: Settling (Step 2)
+      // 300-800ms: Reward (Step 3)
+      // 800ms+: Exit (Step 4) - handled by parent onToggle
+      setTimeout(() => onToggle(todo), 850)
     } else if (todo.completed) {
       onToggle(todo)
     }
@@ -162,17 +168,49 @@ export default function TodoCard({
   const isOver = droppable.isOver
 
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
       style={style}
       role="button"
       tabIndex={0}
       onClick={() => !editing && onOpen(todo)}
       onKeyDown={e => !editing && (e.key === 'Enter' || e.key === ' ') && onOpen(todo)}
-      className={`w-full min-w-0 rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition bg-card border shadow-[var(--shadow-card)] group ${
-        completing ? 'completing-card' : ''
-      } ${isOver ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border'}`}
+      layout
+      initial={false}
+      whileTap={{ scale: 0.98, boxShadow: 'none' }}
+      animate={completing ? { 
+        scale: 0.98, 
+        opacity: 0.7,
+        backgroundColor: 'var(--color-foam)'
+      } : {}}
+      transition={{ duration: 0.18, delay: 0.12 }}
+      className={`w-full min-w-0 rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition bg-card border shadow-[var(--shadow-card)] group relative ${
+        isOver ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border'
+      }`}
     >
+      <AnimatePresence>
+        {completing && (
+          <motion.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 1, 1, 0], y: -20 }}
+            transition={{ duration: 0.6, times: [0, 0.2, 0.8, 1], delay: 0.3 }}
+            className="absolute -top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap"
+          >
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[11px] font-bold text-completion">
+                +{todo.momentum_contribution || 0} Momentum
+              </span>
+              {quests && quests.length > 0 && (
+                <div className="flex items-center gap-1 text-[10px] text-primary-dark font-medium">
+                  <QuestIcon name={quests[0].icon} size={10} />
+                  {quests[0].name}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {isOwner && (isSortable || isDraggable) && !todo.completed && (
         <div
           {...(isSortable ? { ...sortable.listeners } : { ...draggable.listeners })}
@@ -186,29 +224,36 @@ export default function TodoCard({
       {isOwner ? (
         <button
           onClick={handleToggle}
-          className="shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition"
+          className="shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition relative overflow-hidden"
           style={
             todo.completed || completing
-              ? { backgroundColor: 'var(--color-completion)', borderColor: 'var(--color-completion)' }
+              ? { borderColor: 'var(--color-completion)' }
               : { borderColor: 'var(--color-text-disabled)' }
           }
         >
-          {(todo.completed || completing) && (
-            <Check
-              size={11}
-              className={`text-white ${completing && !todo.completed ? 'completing-check' : ''}`}
-              strokeWidth={3}
-            />
-          )}
+          <motion.div
+            className="absolute inset-0 bg-completion"
+            initial={false}
+            animate={(todo.completed || completing) ? { scale: 1 } : { scale: 0 }}
+            transition={{ duration: 0.12, ease: "easeOut" }}
+          />
+          <AnimatePresence>
+            {(todo.completed || completing) && (
+              <motion.div
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 0.12, delay: 0.08 }}
+                className="z-10"
+              >
+                <Check size={11} className="text-white" strokeWidth={3} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </button>
       ) : (
         <div
-          className="shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center"
-          style={
-            todo.completed
-              ? { backgroundColor: 'var(--color-primary-light)', borderColor: 'var(--color-primary-light)' }
-              : { borderColor: 'var(--color-border)' }
-          }
+          className="shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center bg-completion"
+          style={{ borderColor: 'var(--color-completion)' }}
         >
           {todo.completed && <Check size={11} className="text-white" strokeWidth={3} />}
         </div>
@@ -257,10 +302,17 @@ export default function TodoCard({
                   <span className="font-semibold">{completedSub}/{totalSub}</span>
                   {encouragement && <span className="italic">{encouragement}</span>}
                 </div>
-                <div className="h-1 w-full bg-foam rounded-full overflow-hidden mt-0.5">
-                  <div
-                    className="h-full bg-primary transition-all duration-500 ease-out"
-                    style={{ width: `${subProgress}%` }}
+                <div className="h-1 w-full bg-foam rounded-full overflow-hidden mt-0.5 relative">
+                  <motion.div
+                    className="h-full bg-primary"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${subProgress}%` }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  />
+                  <motion.div
+                    className="absolute top-0 bottom-0 bg-white/30 w-2 blur-[1px]"
+                    animate={{ left: `${subProgress}%` }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
                   />
                 </div>
               </div>
@@ -273,17 +325,20 @@ export default function TodoCard({
         <div className="flex items-center gap-2 shrink-0">
           {quests && quests.length > 0 && (
             <div className="flex items-center gap-1">
-              {quests.slice(0, 3).map(q => (
-                <span
+              {quests.slice(0, 3).map((q, i) => (
+                <motion.span
                   key={q.name}
                   title={q.name}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: q.status === 'completed' ? 0.5 : 1, scale: 1 }}
+                  transition={{ duration: 0.2, delay: i * 0.05, ease: 'easeOut' }}
                   style={{
                     color: q.status === 'completed' ? 'var(--color-text-disabled)' : 'var(--color-primary)',
-                    opacity: q.status === 'completed' ? 0.5 : 1,
+                    display: 'inline-flex',
                   }}
                 >
                   <QuestIcon name={q.icon} size={13} />
-                </span>
+                </motion.span>
               ))}
             </div>
           )}
@@ -325,6 +380,6 @@ export default function TodoCard({
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

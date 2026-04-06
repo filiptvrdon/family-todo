@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Quest } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { QUEST_ICONS, QuestIcon } from '@/lib/questIcons'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface LinkedTask {
   id: string
@@ -260,36 +261,49 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                 )}
 
                 <div className="flex flex-col gap-2">
-                  {activeQuests.map(quest => (
-                    <div
-                      key={quest.id}
-                      className="flex items-center gap-3 rounded-xl px-4 py-3 border border-border bg-card"
-                    >
-                      <button
-                        onClick={() => openDetail(quest)}
-                        className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+                  <AnimatePresence>
+                    {activeQuests.map(quest => (
+                      <motion.div
+                        key={quest.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex items-center gap-3 rounded-xl px-4 py-3 border border-border bg-card shadow-[var(--shadow-card)] transition-shadow hover:shadow-md"
                       >
-                        <span className="shrink-0 text-primary">
-                          <QuestIcon name={quest.icon} size={18} />
-                        </span>
-                        <div className="flex flex-col items-start min-w-0">
-                          <span className="text-sm font-medium text-foreground truncate w-full">{quest.name}</span>
-                          <MomentumBadge current={quest.momentum || 0} start={quest.day_start_momentum || 0} />
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => togglePin(quest)}
-                        title={quest.pinned ? 'Unpin from navbar' : pinnedCount >= 3 ? 'Unpin another quest first' : 'Pin to navbar'}
-                        className="shrink-0 transition cursor-pointer"
-                        style={{
-                          color: quest.pinned ? 'var(--color-primary)' : 'var(--color-text-disabled)',
-                          opacity: !quest.pinned && pinnedCount >= 3 ? 0.35 : 1,
-                        }}
-                      >
-                        {quest.pinned ? <Pin size={16} /> : <PinOff size={16} />}
-                      </button>
-                    </div>
-                  ))}
+                        <button
+                          onClick={() => openDetail(quest)}
+                          className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+                        >
+                          <motion.span
+                            key={quest.momentum}
+                            className="shrink-0 text-primary"
+                            whileHover={{ scale: 1.1 }}
+                            initial={quest.momentum > (quest.day_start_momentum || 0) ? { scale: 1 } : false}
+                            animate={quest.momentum > (quest.day_start_momentum || 0) ? { scale: [1, 1.15, 1] } : {}}
+                            transition={{ duration: 0.45, ease: 'easeOut' }}
+                          >
+                            <QuestIcon name={quest.icon} size={18} />
+                          </motion.span>
+                          <div className="flex flex-col items-start min-w-0">
+                            <span className="text-sm font-medium text-foreground truncate w-full">{quest.name}</span>
+                            <MomentumBadge current={quest.momentum || 0} start={quest.day_start_momentum || 0} />
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => togglePin(quest)}
+                          title={quest.pinned ? 'Unpin from navbar' : pinnedCount >= 3 ? 'Unpin another quest first' : 'Pin to navbar'}
+                          className="shrink-0 transition cursor-pointer"
+                          style={{
+                            color: quest.pinned ? 'var(--color-primary)' : 'var(--color-text-disabled)',
+                            opacity: !quest.pinned && pinnedCount >= 3 ? 0.35 : 1,
+                          }}
+                        >
+                          {quest.pinned ? <Pin size={16} /> : <PinOff size={16} />}
+                        </button>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
 
                 {completedQuests.length > 0 && (

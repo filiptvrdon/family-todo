@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { X, Send, Check, GripVertical } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { format } from 'date-fns'
 import { Todo, CalendarEvent } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -309,12 +310,13 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Daily check-in
           </span>
-          <button
+          <motion.button
             onClick={handleDismiss}
-            className="w-7 h-7 flex items-center justify-center rounded-full transition bg-foam text-muted-foreground"
+            whileTap={{ scale: 0.9 }}
+            className="w-7 h-7 flex items-center justify-center rounded-full transition bg-foam text-muted-foreground cursor-pointer"
           >
             <X size={14} />
-          </button>
+          </motion.button>
         </div>
 
         {/* Chat messages — flex-1 when tasks present, capped when timeline expands */}
@@ -421,14 +423,15 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
             className="flex-1 text-sm rounded-xl px-4 focus:outline-none bg-card border-[1.5px] border-border text-foreground min-h-[44px]"
             style={{ opacity: isBusy ? 0.5 : 1 }}
           />
-          <button
+          <motion.button
             type="submit"
+            whileTap={{ scale: 0.95 }}
             disabled={!input.trim() || isBusy}
-            className="shrink-0 flex items-center justify-center rounded-xl transition bg-primary text-primary-foreground size-11"
+            className="shrink-0 flex items-center justify-center rounded-xl transition bg-primary text-primary-foreground size-11 cursor-pointer"
             style={{ opacity: !input.trim() || isBusy ? 0.35 : 1 }}
           >
             <Send size={15} />
-          </button>
+          </motion.button>
         </form>
       </div>
 

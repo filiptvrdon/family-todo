@@ -10,6 +10,7 @@ import { triggerAiMetadata } from '@/lib/ai-metadata'
 import { createClient } from '@/lib/supabase/client'
 import { QuestIcon } from '@/lib/questIcons'
 import TodoList from "./TodoList"
+import { motion } from 'framer-motion'
 
 type Recurrence = 'daily' | 'weekly' | 'monthly'
 
@@ -247,20 +248,39 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
                   {activeQuests.map(quest => {
                     const linked = linkedQuestIds.has(quest.id)
                     return (
-                      <button
+                      <motion.button
                         key={quest.id}
+                        layout
                         type="button"
                         onClick={() => toggleQuestLink(quest.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition min-h-[36px]"
-                        style={{
-                          background: linked ? 'var(--color-primary)' : 'var(--color-foam)',
+                        whileTap={{ scale: 0.95 }}
+                        initial={false}
+                        animate={{
+                          scale: linked ? 1.05 : 1,
+                          backgroundColor: linked ? 'var(--color-primary)' : 'var(--color-foam)',
                           color: linked ? '#fff' : 'var(--color-text-secondary)',
-                          border: linked ? '1.5px solid var(--color-primary)' : '1.5px solid var(--color-border)',
+                          borderColor: linked ? 'var(--color-primary)' : 'var(--color-border)',
                         }}
+                        transition={{ 
+                          duration: 0.2, 
+                          ease: "easeOut",
+                          backgroundColor: { duration: 0.2 },
+                          scale: { duration: 0.15 }
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border-[1.5px] min-h-[36px] cursor-pointer"
                       >
                         <QuestIcon name={quest.icon} size={14} />
                         <span>{quest.name}</span>
-                      </button>
+                        {linked && (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="ml-1"
+                          >
+                            ✓
+                          </motion.span>
+                        )}
+                      </motion.button>
                     )
                   })}
                 </div>
