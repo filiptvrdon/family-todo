@@ -6,6 +6,7 @@ import TaskBoard from '@/components/TaskBoard'
 import CalendarSuite from '@/components/CalendarSuite'
 import FocusMode from '@/components/FocusMode'
 import { Calendar, Focus, ListTodo } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type MainTab = 'tasks' | 'schedule' | 'focus'
 
@@ -111,37 +112,77 @@ export default function ResponsiveDashboard(props: Props) {
             {/* Logic to show correct component based on view-port and active tab */}
             {/* Mobile shows whatever tab is active (if not tasks) */}
             {/* Desktop shows desktopTab */}
-            <div className="flex-1 flex flex-col min-h-0 md:hidden">
-              {mobileTab === 'schedule' && (
-                <CalendarSuite 
-                  {...props}
-                />
-              )}
-              {mobileTab === 'focus' && (
-                <FocusMode 
-                  myTodos={myTodos}
-                  partnerTodos={partnerTodos}
-                  partnerName={partnerName}
-                  myUserId={user.id}
-                  onRefresh={onRefresh}
-                />
-              )}
+            <div className="flex-1 flex flex-col min-h-0 md:hidden relative">
+              <AnimatePresence mode="wait">
+                {mobileTab === 'schedule' && (
+                  <motion.div
+                    key="schedule"
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex-1 flex flex-col min-h-0"
+                  >
+                    <CalendarSuite 
+                      {...props}
+                    />
+                  </motion.div>
+                )}
+                {mobileTab === 'focus' && (
+                  <motion.div
+                    key="focus"
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex-1 flex flex-col min-h-0"
+                  >
+                    <FocusMode 
+                      myTodos={myTodos}
+                      partnerTodos={partnerTodos}
+                      partnerName={partnerName}
+                      myUserId={user.id}
+                      onRefresh={onRefresh}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            <div className="hidden md:flex flex-1 flex-col min-h-0">
-              {desktopTab === 'schedule' ? (
-                <CalendarSuite 
-                  {...props}
-                />
-              ) : (
-                <FocusMode 
-                  myTodos={myTodos}
-                  partnerTodos={partnerTodos}
-                  partnerName={partnerName}
-                  myUserId={user.id}
-                  onRefresh={onRefresh}
-                />
-              )}
+            <div className="hidden md:flex flex-1 flex-col min-h-0 relative">
+              <AnimatePresence mode="wait">
+                {desktopTab === 'schedule' ? (
+                  <motion.div
+                    key="schedule"
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex-1 flex flex-col min-h-0"
+                  >
+                    <CalendarSuite 
+                      {...props}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="focus"
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex-1 flex flex-col min-h-0"
+                  >
+                    <FocusMode 
+                      myTodos={myTodos}
+                      partnerTodos={partnerTodos}
+                      partnerName={partnerName}
+                      myUserId={user.id}
+                      onRefresh={onRefresh}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

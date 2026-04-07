@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@/lib/types'
 import { X, User as UserIcon, Camera, CalendarDays, Loader2, LogOut } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface Props {
   user: User
@@ -115,10 +116,11 @@ export default function UserModal({ user, googleConnected, onClose, onSaved, onG
         <form onSubmit={save} className="flex flex-col gap-4">
           {/* Avatar */}
           <div className="flex flex-col items-center gap-2 mb-2">
-            <button
+            <motion.button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="relative group"
+              whileTap={{ scale: 0.95 }}
+              className="relative group cursor-pointer"
               title="Change profile picture"
             >
               <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-foam border-2 border-foam">
@@ -136,7 +138,7 @@ export default function UserModal({ user, googleConnected, onClose, onSaved, onG
               >
                 <Camera size={20} color="#fff" />
               </div>
-            </button>
+            </motion.button>
             <p className="text-xs text-text-disabled">Click to change photo</p>
             <input
               ref={fileInputRef}
@@ -244,13 +246,14 @@ export default function UserModal({ user, googleConnected, onClose, onSaved, onG
             >
               Cancel
             </button>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={saving}
-              className="flex-1 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 bg-primary text-primary-foreground"
+              className="flex-1 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 bg-primary text-primary-foreground cursor-pointer"
             >
               {saving ? 'Saving…' : 'Save'}
-            </button>
+            </motion.button>
           </div>
 
           <button

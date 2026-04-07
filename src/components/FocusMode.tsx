@@ -6,14 +6,7 @@ import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { format, addDays, parseISO } from 'date-fns'
 import { Calendar, RotateCcw } from 'lucide-react'
-
-const CELEBRATIONS = [
-  'Badass 🍑',
-  'You rock 🤘',
-  'Nailed it 🔨',
-  "That's my girl 💙 ",
-  'Knocked it out 🥊',
-]
+import { motion, AnimatePresence } from 'framer-motion'
 
 const SKIP_KEY = 'focus_skipped'
 
@@ -98,11 +91,6 @@ export default function FocusMode({ myTodos, partnerTodos, partnerName, myUserId
     if (!task || completing) return
     setCompleting(true)
 
-    toast(CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)], {
-      duration: 2000,
-      style: { color: 'var(--color-completion)', fontWeight: '500' },
-    })
-
     // Optimistically mark completed so next task surfaces immediately
     setLocalTodos(prev => prev.map(t => t.id === task.id ? { ...t, completed: true } : t))
 
@@ -179,63 +167,76 @@ export default function FocusMode({ myTodos, partnerTodos, partnerName, myUserId
   }
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-12 flex-1 overflow-y-auto">
-      <div className="w-full max-w-[360px] rounded-2xl p-8 flex flex-col gap-6 bg-card border border-border shadow-[var(--shadow-card)]">
-        {/* Owner badge */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium px-3 py-1 rounded-full bg-foam text-muted-foreground">
-            {isOwn ? 'Your task' : `${partnerName}'s task`}
-          </span>
-          {task.recurrence && (
-            <span className="text-accent" title={`Repeats ${task.recurrence}`}>
-              <RotateCcw size={14} />
+    <motion.div 
+      initial={{ backgroundColor: 'transparent' }}
+      animate={{ backgroundColor: 'rgba(0, 0, 0, 0.03)' }}
+      className="flex flex-col items-center justify-center px-4 py-12 flex-1 overflow-y-auto"
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={task.id}
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1.02, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: -20 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="w-full max-w-[360px] rounded-2xl p-8 flex flex-col gap-6 bg-card border border-border shadow-[0_8px_30px_rgb(0,181,200,0.12)]"
+        >
+          {/* Owner badge */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium px-3 py-1 rounded-full bg-foam text-muted-foreground">
+              {isOwn ? 'Your task' : `${partnerName}'s task`}
             </span>
+            {task.recurrence && (
+              <span className="text-accent" title={`Repeats ${task.recurrence}`}>
+                <RotateCcw size={14} />
+              </span>
+            )}
+          </div>
+
+          {/* Title */}
+          <p className="text-2xl font-semibold leading-snug text-foreground">{task.title}</p>
+
+          {/* Due date — color is dynamic (overdue state), keep inline */}
+          {task.due_date && (
+            <div
+              className="flex items-center gap-1.5 text-sm"
+              style={{ color: isOverdue ? 'var(--color-alert)' : 'var(--color-text-secondary)' }}
+            >
+              <Calendar size={14} />
+              <span>
+                {isOverdue ? 'Overdue · ' : ''}
+                {format(new Date(task.due_date + 'T00:00:00'), 'MMMM d')}
+              </span>
+            </div>
           )}
-        </div>
 
-        {/* Title */}
-        <p className="text-2xl font-semibold leading-snug text-foreground">{task.title}</p>
-
-        {/* Due date — color is dynamic (overdue state), keep inline */}
-        {task.due_date && (
-          <div
-            className="flex items-center gap-1.5 text-sm"
-            style={{ color: isOverdue ? 'var(--color-alert)' : 'var(--color-text-secondary)' }}
-          >
-            <Calendar size={14} />
-            <span>
-              {isOverdue ? 'Overdue · ' : ''}
-              {format(new Date(task.due_date + 'T00:00:00'), 'MMMM d')}
-            </span>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex flex-col gap-3 pt-2">
-          <button
-            onClick={handleDone}
-            disabled={completing}
-            className="w-full font-semibold text-sm rounded-xl transition bg-primary text-primary-foreground min-h-[52px]"
-            style={{ opacity: completing ? 0.6 : 1 }}
-          >
-            Done
-          </button>
-          <div className="flex gap-3">
+          {/* Actions */}
+          <div className="flex flex-col gap-3 pt-2">
             <button
-              onClick={handleSkip}
-              className="flex-1 text-sm rounded-xl transition text-muted-foreground hover:bg-foam min-h-[44px]"
+              onClick={handleDone}
+              disabled={completing}
+              className="w-full font-semibold text-sm rounded-xl transition bg-primary text-primary-foreground min-h-[52px] cursor-pointer"
+              style={{ opacity: completing ? 0.6 : 1 }}
             >
-              Skip
+              Done
             </button>
-            <button
-              onClick={handleLater}
-              className="flex-1 text-sm rounded-xl transition text-muted-foreground hover:bg-foam min-h-[44px]"
-            >
-              Later
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSkip}
+                className="flex-1 text-sm rounded-xl transition text-muted-foreground hover:bg-foam min-h-[44px] cursor-pointer"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleLater}
+                className="flex-1 text-sm rounded-xl transition text-muted-foreground hover:bg-foam min-h-[44px] cursor-pointer"
+              >
+                Later
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </AnimatePresence>
+    </motion.div>
   )
 }

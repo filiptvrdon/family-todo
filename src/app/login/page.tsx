@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Heart } from 'lucide-react'
+import { Logo } from '@/components/Logo'
 
 type Mode = 'magic' | 'password'
 
@@ -76,8 +76,8 @@ function LoginForm() {
     <div className="form-page">
       <div className="form-card">
         <div className="flex flex-col items-center mb-8">
-          <Heart size={36} fill="currentColor" style={{ color: 'var(--color-completion)', marginBottom: '8px' }} />
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>Family Todo</h1>
+          <Logo size={48} className="mb-2" />
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>Momentum</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Stay organised together</p>
         </div>
 

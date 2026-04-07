@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Family Todo",
+  title: "Momentum",
   description: "Shared todo & calendar for you and your partner",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

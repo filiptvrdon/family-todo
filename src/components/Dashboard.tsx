@@ -8,7 +8,8 @@ import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import UserModal from '@/components/UserModal'
 import QuestPanel from '@/components/QuestPanel'
 import ResponsiveDashboard from '@/components/ResponsiveDashboard'
-import { Heart, UserCircle, Moon, Sun, Swords } from 'lucide-react'
+import { UserCircle, Moon, Sun, Swords } from 'lucide-react'
+import { Logo } from '@/components/Logo'
 import { QuestIcon } from '@/lib/questIcons'
 import { useTheme } from '@/lib/hooks/useTheme'
 import {
@@ -227,8 +228,8 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
         <header className="shrink-0 bg-card border-b border-border shadow-[var(--shadow-card)]">
           <div className="layout-container py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 shrink-0">
-              <Heart size={20} fill="currentColor" className="text-completion" />
-              <span className="font-semibold text-foreground">Family Todo</span>
+              <Logo size={24} />
+              <span className="font-semibold text-foreground">Momentum</span>
             </div>
 
             {/* Pinned quests */}

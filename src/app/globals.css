@@ -3,7 +3,7 @@
 @import "shadcn/tailwind.css";
 
 /* ============================================================
-   Family Todo — Design System
+   Momentum — Design System
    Visual guidelines: docs/design-visual-guidelines.md
    ============================================================ */
 
@@ -396,34 +396,9 @@ p, li {
 }
 
 /* ============================================================
-   Completion celebration
+   Completion celebration (now handled by framer-motion in components)
    ============================================================ */
 
-@keyframes todo-complete {
-  0%   { transform: scale(1); }
-  45%  { transform: scale(1.028); background-color: #E8F9F1; box-shadow: 0 4px 16px rgba(82, 183, 136, 0.28); }
-  100% { transform: scale(1); }
-}
-
-@keyframes check-pop {
-  0%   { transform: scale(0.4); opacity: 0.6; }
-  55%  { transform: scale(1.45); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes celebration-fade {
-  0%   { opacity: 0; transform: translateY(-5px); }
-  12%  { opacity: 1; transform: translateY(0); }
-  72%  { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-.completing-card {
-  animation: todo-complete 320ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-.completing-check {
-  animation: check-pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
 .celebration-message {
   animation: celebration-fade 2s ease-out forwards;
   pointer-events: none;

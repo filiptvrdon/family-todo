@@ -7,6 +7,7 @@ import { User, Todo, CalendarEvent } from '@/lib/types'
 import DayTimeline from '@/components/DayTimeline'
 import WeekCalendar from '@/components/calendar/WeekCalendar'
 import MonthCalendar from '@/components/calendar/MonthCalendar'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type CalendarTab = 'day' | 'week' | 'month'
 
@@ -104,50 +105,75 @@ export default function CalendarSuite({
       )}
 
       {/* Panel content */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        {tab === 'day' && (
-          <DayTimeline
-            events={allEvents}
-            todos={scheduledTodos}
-            onTodoComplete={onTodoComplete}
-            date={dayDate}
-            expand
-          />
-        )}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+        <AnimatePresence mode="wait">
+          {tab === 'day' && (
+            <motion.div
+              key="day"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              <DayTimeline
+                events={allEvents}
+                todos={scheduledTodos}
+                onTodoComplete={onTodoComplete}
+                date={dayDate}
+                expand
+              />
+            </motion.div>
+          )}
 
-        {tab === 'week' && (
-          <div className="p-4 h-full overflow-hidden flex flex-col box-border">
-            <WeekCalendar
-              events={allEvents}
-              todos={myTodos}
-              myUserId={user.id}
-              partnerUserId={partner?.id ?? null}
-              myColor="var(--color-primary)"
-              partnerColor="var(--color-completion)"
-              date={weekCalDate}
-              onNavigate={setWeekCalDate}
-              isDragging={isDragging}
-              onRefresh={onRefresh}
-            />
-          </div>
-        )}
+          {tab === 'week' && (
+            <motion.div
+              key="week"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex-1 flex flex-col min-h-0 p-4 overflow-hidden box-border"
+            >
+              <WeekCalendar
+                events={allEvents}
+                todos={myTodos}
+                myUserId={user.id}
+                partnerUserId={partner?.id ?? null}
+                myColor="var(--color-primary)"
+                partnerColor="var(--color-completion)"
+                date={weekCalDate}
+                onNavigate={setWeekCalDate}
+                isDragging={isDragging}
+                onRefresh={onRefresh}
+              />
+            </motion.div>
+          )}
 
-        {tab === 'month' && (
-          <div className="p-4 h-full overflow-hidden flex flex-col box-border">
-            <MonthCalendar
-              events={allEvents}
-              todos={myTodos}
-              myUserId={user.id}
-              partnerUserId={partner?.id ?? null}
-              myColor="var(--color-primary)"
-              partnerColor="var(--color-completion)"
-              date={monthCalDate}
-              onNavigate={setMonthCalDate}
-              isDragging={isDragging}
-              onRefresh={onRefresh}
-            />
-          </div>
-        )}
+          {tab === 'month' && (
+            <motion.div
+              key="month"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex-1 flex flex-col min-h-0 p-4 overflow-hidden box-border"
+            >
+              <MonthCalendar
+                events={allEvents}
+                todos={myTodos}
+                myUserId={user.id}
+                partnerUserId={partner?.id ?? null}
+                myColor="var(--color-primary)"
+                partnerColor="var(--color-completion)"
+                date={monthCalDate}
+                onNavigate={setMonthCalDate}
+                isDragging={isDragging}
+                onRefresh={onRefresh}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
