@@ -177,7 +177,8 @@ export default function TodoCard({
           <TodoDisplay 
             title={todo.title} 
             completed={todo.completed} 
-            nudge={todo.motivation_nudge || streamingNudge} 
+            // nudge={todo.motivation_nudge || streamingNudge}
+              nudge={todo.description}
           />
         )}
         

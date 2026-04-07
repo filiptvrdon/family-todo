@@ -17,6 +17,7 @@ import { UserCircle, Moon, Sun, Swords } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { QuestIcon } from '@/lib/questIcons'
 import { useTheme } from '@/lib/hooks/useTheme'
+import { subtaskCollisionDetection } from '@/lib/dnd-utils'
 import {
   DndContext,
   DragEndEvent,
@@ -25,6 +26,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  closestCenter,
 } from '@dnd-kit/core'
 import { format } from 'date-fns'
 import { generateKeyBetween } from 'fractional-indexing'
@@ -132,8 +134,16 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
       const parentId = over.data.current.todoId
       if (parentId === todoId) return // Cannot drop onto itself
 
+      // If we are also over a sortable item that is NOT the drop target,
+      // and our custom collision detection says we should prioritize reordering,
+      // then we should skip this subtask logic.
+      // However, the custom collision detection already handled the priority.
+      // So if 'over' is the drop target, it means the custom detection DECIDED it should be.
+      
       // Get existing sub-tasks of the target to compute index
-      const existingSubTasks = myTodos.filter(t => t.parent_id === parentId)
+      const targetIsMine = myTodos.some(t => t.id === parentId)
+      const targetList = targetIsMine ? myTodos : partnerTodos
+      const existingSubTasks = targetList.filter(t => t.parent_id === parentId)
         .sort((a, b) => (a.index || '').localeCompare(b.index || ''))
 
       const lastIndex = existingSubTasks.length > 0
@@ -141,7 +151,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
         : null
       const newIndex = generateKeyBetween(lastIndex, null)
 
-      updateTodoStore(todoId, {
+      await updateTodoStore(todoId, {
         parent_id: parentId,
         index: newIndex,
         due_date: null,
@@ -149,7 +159,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
       })
       return
     }
-  }, [dayDate, myTodos, updateTodoStore])
+  }, [dayDate, myTodos, partnerTodos, updateTodoStore])
 
   const completeTodo = useCallback(async (todoId: string) => {
     useTodoStore.getState().toggleTodo(todoId, true)
@@ -196,7 +206,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
   }
 
   return (
-    <DndContext id={dndContextId} sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext id={dndContextId} sensors={sensors} collisionDetection={subtaskCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-col h-[100dvh] overflow-hidden bg-background">
         {/* ── Header ── */}
         <header className="shrink-0 bg-card border-b border-border shadow-[var(--shadow-card)]">

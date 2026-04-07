@@ -1,12 +1,14 @@
 'use client'
 
-import { useDndMonitor, DragEndEvent } from '@dnd-kit/core'
+import { useDndMonitor, DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 
 interface DndMonitorProps {
+  onDragStart?: (event: DragStartEvent) => void
   onDragEnd: (event: DragEndEvent) => void
+  onDragCancel?: () => void
 }
 
-export function DndMonitor({ onDragEnd }: DndMonitorProps) {
-  useDndMonitor({ onDragEnd })
+export function DndMonitor({ onDragStart, onDragEnd, onDragCancel }: DndMonitorProps) {
+  useDndMonitor({ onDragStart, onDragEnd, onDragCancel })
   return null
 }

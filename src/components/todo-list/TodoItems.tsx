@@ -15,6 +15,7 @@ interface TodoItemsProps {
   questLinkMap: Record<string, QuestLink[]>
   streamingNudges: Map<string, string>
   loading: boolean
+  isDragging?: boolean
 }
 
 export function TodoItems({
@@ -26,7 +27,8 @@ export function TodoItems({
   onEdit,
   questLinkMap,
   streamingNudges,
-  loading
+  loading,
+  isDragging = false,
 }: TodoItemsProps) {
   if (loading) {
     return <p className="text-sm text-center py-6 text-text-disabled">Loading tasks…</p>
@@ -38,31 +40,40 @@ export function TodoItems({
 
   return (
     <SortableContext items={todos.map(t => t.id)} strategy={verticalListSortingStrategy}>
-      <AnimatePresence initial={false}>
-        {todos.map(todo => (
-          <motion.div
-            key={todo.id}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-          >
-            <TodoCard
-              todo={todo}
-              isOwner={isOwner}
-              onToggle={onToggle}
-              onDelete={onDelete}
-              onOpen={onOpen}
-              onEdit={onEdit}
-              isSortable={isOwner}
-              isDraggable={isOwner}
-              isDroppable={isOwner}
-              quests={questLinkMap[todo.id]}
-              streamingNudge={streamingNudges.get(todo.id)}
-            />
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: isDragging ? '16px' : '8px',
+          transition: 'gap 0.15s ease',
+        }}
+      >
+        <AnimatePresence initial={false}>
+          {todos.map(todo => (
+            <motion.div
+              key={todo.id}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+            >
+              <TodoCard
+                todo={todo}
+                isOwner={isOwner}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onOpen={onOpen}
+                onEdit={onEdit}
+                isSortable={isOwner}
+                isDraggable={isOwner}
+                isDroppable={isOwner}
+                quests={questLinkMap[todo.id]}
+                streamingNudge={streamingNudges.get(todo.id)}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </SortableContext>
   )
 }

@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Todo, Quest } from '@/lib/types'
 import { triggerAiMetadata } from '@/lib/ai-metadata'
 import { createClient } from '@/lib/supabase/client'
+import { fetchTodoById } from '@/services/todo-service'
 import { useTodoStore } from '@/stores/todo-store'
 import { useQuestStore } from '@/stores/quest-store'
 import { QuestIcon } from '@/lib/questIcons'
@@ -48,7 +49,9 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
   const [activeQuests, setActiveQuests] = useState<Quest[]>([])
   const [initialLinkedQuestIds, setInitialLinkedQuestIds] = useState<Set<string>>(new Set())
   const [linkedQuestIds, setLinkedQuestIds] = useState<Set<string>>(new Set())
+  const [parentTodo, setParentTodo] = useState<Todo | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isUnlinking, setIsUnlinking] = useState(false)
   const quests = useQuestStore(s => s.quests)
   const supabase = useMemo(() => createClient(), [])
   const placeholder = useMemo(() => getRandomWhyQuestion(), [])
@@ -72,6 +75,33 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
     // We only want to load once when the panel opens or if the todo changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isOwner, todo.id, todo.user_id, supabase])
+
+  useEffect(() => {
+    if (!open || !todo.parent_id) {
+      setParentTodo(null)
+      return
+    }
+
+    async function loadParent() {
+      // Check store first
+      const store = useTodoStore.getState()
+      const found = [...store.myTodos, ...store.partnerTodos].find(t => t.id === todo.parent_id)
+      if (found) {
+        setParentTodo(found)
+        return
+      }
+
+      // Fetch from API
+      try {
+        const p = await fetchTodoById(supabase, todo.parent_id!)
+        setParentTodo(p)
+      } catch (err) {
+        console.error('Failed to load parent todo:', err)
+      }
+    }
+
+    loadParent()
+  }, [open, todo.parent_id, supabase])
 
   function toggleQuestLink(questId: string) {
     setLinkedQuestIds(prev => {
@@ -114,6 +144,22 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
       toast.error('Failed to save changes')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleUnlink() {
+    if (!isOwner) return
+    setIsUnlinking(true)
+    try {
+      await useTodoStore.getState().updateTodo(todo.id, { parent_id: null })
+      setParentTodo(null)
+      onRefresh()
+      toast.success('Task unlinked from parent')
+    } catch (err) {
+      console.error('Error unlinking todo:', err)
+      toast.error('Failed to unlink task')
+    } finally {
+      setIsUnlinking(false)
     }
   }
 
@@ -160,6 +206,26 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
                 <X size={16} />
               </Drawer.Close>
             </div>
+
+            {/* Parent Todo */}
+            {parentTodo && (
+              <div className="flex items-center justify-between bg-foam rounded-xl px-4 py-2 -mt-2">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Subtask of</span>
+                  <span className="text-sm font-medium truncate">{parentTodo.title}</span>
+                </div>
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={handleUnlink}
+                    disabled={isUnlinking}
+                    className="text-xs font-semibold text-primary-dark hover:underline flex-shrink-0 ml-2 disabled:opacity-50"
+                  >
+                    {isUnlinking ? 'Unlinking...' : 'Unlink'}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Title */}
             {isOwner ? (

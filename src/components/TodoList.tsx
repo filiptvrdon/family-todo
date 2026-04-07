@@ -9,11 +9,14 @@ import { format, addDays } from 'date-fns'
 import {
   DndContext,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
   closestCenter,
 } from '@dnd-kit/core'
+import { subtaskCollisionDetection } from '@/lib/dnd-utils'
 import { generateKeyBetween } from 'fractional-indexing'
 import TodoDetailPanel from '@/components/TodoDetailPanel'
 import { triggerAiMetadata } from '@/lib/ai-metadata'
@@ -194,6 +197,9 @@ export default function TodoList({
     prevIdsRef.current = ''
   }
 
+  const [isDraggingActive, setIsDraggingActive] = useState(false)
+  const [draggingTodo, setDraggingTodo] = useState<Todo | null>(null)
+
   const [onARoll, setOnARoll] = useState(false)
   const lastCompletionsRef = useRef<number[]>([])
 
@@ -263,9 +269,47 @@ export default function TodoList({
     await useTodoStore.getState().deleteTodo(id)
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    const todo = localTodos.find(t => t.id === event.active.id)
+    setDraggingTodo(todo ?? null)
+    setIsDraggingActive(true)
+  }
+
+  function handleDragCancel() {
+    setDraggingTodo(null)
+    setIsDraggingActive(false)
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
-    if (!over || active.id === over.id) return
+    if (!over) return
+
+    // 1. Handle making it a subtask
+    if (over.data.current?.type === 'todo-drop-target') {
+      const targetId = over.data.current.todoId as string
+      if (active.id !== targetId) {
+        // Only subtask if the custom collision detection chose this target.
+        // If the collision detection chose a sortable item, 'over' would not be todo-drop-target.
+        
+        // Compute index at the end of existing subtasks
+        const existingSubTasks = storeTodos.filter(t => t.parent_id === targetId)
+        const lastIndex = existingSubTasks.length > 0
+          ? (existingSubTasks[existingSubTasks.length - 1].index || null)
+          : null
+        const newIndex = generateKeyBetween(lastIndex, null)
+
+        await useTodoStore.getState().updateTodo(active.id as string, { 
+          parent_id: targetId,
+          index: newIndex,
+          due_date: null,
+          scheduled_time: null
+        })
+        return
+      }
+    }
+
+    // 2. Handle reordering
+    if (active.id === over.id) return
 
     const oldIndex = localTodos.findIndex(t => t.id === active.id)
     const newIndex = localTodos.findIndex(t => t.id === over.id)
@@ -281,6 +325,9 @@ export default function TodoList({
 
       await useTodoStore.getState().updateTodo(active.id as string, { index: computedIndex })
     }
+
+    setDraggingTodo(null)
+    setIsDraggingActive(false)
   }
 
   const today = format(new Date(), 'yyyy-MM-dd')
@@ -302,11 +349,15 @@ export default function TodoList({
 
   const ListContent = (
     <div className="flex flex-col gap-2">
-      <DndMonitor onDragEnd={handleDragEnd} />
-      <EnergyFilter 
-        activeFilter={energyFilter} 
-        onFilterChange={setEnergyFilter} 
-        isVisible={!parentId} 
+      <DndMonitor
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      />
+      <EnergyFilter
+        activeFilter={energyFilter}
+        onFilterChange={setEnergyFilter}
+        isVisible={!parentId}
       />
       <TodoItems
         todos={displayTodos}
@@ -318,6 +369,7 @@ export default function TodoList({
         questLinkMap={questLinkMap}
         streamingNudges={streamingNudges}
         loading={loading}
+        isDragging={isDraggingActive}
       />
     </div>
   )
@@ -325,24 +377,36 @@ export default function TodoList({
   return (
     <div className="flex flex-col gap-3 min-w-0 relative">
       <OnARollBadge active={onARoll} />
-      
-      <TodoListProgress 
-        completedCount={completedCount} 
-        totalCount={totalCount} 
-        isVisible={!!parentId && !hideProgress} 
+
+      <TodoListProgress
+        completedCount={completedCount}
+        totalCount={totalCount}
+        isVisible={!!parentId && !hideProgress}
       />
 
-      <AddTodoInput 
-        value={title} 
-        onChange={setTitle} 
-        onSubmit={addTodo} 
-        isSubtask={!!parentId} 
-        isVisible={isOwner} 
+      <AddTodoInput
+        value={title}
+        onChange={setTitle}
+        onSubmit={addTodo}
+        isSubtask={!!parentId}
+        isVisible={isOwner}
       />
 
       {useInternalDndContext ? (
-        <DndContext id={dndContextId} sensors={sensors} collisionDetection={closestCenter}>
+        <DndContext id={dndContextId} sensors={sensors} collisionDetection={subtaskCollisionDetection}>
           {ListContent}
+          <DragOverlay dropAnimation={null}>
+            {draggingTodo && (
+              <div
+                className="rounded-xl px-3 py-2 flex items-center bg-card border shadow-lg pointer-events-none opacity-90"
+                style={{ borderColor: 'var(--color-primary)', minWidth: 160 }}
+              >
+                <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>
+                  {draggingTodo.title}
+                </p>
+              </div>
+            )}
+          </DragOverlay>
         </DndContext>
       ) : (
         ListContent

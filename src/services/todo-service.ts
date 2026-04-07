@@ -33,6 +33,36 @@ export async function fetchTodos(
   })
 }
 
+export async function fetchTodoById(
+  supabase: SupabaseClient,
+  id: string
+): Promise<Todo | null> {
+  const { data, error } = await supabase
+    .from('todos')
+    .select('*, subtasks_count:todos!parent_id(count)')
+    .eq('id', id)
+    .single()
+  if (error) {
+    if (error.code === 'PGRST116') return null // Not found
+    throw error
+  }
+  
+  const todo = data as RawTodo
+  let count = 0
+  if (typeof todo.subtasks_count === 'number') {
+    count = todo.subtasks_count
+  } else if (Array.isArray(todo.subtasks_count)) {
+    count = (todo.subtasks_count[0] as { count: number })?.count ?? 0
+  } else if (todo.subtasks_count && typeof todo.subtasks_count === 'object') {
+    count = (todo.subtasks_count as { count: number }).count ?? 0
+  }
+
+  return {
+    ...todo,
+    subtasks_count: count
+  } as Todo
+}
+
 export async function fetchSubtasks(
   supabase: SupabaseClient,
   parentId: string
