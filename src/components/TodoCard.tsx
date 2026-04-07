@@ -152,10 +152,14 @@ export default function TodoCard({
     setEditing(true)
   }
 
+  const isDragging = sortable.isDragging || draggable.isDragging
   const style: React.CSSProperties = {
-    opacity: (sortable.isDragging || draggable.isDragging) ? 0.4 : todo.completed ? 0.5 : 1,
+    // Only set opacity via style when dragging — otherwise let Framer Motion own it
+    // to avoid conflicting with completing/exit animations
+    opacity: isDragging ? 0.4 : undefined,
     transform: CSS.Transform.toString(sortable.transform),
-    transition: sortable.transition,
+    // Only apply DnD transition during active drag; Framer Motion handles all other transitions
+    transition: isDragging ? sortable.transition : undefined,
   }
 
   // Combine refs
@@ -175,16 +179,15 @@ export default function TodoCard({
       tabIndex={0}
       onClick={() => !editing && onOpen(todo)}
       onKeyDown={e => !editing && (e.key === 'Enter' || e.key === ' ') && onOpen(todo)}
-      layout
       initial={false}
       whileTap={{ scale: 0.98, boxShadow: 'none' }}
-      animate={completing ? { 
-        scale: 0.98, 
+      animate={completing ? {
+        scale: 0.98,
         opacity: 0.7,
         backgroundColor: 'var(--color-foam)'
-      } : {}}
+      } : { opacity: todo.completed ? 0.5 : 1 }}
       transition={{ duration: 0.18, delay: 0.12 }}
-      className={`w-full min-w-0 rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition bg-card border shadow-[var(--shadow-card)] group relative ${
+      className={`w-full min-w-0 rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition-colors bg-card border shadow-[var(--shadow-card)] group relative ${
         isOver ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border'
       }`}
     >
@@ -193,7 +196,7 @@ export default function TodoCard({
           <motion.div
             initial={{ opacity: 0, y: 0 }}
             animate={{ opacity: [0, 1, 1, 0], y: -20 }}
-            transition={{ duration: 0.6, times: [0, 0.2, 0.8, 1], delay: 0.3 }}
+            transition={{ duration: 1.2, times: [0, 0.2, 0.8, 1], delay: 0.3 }}
             className="absolute -top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap"
           >
             <div className="flex flex-col items-center gap-0.5">
