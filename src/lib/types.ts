@@ -33,6 +33,12 @@ export interface Todo {
   momentum_contribution: number
 }
 
+export interface QuestLink {
+  icon: string
+  name: string
+  status: string
+}
+
 
 export interface Quest {
   id: string
