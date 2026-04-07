@@ -70,6 +70,18 @@ export async function fetchLinkedTasks(
   }).filter(Boolean)
 }
 
+export async function fetchQuestsForTask(
+  supabase: SupabaseClient,
+  taskId: string
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('quest_tasks')
+    .select('quest_id')
+    .eq('task_id', taskId)
+  if (error) throw error
+  return (data ?? []).map(r => r.quest_id)
+}
+
 export async function linkTask(
   supabase: SupabaseClient,
   questId: string,
@@ -77,7 +89,7 @@ export async function linkTask(
 ): Promise<void> {
   const { error } = await supabase
     .from('quest_tasks')
-    .insert([{ quest_id: questId, task_id: taskId }])
+    .upsert([{ quest_id: questId, task_id: taskId }], { onConflict: 'quest_id,task_id' })
   if (error) throw error
 }
 

@@ -125,6 +125,7 @@ Migration: `supabase migration new add_quests`
 - [x] User can manually mark a quest as complete.
 - [x] Completed quests are archived, not deleted.
 - [x] Max 3 quests can be pinned; UI prevents pinning a 4th.
+- [x] Subtasks automatically inherit the quest assignments of their parent task.
 
 **Open questions**
 - None.
@@ -133,4 +134,5 @@ Migration: `supabase migration new add_quests`
 - Icons use Lucide React, mapped in `src/lib/questIcons.tsx` via `QUEST_ICONS` array and `QuestIcon` component.
 - Quest link icons on task cards are batch-fetched in `TodoList` (one query for all visible todo IDs) — not per-card. Map invalidates when task detail is saved.
 - Quest link sync on task save: delete-all + re-insert pattern (simple, no diffing needed at this scale).
+- Subtasks inherit parent's quests: implemented in `TodoStore` (`addTodo` and `updateTodo`) by fetching parent's quest links and applying them to the child.
 - Pinned quests are re-fetched client-side in `Dashboard.refreshPinnedQuests()` after any quest change; initial value comes from SSR in `page.tsx`.

@@ -70,6 +70,7 @@ No separate table needed.
 - [x] Sub-tasks can be reordered by drag within the panel
 - [x] Dragging one root task onto another makes it a sub-task
 - [x] Sub-tasks are deleted independently without affecting the parent
+- [x] Sub-tasks automatically inherit quest assignments from their parent task
 
 ## Open questions
 
@@ -79,4 +80,5 @@ _None — feature is complete._
 
 - Only one level of nesting is enforced by UI convention (no `parent_id` field shown in sub-task detail panel), not by DB constraint. A future constraint could be added if needed.
 - Sub-task counts on the server load (`/src/app/page.tsx`) use Supabase's aggregation syntax: `todos(count)` nested in the query — this avoids N+1 fetches.
+- Quest inheritance: when a task is promoted to sub-task or created as sub-task, it inherits parent's quests. This is handled in `todo-store.ts`.
 - The drag-onto detection in `Dashboard.tsx` checks if the `over.id` matches a todo ID (not a droppable zone ID) to distinguish reorder from sub-task promotion.

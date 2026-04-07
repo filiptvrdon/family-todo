@@ -35,8 +35,9 @@ export const useEventStore = create<EventStore>((set, get) => ({
       set(s => ({ 
         events: s.events.map(e => e.id === tempId ? created : e) 
       }))
-    } catch (err: any) {
-      console.error('Failed to add event:', err.message || err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to add event:', message)
       set(s => ({ 
         events: s.events.filter(e => e.id !== tempId) 
       }))
@@ -51,8 +52,9 @@ export const useEventStore = create<EventStore>((set, get) => ({
 
     try {
       await eventService.updateEvent(supabase, id, patch)
-    } catch (err: any) {
-      console.error('Failed to update event:', err.message || err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to update event:', message)
       if (prev) {
         set(s => ({
           events: s.events.map(e => e.id === id ? prev : e)
@@ -69,8 +71,9 @@ export const useEventStore = create<EventStore>((set, get) => ({
 
     try {
       await eventService.deleteEvent(supabase, id)
-    } catch (err: any) {
-      console.error('Failed to delete event:', err.message || err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to delete event:', message)
       if (prev) {
         set(s => ({
           events: [...s.events, prev]

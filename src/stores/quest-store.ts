@@ -45,8 +45,9 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
       set(s => ({ 
         quests: s.quests.map(q => q.id === tempId ? created : q) 
       }))
-    } catch (err: any) {
-      console.error('Failed to add quest:', err.message || err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to add quest:', message)
       set(s => ({ 
         quests: s.quests.filter(q => q.id !== tempId) 
       }))
@@ -61,8 +62,9 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
 
     try {
       await questService.updateQuest(supabase, id, patch)
-    } catch (err: any) {
-      console.error('Failed to update quest:', err.message || err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to update quest:', message)
       if (prev) {
         set(s => ({
           quests: s.quests.map(q => q.id === id ? prev : q)
@@ -79,8 +81,9 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
 
     try {
       await questService.deleteQuest(supabase, id)
-    } catch (err: any) {
-      console.error('Failed to delete quest:', err.message || err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to delete quest:', message)
       if (prev) {
         set(s => ({
           quests: [...s.quests, prev]

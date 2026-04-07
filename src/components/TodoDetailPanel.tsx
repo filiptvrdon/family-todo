@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { X } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
@@ -24,6 +24,21 @@ interface Props {
   onRefresh: () => void
 }
 
+const whyQuestions = [
+  "Why is this task important for you right now?",
+  "What context makes this task a priority?",
+  "How will completing this help you achieve your goals?",
+  "What's the impact of getting this done today?",
+  "Why does this task matter to your family?",
+  "In what situation will this task be most relevant?",
+  "What is the core reason you want to finish this?",
+  "How does this task fit into your weekly plan?",
+  "What motivated you to add this task?",
+  "What's the underlying value of this task?",
+];
+
+const getRandomWhyQuestion = () => whyQuestions[Math.floor(Math.random() * whyQuestions.length)];
+
 export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefresh }: Props) {
   const [editTitle, setEditTitle] = useState(todo.title)
   const [editDescription, setEditDescription] = useState(todo.description ?? '')
@@ -33,8 +48,10 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
   const [activeQuests, setActiveQuests] = useState<Quest[]>([])
   const [initialLinkedQuestIds, setInitialLinkedQuestIds] = useState<Set<string>>(new Set())
   const [linkedQuestIds, setLinkedQuestIds] = useState<Set<string>>(new Set())
+  const [isSaving, setIsSaving] = useState(false)
   const quests = useQuestStore(s => s.quests)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const placeholder = useMemo(() => getRandomWhyQuestion(), [])
 
   useEffect(() => {
     if (!open || !isOwner) return
@@ -52,7 +69,9 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
 
     loadQuests()
     return () => { ignore = true }
-  }, [open, isOwner, todo.id, todo.user_id, supabase, quests])
+    // We only want to load once when the panel opens or if the todo changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isOwner, todo.id, todo.user_id, supabase])
 
   function toggleQuestLink(questId: string) {
     setLinkedQuestIds(prev => {
@@ -65,6 +84,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
 
   async function handleSave() {
     if (!editTitle.trim()) return
+    setIsSaving(true)
 
     try {
       await useTodoStore.getState().updateTodo(todo.id, {
@@ -79,26 +99,28 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
       const toAdd = [...linkedQuestIds].filter(id => !initialLinkedQuestIds.has(id))
       const toRemove = [...initialLinkedQuestIds].filter(id => !linkedQuestIds.has(id))
 
-      for (const qid of toAdd) {
-        await useQuestStore.getState().linkTask(qid, todo.id)
-      }
-      for (const qid of toRemove) {
-        await useQuestStore.getState().unlinkTask(qid, todo.id)
-      }
+      await Promise.all([
+        ...toAdd.map(qid => useQuestStore.getState().linkTask(qid, todo.id)),
+        ...toRemove.map(qid => useQuestStore.getState().unlinkTask(qid, todo.id))
+      ])
 
       // Regenerate metadata in background
       triggerAiMetadata(todo.id)
 
+      onRefresh()
       onClose()
     } catch (err) {
       console.error('Error saving todo:', err)
       toast.error('Failed to save changes')
+    } finally {
+      setIsSaving(false)
     }
   }
 
   async function handleDelete() {
     try {
       await useTodoStore.getState().deleteTodo(todo.id)
+      onRefresh()
       onClose()
     } catch (err) {
       console.error('Error deleting todo:', err)
@@ -156,7 +178,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
               <textarea
                 value={editDescription}
                 onChange={e => setEditDescription(e.target.value)}
-                placeholder="Add any notes…"
+                placeholder={placeholder}
                 rows={3}
                 className="text-sm rounded-xl px-4 py-3 w-full focus:outline-none resize-none bg-card border-[1.5px] border-border text-foreground"
               />
@@ -264,16 +286,17 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
                         onClick={() => toggleQuestLink(quest.id)}
                         whileTap={{ scale: 0.95 }}
                         initial={false}
-                        animate={{
-                          scale: linked ? 1.05 : 1,
+                        style={{
                           backgroundColor: linked ? 'var(--color-primary)' : 'var(--color-foam)',
                           color: linked ? '#fff' : 'var(--color-text-secondary)',
                           borderColor: linked ? 'var(--color-primary)' : 'var(--color-border)',
                         }}
+                        animate={{
+                          scale: linked ? 1.05 : 1,
+                        }}
                         transition={{ 
                           duration: 0.2, 
                           ease: "easeOut",
-                          backgroundColor: { duration: 0.2 },
                           scale: { duration: 0.15 }
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border-[1.5px] min-h-[36px] cursor-pointer"
@@ -301,11 +324,11 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
               <div className="flex flex-col gap-2 pt-2">
                 <button
                   onClick={handleSave}
-                  disabled={!editTitle.trim()}
-                  className="w-full font-semibold text-sm rounded-xl transition bg-primary text-primary-foreground min-h-[48px]"
-                  style={{ opacity: editTitle.trim() ? 1 : 0.4 }}
+                  disabled={!editTitle.trim() || isSaving}
+                  className="w-full font-semibold text-sm rounded-xl transition bg-primary text-primary-foreground min-h-[48px] flex items-center justify-center"
+                  style={{ opacity: (editTitle.trim() && !isSaving) ? 1 : 0.4 }}
                 >
-                  Save changes
+                  {isSaving ? 'Saving...' : 'Save changes'}
                 </button>
                 <button
                   onClick={handleDelete}

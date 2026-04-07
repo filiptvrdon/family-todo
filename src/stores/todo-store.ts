@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createClient } from '@/lib/supabase/client'
 import * as todoService from '@/services/todo-service'
+import * as questService from '@/services/quest-service'
 import { Todo } from '@/lib/types'
 
 const supabase = createClient()
@@ -37,8 +38,9 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     // 2. Persist
     try {
       await todoService.toggleTodo(supabase, id, completed)
-    } catch (err: any) {
-      console.error('Failed to toggle todo:', err.message || err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to toggle todo:', message)
       // Rollback
       set(s => {
         const key = isMine ? 'myTodos' : 'partnerTodos'
@@ -65,8 +67,21 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
       set(s => ({ 
         myTodos: s.myTodos.map(t => t.id === tempId ? created : t) 
       }))
-    } catch (err: any) {
-      console.error('Failed to add todo:', err.message || err)
+
+      // Sync quest links from parent if applicable
+      if (todo.parent_id) {
+        try {
+          const questIds = await questService.fetchQuestsForTask(supabase, todo.parent_id)
+          if (questIds.length > 0) {
+            await Promise.all(questIds.map(qid => questService.linkTask(supabase, qid, created.id)))
+          }
+        } catch (err) {
+          console.error('Failed to sync quest links for subtask:', err)
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to add todo:', message)
       // Rollback
       set(s => ({ 
         myTodos: s.myTodos.filter(t => t.id !== tempId) 
@@ -87,8 +102,21 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
     try {
       await todoService.updateTodo(supabase, id, patch)
-    } catch (err: any) {
-      console.error('Failed to update todo:', err.message || err)
+      
+      // Sync quest links from parent if parent_id was newly set/changed
+      if (patch.parent_id) {
+        try {
+          const questIds = await questService.fetchQuestsForTask(supabase, patch.parent_id)
+          if (questIds.length > 0) {
+            await Promise.all(questIds.map(qid => questService.linkTask(supabase, qid, id)))
+          }
+        } catch (err) {
+          console.error('Failed to sync quest links for task moved to parent:', err)
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to update todo:', message)
       if (prev) {
         set(s => {
           const key = isMine ? 'myTodos' : 'partnerTodos'
@@ -113,8 +141,9 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
     try {
       await todoService.deleteTodo(supabase, id)
-    } catch (err: any) {
-      console.error('Failed to delete todo:', err.message || err)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('Failed to delete todo:', message)
       if (prev) {
         set(s => {
           const key = isMine ? 'myTodos' : 'partnerTodos'

@@ -26,12 +26,6 @@ export function SubtaskProgressBar({ todoId, initialCount }: Props) {
   const totalSub = useMemo(() => {
     if (subtaskTotals) return subtaskTotals.total
     if (typeof initialCount === 'number') return initialCount
-    if (Array.isArray(initialCount) && typeof (initialCount[0] as any)?.count === 'number') {
-      return (initialCount[0] as any).count
-    }
-    if (initialCount && typeof (initialCount as any).count === 'number') {
-      return (initialCount as any).count
-    }
     return 0
   }, [subtaskTotals, initialCount])
   const completedSub = useMemo(() => subtaskTotals?.completed ?? 0, [subtaskTotals?.completed])

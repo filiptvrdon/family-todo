@@ -1,6 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Todo } from '@/lib/types'
 
+interface RawTodo extends Record<string, unknown> {
+  subtasks_count?: number | { count: number } | { count: number }[]
+}
+
 export async function fetchTodos(
   supabase: SupabaseClient,
   userId: string
@@ -12,14 +16,21 @@ export async function fetchTodos(
     .order('index')
   if (error) throw error
   
-  return (data || []).map((todo: any) => ({
-    ...todo,
-    subtasks_count: typeof todo.subtasks_count === 'number'
-      ? todo.subtasks_count
-      : Array.isArray(todo.subtasks_count)
-        ? (todo.subtasks_count[0]?.count ?? 0)
-        : (todo.subtasks_count?.count ?? 0)
-  })) as Todo[]
+  return (data || []).map((todo: RawTodo) => {
+    let count = 0
+    if (typeof todo.subtasks_count === 'number') {
+      count = todo.subtasks_count
+    } else if (Array.isArray(todo.subtasks_count)) {
+      count = (todo.subtasks_count[0] as { count: number })?.count ?? 0
+    } else if (todo.subtasks_count && typeof todo.subtasks_count === 'object') {
+      count = (todo.subtasks_count as { count: number }).count ?? 0
+    }
+
+    return {
+      ...todo,
+      subtasks_count: count
+    } as Todo
+  })
 }
 
 export async function fetchSubtasks(
@@ -33,21 +44,29 @@ export async function fetchSubtasks(
     .order('index')
   if (error) throw error
   
-  return (data || []).map((todo: any) => ({
-    ...todo,
-    subtasks_count: typeof todo.subtasks_count === 'number'
-      ? todo.subtasks_count
-      : Array.isArray(todo.subtasks_count)
-        ? (todo.subtasks_count[0]?.count ?? 0)
-        : (todo.subtasks_count?.count ?? 0)
-  })) as Todo[]
+  return (data || []).map((todo: RawTodo) => {
+    let count = 0
+    if (typeof todo.subtasks_count === 'number') {
+      count = todo.subtasks_count
+    } else if (Array.isArray(todo.subtasks_count)) {
+      count = (todo.subtasks_count[0] as { count: number })?.count ?? 0
+    } else if (todo.subtasks_count && typeof todo.subtasks_count === 'object') {
+      count = (todo.subtasks_count as { count: number }).count ?? 0
+    }
+
+    return {
+      ...todo,
+      subtasks_count: count
+    } as Todo
+  })
 }
 
 export async function createTodo(
   supabase: SupabaseClient,
   todo: Omit<Todo, 'id' | 'created_at'>
 ): Promise<Todo> {
-  const { subtasks_count, ...insertData } = todo as any
+  const insertData = { ...todo } as Record<string, unknown>
+  delete insertData.subtasks_count
   const { data, error } = await supabase
     .from('todos')
     .insert([insertData])
@@ -62,7 +81,8 @@ export async function updateTodo(
   id: string,
   patch: Partial<Todo>
 ): Promise<Todo> {
-  const { subtasks_count, ...updateData } = patch as any
+  const updateData = { ...patch } as Record<string, unknown>
+  delete updateData.subtasks_count
   const { data, error } = await supabase
     .from('todos')
     .update(updateData)
