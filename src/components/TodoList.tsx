@@ -2,11 +2,10 @@
 
 import { useId, useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Todo } from '@/lib/types'
+import {QuestLink, Todo} from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { useTodoStore } from '@/stores/todo-store'
 import { format, addDays } from 'date-fns'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   DndContext,
   DragEndEvent,
@@ -14,16 +13,18 @@ import {
   useSensor,
   useSensors,
   closestCenter,
-  useDndMonitor,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
 import { generateKeyBetween } from 'fractional-indexing'
 import TodoDetailPanel from '@/components/TodoDetailPanel'
-import TodoCard from '@/components/TodoCard'
 import { triggerAiMetadata } from '@/lib/ai-metadata'
+
+// Sub-components
+import { OnARollBadge } from './todo-list/OnARollBadge'
+import { TodoListProgress } from './todo-list/TodoListProgress'
+import { AddTodoInput } from './todo-list/AddTodoInput'
+import { EnergyFilter } from './todo-list/EnergyFilter'
+import { TodoItems } from './todo-list/TodoItems'
+import { DndMonitor } from './todo-list/DndMonitor'
 
 type Recurrence = 'daily' | 'weekly' | 'monthly'
 
@@ -44,10 +45,6 @@ interface Props {
   hideProgress?: boolean
 }
 
-function DndMonitor({ onDragEnd }: { onDragEnd: (event: DragEndEvent) => void }) {
-  useDndMonitor({ onDragEnd })
-  return null
-}
 
 export default function TodoList({
   userId,
@@ -70,7 +67,7 @@ export default function TodoList({
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [energyFilter, setEnergyFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all')
-  const [questLinkMap, setQuestLinkMap] = useState<Record<string, { icon: string; name: string; status: string }[]>>({})
+  const [questLinkMap, setQuestLinkMap] = useState<Record<string, QuestLink[]>>({})
   const prevIdsRef = useRef<string>('')
   const [streamingNudges, setStreamingNudges] = useState<Map<string, string>>(new Map())
   const intervalsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set())
@@ -100,8 +97,8 @@ export default function TodoList({
         .select('task_id, quests(icon, name, status)')
         .in('task_id', ids)
       if (ignore || !data) return
-      const map: Record<string, { icon: string; name: string; status: string }[]> = {}
-      for (const row of data as { task_id: string; quests: { icon: string; name: string; status: string } | { icon: string; name: string; status: string }[] | null }[]) {
+      const map: Record<string, QuestLink[]> = {}
+      for (const row of data as { task_id: string; quests: QuestLink | QuestLink[] | null }[]) {
         const q = Array.isArray(row.quests) ? row.quests[0] : row.quests
         if (!q) continue
         if (!map[row.task_id]) map[row.task_id] = []
@@ -302,115 +299,46 @@ export default function TodoList({
 
   const completedCount = localTodos.filter(t => t.completed).length
   const totalCount = localTodos.length
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
   const ListContent = (
-    <>
+    <div className="flex flex-col gap-2">
       <DndMonitor onDragEnd={handleDragEnd} />
-      <div className="flex flex-col gap-2">
-        {!parentId && (
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {(['all', 'low', 'medium', 'high'] as const).map(val => (
-              <button
-                key={val}
-                type="button"
-                onClick={() => setEnergyFilter(val)}
-                className="px-3 py-1 rounded-full text-xs font-medium transition whitespace-nowrap"
-                style={{
-                  background: energyFilter === val ? 'var(--color-primary)' : 'var(--color-foam)',
-                  color: energyFilter === val ? '#fff' : 'var(--color-text-secondary)',
-                  border: energyFilter === val ? '1.5px solid var(--color-primary)' : '1.5px solid var(--color-border)',
-                }}
-              >
-                {val === 'all' ? 'All' : val === 'low' ? 'Doable Now (Low)' : val.charAt(0).toUpperCase() + val.slice(1)}
-              </button>
-            ))}
-          </div>
-        )}
-        {displayTodos.length === 0 && !loading && (
-          <p className="text-sm text-center py-6 text-text-disabled">No tasks yet</p>
-        )}
-        {loading && <p className="text-sm text-center py-6 text-text-disabled">Loading tasks…</p>}
-        
-        <SortableContext items={displayTodos.map(t => t.id)} strategy={verticalListSortingStrategy}>
-          <AnimatePresence initial={false}>
-            {displayTodos.map(todo => (
-              <motion.div
-                key={todo.id}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-              >
-                <TodoCard
-                  todo={todo}
-                  isOwner={isOwner}
-                  onToggle={toggleTodo}
-                  onDelete={deleteTodo}
-                  onOpen={openDetail}
-                  onEdit={editTodo}
-                  isSortable={isOwner}
-                  isDraggable={isOwner}
-                  isDroppable={isOwner}
-                  quests={questLinkMap[todo.id]}
-                  streamingNudge={streamingNudges.get(todo.id)}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </SortableContext>
-      </div>
-    </>
+      <EnergyFilter 
+        activeFilter={energyFilter} 
+        onFilterChange={setEnergyFilter} 
+        isVisible={!parentId} 
+      />
+      <TodoItems
+        todos={displayTodos}
+        isOwner={isOwner}
+        onToggle={toggleTodo}
+        onDelete={deleteTodo}
+        onOpen={openDetail}
+        onEdit={editTodo}
+        questLinkMap={questLinkMap}
+        streamingNudges={streamingNudges}
+        loading={loading}
+      />
+    </div>
   )
 
   return (
     <div className="flex flex-col gap-3 min-w-0 relative">
-      <AnimatePresence>
-        {onARoll && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="absolute -top-10 left-1/2 -translate-x-1/2 z-50 bg-white px-4 py-2 rounded-full shadow-lg border border-primary flex items-center gap-2 pointer-events-none"
-          >
-            <span className="text-sm font-bold text-primary flex items-center gap-1">
-              🔥 You&apos;re on a roll
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {parentId && totalCount > 0 && !hideProgress && (
-        <div className="flex flex-col gap-1.5 mb-1">
-          <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            <span>Progress</span>
-            <span>{completedCount}/{totalCount}</span>
-          </div>
-          <div className="h-1.5 w-full bg-foam rounded-full overflow-hidden relative">
-            <motion.div 
-              className="h-full bg-primary" 
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            />
-            <motion.div
-              className="absolute top-0 bottom-0 bg-white/30 w-3 blur-[2px]"
-              animate={{ left: `${progress}%` }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            />
-          </div>
-        </div>
-      )}
+      <OnARollBadge active={onARoll} />
+      
+      <TodoListProgress 
+        completedCount={completedCount} 
+        totalCount={totalCount} 
+        isVisible={!!parentId && !hideProgress} 
+      />
 
-      {isOwner && (
-        <form onSubmit={addTodo}>
-          <input
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            placeholder={parentId ? "Add a sub-task…" : "Add a task…"}
-            className="text-sm rounded-xl px-3 py-2.5 w-full focus:outline-none border-[1.5px] border-border bg-card text-foreground min-h-[44px] placeholder:text-text-disabled"
-          />
-        </form>
-      )}
+      <AddTodoInput 
+        value={title} 
+        onChange={setTitle} 
+        onSubmit={addTodo} 
+        isSubtask={!!parentId} 
+        isVisible={isOwner} 
+      />
 
       {useInternalDndContext ? (
         <DndContext id={dndContextId} sensors={sensors} collisionDetection={closestCenter}>
