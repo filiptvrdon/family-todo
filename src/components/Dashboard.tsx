@@ -1,8 +1,13 @@
 'use client'
 
-import { useState, useCallback, useEffect, useId } from 'react'
+import { useState, useCallback, useEffect, useId, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useStoreInit } from '@/hooks/useStoreInit'
+import { useTodoStore } from '@/stores/todo-store'
+import { useUserStore } from '@/stores/user-store'
+import { useQuestStore } from '@/stores/quest-store'
+import { useEventStore } from '@/stores/event-store'
 import { User, Todo, CalendarEvent, Quest } from '@/lib/types'
 import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import UserModal from '@/components/UserModal'
@@ -34,12 +39,17 @@ interface Props {
   pinnedQuests: Quest[]
 }
 
-export default function Dashboard({ user, partner, myTodos, partnerTodos, allEvents, googleConnected, pinnedQuests }: Props) {
-  const [localMyTodos, setLocalMyTodos] = useState<Todo[]>(myTodos)
-  const [localPartnerTodos, setLocalPartnerTodos] = useState<Todo[]>(partnerTodos)
-  const [prevMyTodos, setPrevMyTodos] = useState(myTodos)
-  const [prevPartnerTodos, setPrevPartnerTodos] = useState(partnerTodos)
+export default function Dashboard({ user: initialUser, partner: initialPartner, allEvents, googleConnected, pinnedQuests }: Props) {
+  const user = useUserStore(s => s.user || initialUser)
+  const partner = useUserStore(s => s.partner || initialPartner)
 
+  useStoreInit({ user })
+  const myTodos = useTodoStore(s => s.myTodos)
+  const partnerTodos = useTodoStore(s => s.partnerTodos)
+  const updateTodoStore = useTodoStore(s => s.updateTodo)
+  const quests = useQuestStore(s => s.quests)
+  const eventsFromStore = useEventStore(s => s.events)
+  
   const [dayDate, setDayDate] = useState<Date>(new Date())
   const [weekCalDate, setWeekCalDate] = useState<Date>(new Date())
   const [monthCalDate, setMonthCalDate] = useState<Date>(new Date())
@@ -48,13 +58,6 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const dndContextId = useId()
 
-  if (myTodos !== prevMyTodos || partnerTodos !== prevPartnerTodos) {
-    setPrevMyTodos(myTodos)
-    setPrevPartnerTodos(partnerTodos)
-    setLocalMyTodos(myTodos)
-    setLocalPartnerTodos(partnerTodos)
-  }
-
   const [showCheckin, setShowCheckin] = useState(() => {
     if (typeof window !== 'undefined') return !hasCheckedInToday()
     return false
@@ -62,50 +65,24 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
   const [showProfile, setShowProfile] = useState(false)
   const [showQuests, setShowQuests] = useState(false)
   const [questPanelInitialId, setQuestPanelInitialId] = useState<string | null>(null)
-  const [localPinnedQuests, setLocalPinnedQuests] = useState<Quest[]>(pinnedQuests)
+  
+  const pinnedQuestsFromStore = quests.filter(q => q.status === 'active' && q.pinned).slice(0, 3)
+  const localPinnedQuests = pinnedQuestsFromStore.length > 0 ? pinnedQuestsFromStore : pinnedQuests
+
   const { isDark, toggle: toggleTheme } = useTheme()
   const router = useRouter()
   const supabase = createClient()
 
-  const refreshLocal = useCallback(async () => {
-    const [{ data: mineRaw }, { data: theirsRaw }] = await Promise.all([
-      supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', user.id).is('parent_id', null).order('index', { ascending: true }),
-      partner?.id
-        ? supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', partner.id).is('parent_id', null).order('index', { ascending: true })
-        : Promise.resolve({ data: [] as unknown as { count: number }[][] }),
-    ])
-    
-    const mine = (mineRaw ?? []).map(t => ({
-      ...t,
-      subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
-    }))
-    const theirs = (theirsRaw ?? []).map(t => ({
-      ...t,
-      subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
-    }))
-
-    if (mine) setLocalMyTodos(mine)
-    if (theirs) setLocalPartnerTodos(theirs ?? [])
-  }, [supabase, user.id, partner])
-
   const refresh = useCallback(() => router.refresh(), [router])
 
   const onRefresh = useCallback(() => {
-    refreshLocal()
-    refresh()
-  }, [refreshLocal, refresh])
+    // No-op for now as stores are live, but keeping for compatibility if needed
+    // refresh() // Removed router.refresh() as per spec
+  }, [])
 
   const refreshPinnedQuests = useCallback(async () => {
-    const { data } = await supabase
-      .from('quests')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .eq('pinned', true)
-      .order('created_at', { ascending: true })
-      .limit(3)
-    setLocalPinnedQuests(data ?? [])
-  }, [supabase, user.id])
+    // Stores update live
+  }, [])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     if (event.active.data.current?.source === 'todo-column') {
@@ -116,7 +93,6 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
     setDraggingTodoId(null)
-    const supabase = createClient()
 
     if (!over) return
 
@@ -128,29 +104,26 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
     if (hourMatch) {
       const hour = parseInt(hourMatch[1])
       const scheduledTime = `${String(hour).padStart(2, '0')}:00:00`
-      const updates: Record<string, string> = { scheduled_time: scheduledTime }
+      const updates: Partial<Todo> = { scheduled_time: scheduledTime }
       if (isFromColumn) updates.due_date = format(dayDate, 'yyyy-MM-dd')
-      await supabase.from('todos').update(updates).eq('id', todoId)
-      onRefresh()
+      updateTodoStore(todoId, updates)
       return
     }
 
     // Week view: hour slot with date
     const weekSlotMatch = String(over.id).match(/^week-slot-(\d{4}-\d{2}-\d{2})-(\d{2})$/)
     if (weekSlotMatch) {
-      await supabase.from('todos').update({
+      updateTodoStore(todoId, {
         due_date: weekSlotMatch[1],
         scheduled_time: `${weekSlotMatch[2]}:00:00`,
-      }).eq('id', todoId)
-      onRefresh()
+      })
       return
     }
 
     // Month view: day cell
     const monthDayMatch = String(over.id).match(/^month-day-(\d{4}-\d{2}-\d{2})$/)
     if (monthDayMatch) {
-      await supabase.from('todos').update({ due_date: monthDayMatch[1] }).eq('id', todoId)
-      onRefresh()
+      updateTodoStore(todoId, { due_date: monthDayMatch[1] })
       return
     }
 
@@ -160,34 +133,27 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
       if (parentId === todoId) return // Cannot drop onto itself
 
       // Get existing sub-tasks of the target to compute index
-      const { data: existingSubTasks } = await supabase
-        .from('todos')
-        .select('index')
-        .eq('parent_id', parentId)
-        .order('index', { ascending: true })
+      const existingSubTasks = myTodos.filter(t => t.parent_id === parentId)
+        .sort((a, b) => (a.index || '').localeCompare(b.index || ''))
 
-      const lastIndex = existingSubTasks && existingSubTasks.length > 0
+      const lastIndex = existingSubTasks.length > 0
         ? (existingSubTasks[existingSubTasks.length - 1].index || null)
         : null
       const newIndex = generateKeyBetween(lastIndex, null)
 
-      await supabase.from('todos').update({
+      updateTodoStore(todoId, {
         parent_id: parentId,
         index: newIndex,
         due_date: null,
         scheduled_time: null,
-      }).eq('id', todoId)
-
-      onRefresh()
+      })
       return
     }
-  }, [dayDate, onRefresh])
+  }, [dayDate, myTodos, updateTodoStore])
 
   const completeTodo = useCallback(async (todoId: string) => {
-    setLocalMyTodos((prev) => prev.map((t) => t.id === todoId ? { ...t, completed: true } : t))
-    await supabase.from('todos').update({ completed: true }).eq('id', todoId)
-    refresh()
-  }, [supabase, refresh])
+    useTodoStore.getState().toggleTodo(todoId, true)
+  }, [])
 
   useEffect(() => {
     // Check-in logic is now handled in initial state
@@ -201,14 +167,22 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
   const myName = user?.display_name || user?.email?.split('@')[0] || 'You'
   const partnerName = partner?.display_name || partner?.email?.split('@')[0] || 'Partner'
 
-  const draggingTodo = draggingTodoId ? localMyTodos.find(t => t.id === draggingTodoId) ?? null : null
+  const draggingTodo = draggingTodoId ? myTodos.find(t => t.id === draggingTodoId) ?? null : null
+
+  // Combine store events with initial allEvents (which includes Google Calendar events)
+  // Store events handle Supabase Realtime updates. 
+  // Initial allEvents are needed for the first render and for Google Calendar data.
+  const allEventsCombined = useMemo(() => {
+    if (eventsFromStore.length === 0) return allEvents
+    return eventsFromStore
+  }, [eventsFromStore, allEvents])
 
   const sharedProps = {
     user,
     partner,
-    myTodos: localMyTodos,
-    partnerTodos: localPartnerTodos,
-    allEvents,
+    myTodos: myTodos.filter(t => !t.parent_id),
+    partnerTodos: partnerTodos.filter(t => !t.parent_id),
+    allEvents: allEventsCombined,
     myName,
     partnerName,
     onRefresh,
@@ -296,7 +270,6 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
             user={user}
             googleConnected={googleConnected}
             onClose={() => setShowProfile(false)}
-            onSaved={refresh}
             onGoogleDisconnected={refresh}
             onSignOut={signOut}
           />
@@ -315,12 +288,10 @@ export default function Dashboard({ user, partner, myTodos, partnerTodos, allEve
         {showCheckin && (
           <CheckIn
             userName={myName}
-            myTodos={localMyTodos}
+            myTodos={myTodos.filter(t => !t.parent_id)}
             allEvents={allEvents}
             onDone={() => {
               setShowCheckin(false)
-              refreshLocal()
-              refresh()
             }}
           />
         )}

@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { X, ArrowLeft, Pin, PinOff, Plus, CheckCircle2, Pencil } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
 import { toast } from 'sonner'
 import { Quest } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
+import { useQuestStore } from '@/stores/quest-store'
+import * as questService from '@/services/quest-service'
 import { QUEST_ICONS, QuestIcon } from '@/lib/questIcons'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -40,7 +42,7 @@ function MomentumBadge({ current, start }: { current: number, start: number }) {
 
 export default function QuestPanel({ open, userId, initialQuestId, onClose, onQuestsChanged }: Props) {
   const [view, setView] = useState<View>('list')
-  const [quests, setQuests] = useState<Quest[]>([])
+  const quests = useQuestStore(s => s.quests)
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null)
   const [linkedTasks, setLinkedTasks] = useState<LinkedTask[]>([])
   const [loadingTasks, setLoadingTasks] = useState(false)
@@ -62,107 +64,71 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
 
   const supabase = createClient()
 
-  const loadQuests = useCallback(async () => {
-    const { data } = await supabase
-      .from('quests')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-    setQuests(data ?? [])
-  }, [supabase, userId])
-
-  useEffect(() => {
-    if (open) {
-      loadQuests()
-    }
-  }, [open, loadQuests])
-
   useEffect(() => {
     if (open && initialQuestId && quests.length > 0) {
       const quest = quests.find(q => q.id === initialQuestId)
       if (quest) openDetail(quest)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialQuestId, quests])
+  }, [open, initialQuestId, quests.length])
 
   async function openDetail(quest: Quest) {
     setSelectedQuest(quest)
     setView('detail')
     setLoadingTasks(true)
-    const { data } = await supabase
-      .from('quest_tasks')
-      .select('task_id, todos(id, title, completed)')
-      .eq('quest_id', quest.id)
-    const tasks = (data ?? []).map((row: { todos: LinkedTask | LinkedTask[] | null }) => {
-      const t = Array.isArray(row.todos) ? row.todos[0] : row.todos
-      return t as LinkedTask
-    }).filter(Boolean)
-    setLinkedTasks(tasks)
-    setLoadingTasks(false)
+    try {
+      const tasks = await questService.fetchLinkedTasks(supabase, quest.id)
+      setLinkedTasks(tasks as LinkedTask[])
+    } catch (err) {
+      console.error('Error fetching linked tasks:', err)
+    } finally {
+      setLoadingTasks(false)
+    }
   }
 
   async function togglePin(quest: Quest) {
     const pinned = quests.filter(q => q.pinned)
     if (!quest.pinned && pinned.length >= 3) return
     const newVal = !quest.pinned
-    setQuests(prev => prev.map(q => q.id === quest.id ? { ...q, pinned: newVal } : q))
-    const { error } = await supabase.from('quests').update({ pinned: newVal }).eq('id', quest.id)
-    if (error) {
-      console.error('Error toggling pin:', error)
-      toast.error('Failed to pin quest: ' + error.message)
-      setQuests(prev => prev.map(q => q.id === quest.id ? { ...q, pinned: !newVal } : q))
-      return
-    }
+    await useQuestStore.getState().updateQuest(quest.id, { pinned: newVal })
     onQuestsChanged()
   }
 
   async function createQuest() {
     if (!newName.trim()) return
     setSaving(true)
-    const { data, error } = await supabase.from('quests').insert({
-      user_id: userId,
-      name: newName.trim(),
-      icon: newIcon,
-      description: newDescription.trim() || null,
-    }).select().single()
-
-    if (error) {
-      console.error('Error creating quest:', error)
-      toast.error('Failed to create quest: ' + error.message)
-      setSaving(false)
-      return
-    }
-
-    if (data) {
-      setQuests(prev => [data, ...prev])
+    try {
+      await useQuestStore.getState().addQuest({
+        user_id: userId,
+        name: newName.trim(),
+        icon: newIcon,
+        description: newDescription.trim() || null,
+        pinned: false,
+        status: 'active',
+        completed_at: null,
+      })
       onQuestsChanged()
+      setNewName('')
+      setNewIcon(QUEST_ICONS[0].name)
+      setNewDescription('')
+      setShowCreateIconPicker(false)
+      setView('list')
+    } catch (err) {
+      console.error('Error creating quest:', err)
+      toast.error('Failed to create quest')
+    } finally {
+      setSaving(false)
     }
-    setNewName('')
-    setNewIcon(QUEST_ICONS[0].name)
-    setNewDescription('')
-    setSaving(false)
-    setShowCreateIconPicker(false)
-    setView('list')
   }
 
   async function completeQuest() {
     if (!selectedQuest) return
-    const { error } = await supabase.from('quests').update({
+    await useQuestStore.getState().updateQuest(selectedQuest.id, {
       status: 'completed',
       completed_at: new Date().toISOString(),
       pinned: false,
-    }).eq('id', selectedQuest.id)
+    })
 
-    if (error) {
-      console.error('Error completing quest:', error)
-      toast.error('Failed to complete quest: ' + error.message)
-      return
-    }
-
-    setQuests(prev => prev.map(q => q.id === selectedQuest.id
-      ? { ...q, status: 'completed' as const, pinned: false, completed_at: new Date().toISOString() }
-      : q
-    ))
     onQuestsChanged()
     setView('list')
     setSelectedQuest(null)
@@ -181,25 +147,24 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
     if (!selectedQuest || !editName.trim()) return
     setSaving(true)
     const updates = { name: editName.trim(), icon: editIcon, description: editDescription.trim() || null }
-    const { error } = await supabase.from('quests').update(updates).eq('id', selectedQuest.id)
-    if (error) {
-      console.error('Error updating quest:', error)
-      toast.error('Failed to save changes: ' + error.message)
+    try {
+      await useQuestStore.getState().updateQuest(selectedQuest.id, updates)
+      const updated = { ...selectedQuest, ...updates }
+      setSelectedQuest(updated)
+      onQuestsChanged()
+      setIsEditing(false)
+      setShowEditIconPicker(false)
+    } catch (err) {
+      console.error('Error updating quest:', err)
+      toast.error('Failed to save changes')
+    } finally {
       setSaving(false)
-      return
     }
-    const updated = { ...selectedQuest, ...updates }
-    setSelectedQuest(updated)
-    setQuests(prev => prev.map(q => q.id === selectedQuest.id ? updated : q))
-    onQuestsChanged()
-    setSaving(false)
-    setIsEditing(false)
-    setShowEditIconPicker(false)
   }
 
   async function unlinkTask(taskId: string) {
     if (!selectedQuest) return
-    await supabase.from('quest_tasks').delete().eq('quest_id', selectedQuest.id).eq('task_id', taskId)
+    await questService.unlinkTask(supabase, selectedQuest.id, taskId)
     setLinkedTasks(prev => prev.filter(t => t.id !== taskId))
   }
 
@@ -583,10 +548,9 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                     </p>
                     <button
                       onClick={async () => {
-                        await supabase.from('quests').update({ status: 'active', completed_at: null }).eq('id', selectedQuest.id)
+                        await useQuestStore.getState().updateQuest(selectedQuest.id, { status: 'active', completed_at: null })
                         const updated = { ...selectedQuest, status: 'active' as const, completed_at: null }
                         setSelectedQuest(updated)
-                        setQuests(prev => prev.map(q => q.id === selectedQuest.id ? updated : q))
                         onQuestsChanged()
                       }}
                       className="w-full text-sm rounded-xl transition min-h-[44px] border-[1.5px] border-border text-muted-foreground cursor-pointer"

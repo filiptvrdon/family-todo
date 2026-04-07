@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { format, addDays } from 'date-fns'
 import { aiJSON, aiStream, AIMessage } from '@/lib/ai'
+import { maintainMomentum } from '@/lib/momentum'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 type OverdueTodo = { id: string; title: string; due_date: string }
@@ -189,12 +190,13 @@ Ask what else is on their mind — new tasks, thoughts, plans, anything.
       await supabase.from('todos').delete().in('id', deleteIds)
     }
 
-    // Momentum maintenance
-    await supabase.rpc('process_daily_momentum')
+    // Momentum maintenance & quest nudges
+    await maintainMomentum(user.id)
     
     // Reset day start momentum for the user now that they've checked in
+    const { data: userData } = await supabase.from('users').select('momentum').eq('id', user.id).single()
     await supabase.from('users').update({ 
-      day_start_momentum: (await supabase.from('users').select('momentum').eq('id', user.id).single()).data?.momentum || 0 
+      day_start_momentum: userData?.momentum || 0 
     }).eq('id', user.id)
 
     // Also reset for their active quests

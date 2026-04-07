@@ -5,7 +5,7 @@ import { X, Send, Check, GripVertical } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
 import { Todo, CalendarEvent } from '@/lib/types'
-import { createClient } from '@/lib/supabase/client'
+import { useTodoStore } from '@/stores/todo-store'
 import DayTimeline from '@/components/DayTimeline'
 import {
   DndContext,
@@ -117,16 +117,16 @@ async function readStream(res: Response, onToken: (t: string) => void): Promise<
   }
 }
 
-export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props) {
+export default function CheckIn({ userName, allEvents, onDone }: Props) {
   const today = format(new Date(), 'yyyy-MM-dd')
-  const supabase = createClient()
 
   const sensors = useSensors(
     useSensor(MouseSensor),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
   )
 
-  // Local copy of todos so inline completions and schedule changes are reflected immediately
+  // Use store todos
+  const myTodos = useTodoStore(s => s.myTodos)
   const [localTodos, setLocalTodos] = useState<Todo[]>(myTodos)
   const [activeDragTodo, setActiveDragTodo] = useState<Todo | null>(null)
 
@@ -197,7 +197,7 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
 
   async function handleTodoCheck(todoId: string) {
     setLocalTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, completed: true } : t)))
-    await supabase.from('todos').update({ completed: true }).eq('id', todoId)
+    await useTodoStore.getState().toggleTodo(todoId, true)
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -218,7 +218,7 @@ export default function CheckIn({ userName, myTodos, allEvents, onDone }: Props)
     setLocalTodos((prev) =>
       prev.map((t) => (t.id === todoId ? { ...t, scheduled_time: scheduledTime } : t)),
     )
-    await supabase.from('todos').update({ scheduled_time: scheduledTime }).eq('id', todoId)
+    await useTodoStore.getState().updateTodo(todoId, { scheduled_time: scheduledTime })
   }
 
   async function sendMessage() {

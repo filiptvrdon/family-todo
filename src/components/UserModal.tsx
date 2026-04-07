@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useUserStore } from '@/stores/user-store'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@/lib/types'
 import { X, User as UserIcon, Camera, CalendarDays, Loader2, LogOut } from 'lucide-react'
@@ -10,12 +11,11 @@ interface Props {
   user: User
   googleConnected: boolean
   onClose: () => void
-  onSaved: () => void
   onGoogleDisconnected: () => void
   onSignOut: () => void
 }
 
-export default function UserModal({ user, googleConnected, onClose, onSaved, onGoogleDisconnected, onSignOut }: Props) {
+export default function UserModal({ user, googleConnected, onClose, onGoogleDisconnected, onSignOut }: Props) {
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -70,25 +70,22 @@ export default function UserModal({ user, googleConnected, onClose, onSaved, onG
       avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`
     }
 
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        display_name: displayName.trim(),
-        username: username.trim() || null,
-        customization_prompt: customizationPrompt.trim() || null,
-        avatar_url: avatarUrl,
-      })
-      .eq('id', user.id)
-
-    setSaving(false)
-
-    if (updateError) {
-      setError('Failed to save. Please try again.')
-      return
+    const patch = {
+      display_name: displayName.trim(),
+      username: username.trim() || null,
+      customization_prompt: customizationPrompt.trim() || null,
+      avatar_url: avatarUrl,
     }
 
-    onSaved()
-    onClose()
+    try {
+      await useUserStore.getState().updateUser(user.id, patch)
+      onClose()
+    } catch (err) {
+      console.error('Error updating user:', err)
+      setError('Failed to save. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

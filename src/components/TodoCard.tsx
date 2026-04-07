@@ -77,8 +77,13 @@ export default function TodoCard({
       // 120-300ms: Settling (Step 2)
       // 300-800ms: Reward (Step 3)
       // 800ms+: Exit (Step 4) - handled by parent onToggle
-      setTimeout(() => onToggle(todo), 850)
+      setTimeout(() => {
+        onToggle(todo)
+        // Reset completing state after enough time for rewards to finish
+        setTimeout(() => setCompleting(false), 1000)
+      }, 850)
     } else if (todo.completed) {
+      setCompleting(false)
       onToggle(todo)
     }
   }
@@ -135,7 +140,10 @@ export default function TodoCard({
         opacity: 0.7,
         backgroundColor: 'var(--color-foam)'
       } : { opacity: todo.completed ? 0.5 : 1 }}
-      transition={{ duration: 0.18, delay: 0.12 }}
+      transition={{ 
+        duration: completing ? 0.18 : 0.1, 
+        delay: completing ? 0.12 : 0 
+      }}
       className={`w-full min-w-0 rounded-xl px-3 py-2 flex items-center gap-2.5 cursor-pointer transition-colors bg-card border shadow-[var(--shadow-card)] group relative ${
         isOver ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border'
       }`}

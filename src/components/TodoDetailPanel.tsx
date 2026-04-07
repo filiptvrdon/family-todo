@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 import { Todo, Quest } from '@/lib/types'
 import { triggerAiMetadata } from '@/lib/ai-metadata'
 import { createClient } from '@/lib/supabase/client'
+import { useTodoStore } from '@/stores/todo-store'
+import { useQuestStore } from '@/stores/quest-store'
 import { QuestIcon } from '@/lib/questIcons'
 import TodoList from "./TodoList"
 import { motion } from 'framer-motion'
@@ -29,7 +31,9 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
   const [editRecurrence, setEditRecurrence] = useState<Recurrence | ''>(todo.recurrence ?? '')
   const [editEnergyLevel, setEditEnergyLevel] = useState<'low' | 'medium' | 'high'>(todo.energy_level || 'low')
   const [activeQuests, setActiveQuests] = useState<Quest[]>([])
+  const [initialLinkedQuestIds, setInitialLinkedQuestIds] = useState<Set<string>>(new Set())
   const [linkedQuestIds, setLinkedQuestIds] = useState<Set<string>>(new Set())
+  const quests = useQuestStore(s => s.quests)
   const supabase = createClient()
 
   useEffect(() => {
@@ -37,18 +41,18 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
     let ignore = false
 
     async function loadQuests() {
-      const [{ data: quests }, { data: links }] = await Promise.all([
-        supabase.from('quests').select('*').eq('user_id', todo.user_id).eq('status', 'active').order('created_at', { ascending: false }),
-        supabase.from('quest_tasks').select('quest_id').eq('task_id', todo.id),
-      ])
+      const active = quests.filter(q => q.status === 'active' && q.user_id === todo.user_id)
+      const { data: links } = await supabase.from('quest_tasks').select('quest_id').eq('task_id', todo.id)
       if (ignore) return
-      setActiveQuests(quests ?? [])
-      setLinkedQuestIds(new Set((links ?? []).map((l: { quest_id: string }) => l.quest_id)))
+      setActiveQuests(active)
+      const ids = new Set((links ?? []).map((l: { quest_id: string }) => l.quest_id))
+      setLinkedQuestIds(ids)
+      setInitialLinkedQuestIds(new Set(ids))
     }
 
     loadQuests()
     return () => { ignore = true }
-  }, [open, isOwner, todo.id, todo.user_id, supabase])
+  }, [open, isOwner, todo.id, todo.user_id, supabase, quests])
 
   function toggleQuestLink(questId: string) {
     setLinkedQuestIds(prev => {
@@ -62,39 +66,44 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
   async function handleSave() {
     if (!editTitle.trim()) return
 
-    const { error } = await supabase.from('todos').update({
-      title: editTitle.trim(),
-      description: editDescription.trim() || null,
-      due_date: editDueDate || null,
-      recurrence: (editRecurrence as Recurrence) || null,
-      energy_level: editEnergyLevel,
-    }).eq('id', todo.id)
+    try {
+      await useTodoStore.getState().updateTodo(todo.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+        due_date: editDueDate || null,
+        recurrence: (editRecurrence as Recurrence) || null,
+        energy_level: editEnergyLevel,
+      })
 
-    if (error) {
-      console.error('Error updating todo:', error)
-      toast.error('Failed to save changes: ' + error.message)
-      return
+      // Sync quest links
+      const toAdd = [...linkedQuestIds].filter(id => !initialLinkedQuestIds.has(id))
+      const toRemove = [...initialLinkedQuestIds].filter(id => !linkedQuestIds.has(id))
+
+      for (const qid of toAdd) {
+        await useQuestStore.getState().linkTask(qid, todo.id)
+      }
+      for (const qid of toRemove) {
+        await useQuestStore.getState().unlinkTask(qid, todo.id)
+      }
+
+      // Regenerate metadata in background
+      triggerAiMetadata(todo.id)
+
+      onClose()
+    } catch (err) {
+      console.error('Error saving todo:', err)
+      toast.error('Failed to save changes')
     }
-
-    // Sync quest links: delete all existing, re-insert current selection
-    await supabase.from('quest_tasks').delete().eq('task_id', todo.id)
-    if (linkedQuestIds.size > 0) {
-      await supabase.from('quest_tasks').insert(
-        [...linkedQuestIds].map(quest_id => ({ quest_id, task_id: todo.id }))
-      )
-    }
-
-    // Regenerate metadata in background
-    triggerAiMetadata(todo.id)
-
-    onRefresh()
-    onClose()
   }
 
   async function handleDelete() {
-    await supabase.from('todos').delete().eq('id', todo.id)
-    onRefresh()
-    onClose()
+    try {
+      await useTodoStore.getState().deleteTodo(todo.id)
+      onClose()
+    } catch (err) {
+      console.error('Error deleting todo:', err)
+      toast.error('Failed to delete task')
+    }
   }
 
   return (

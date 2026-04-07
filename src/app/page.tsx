@@ -3,17 +3,12 @@ import { redirect } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
 import { refreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar'
 import { CalendarEvent, Quest } from '@/lib/types'
-import { maintainMomentum } from '@/lib/momentum'
 
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
-
-  // Maintain momentum (decay + nudges) in background-ish way
-  // We await it here because it might affect the dbUser we're about to fetch
-  await maintainMomentum(user.id)
 
   const { error: upsertError } = await supabase.from('users').upsert(
     { id: user.id, email: user.email! },

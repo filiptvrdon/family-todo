@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useEventStore } from '@/stores/event-store'
 
 interface Props {
   userId: string
@@ -15,18 +15,19 @@ export default function NewEventForm({ userId, defaultStart = '', onSave, onCanc
   const [title, setTitle] = useState('')
   const [start, setStart] = useState(defaultStart)
   const [end, setEnd] = useState(defaultStart)
-  const supabase = createClient()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title || !start) return
     const endTime = end || start
-    await supabase.from('calendar_events').insert({
+    
+    await useEventStore.getState().addEvent({
       user_id: userId,
       title,
       start_time: new Date(start).toISOString(),
       end_time: new Date(endTime).toISOString(),
       all_day: false,
+      description: null,
     })
     onSave()
   }

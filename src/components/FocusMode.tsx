@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { toast } from 'sonner'
+import { useMemo, useState } from 'react'
 import { Todo } from '@/lib/types'
-import { createClient } from '@/lib/supabase/client'
+import { useTodoStore } from '@/stores/todo-store'
 import { format, addDays, parseISO } from 'date-fns'
 import { Calendar, RotateCcw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -65,19 +64,12 @@ interface Props {
   onRefresh: () => void
 }
 
-export default function FocusMode({ myTodos, partnerTodos, partnerName, myUserId, onRefresh }: Props) {
-  const [localTodos, setLocalTodos] = useState<Todo[]>(() => [...myTodos, ...partnerTodos])
-  const [prevMyTodos, setPrevMyTodos] = useState(myTodos)
-  const [prevPartnerTodos, setPrevPartnerTodos] = useState(partnerTodos)
+export default function FocusMode({ partnerName, myUserId }: Props) {
+  const storeMyTodos = useTodoStore(s => s.myTodos)
+  const storePartnerTodos = useTodoStore(s => s.partnerTodos)
+  const localTodos = useMemo(() => [...storeMyTodos, ...storePartnerTodos], [storeMyTodos, storePartnerTodos])
+  
   const [skipped, setSkipped] = useState<Set<string>>(() => getSkippedIds())
-  const supabase = createClient()
-
-  // Sync incoming props into local state (e.g. after a background refresh)
-  if (myTodos !== prevMyTodos || partnerTodos !== prevPartnerTodos) {
-    setPrevMyTodos(myTodos)
-    setPrevPartnerTodos(partnerTodos)
-    setLocalTodos([...myTodos, ...partnerTodos])
-  }
 
   const [completing, setCompleting] = useState(false)
 
@@ -91,32 +83,17 @@ export default function FocusMode({ myTodos, partnerTodos, partnerName, myUserId
     if (!task || completing) return
     setCompleting(true)
 
-    // Optimistically mark completed so next task surfaces immediately
-    setLocalTodos(prev => prev.map(t => t.id === task.id ? { ...t, completed: true } : t))
-
-    const { error } = await supabase.from('todos').update({ completed: true }).eq('id', task.id)
-    if (error) {
-      console.error('Error completing task:', error)
-      toast.error('Failed to complete task: ' + error.message)
-      setLocalTodos(prev => prev.map(t => t.id === task.id ? { ...t, completed: false } : t))
-      setCompleting(false)
-      return
-    }
+    await useTodoStore.getState().toggleTodo(task.id, true)
 
     if (task.recurrence) {
       const days = task.recurrence === 'daily' ? 1 : task.recurrence === 'weekly' ? 7 : 30
       const due = format(addDays(new Date(), days), 'yyyy-MM-dd')
       setTimeout(async () => {
-        await supabase.from('todos').update({ completed: false, due_date: due }).eq('id', task.id)
-        setLocalTodos(prev =>
-          prev.map(t => t.id === task.id ? { ...t, completed: false, due_date: due } : t)
-        )
+        await useTodoStore.getState().updateTodo(task.id, { completed: false, due_date: due })
         setCompleting(false)
-        onRefresh()
       }, 1500)
     } else {
       setCompleting(false)
-      onRefresh()
     }
   }
 
@@ -134,26 +111,12 @@ export default function FocusMode({ myTodos, partnerTodos, partnerName, myUserId
       ? format(addDays(parseISO(task.due_date), 1), 'yyyy-MM-dd')
       : format(addDays(new Date(), 1), 'yyyy-MM-dd')
 
-    // Update locally so next task surfaces immediately
-    setLocalTodos(prev =>
-      prev.map(t => t.id === task.id ? { ...t, due_date: newDate } : t)
-    )
-
     const next = new Set(skipped)
     next.add(task.id)
     saveSkippedIds(next)
     setSkipped(next)
 
-    const { error } = await supabase.from('todos').update({ due_date: newDate }).eq('id', task.id)
-    if (error) {
-      console.error('Error postponing task:', error)
-      toast.error('Failed to postpone task: ' + error.message)
-      setLocalTodos(prev =>
-        prev.map(t => t.id === task.id ? { ...t, due_date: task.due_date } : t)
-      )
-      return
-    }
-    onRefresh()
+    await useTodoStore.getState().updateTodo(task.id, { due_date: newDate })
   }
 
   if (!task) {

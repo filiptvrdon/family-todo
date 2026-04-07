@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useMemo } from 'react'
+import { useTodoStore } from '@/stores/todo-store'
 import { motion } from 'framer-motion'
 import { START_MESSAGES, IN_PROGRESS_MESSAGES, DONE_MESSAGES } from '@/constants/messages'
 
@@ -11,28 +11,29 @@ interface Props {
 }
 
 export function SubtaskProgressBar({ todoId, initialCount }: Props) {
-  const supabase = createClient()
-  const [subtaskTotals, setSubtaskTotals] = useState<{ total: number; completed: number } | null>(null)
+  const myTodos = useTodoStore(s => s.myTodos)
+  const partnerTodos = useTodoStore(s => s.partnerTodos)
 
-  useEffect(() => {
-    let cancelled = false
-    async function fetchCounts() {
-      if (!initialCount || initialCount <= 0) return
-      const { data } = await supabase
-        .from('todos')
-        .select('id, completed')
-        .eq('parent_id', todoId)
-      if (!cancelled && data) {
-        const total = data.length
-        const completed = data.filter(d => d.completed).length
-        setSubtaskTotals({ total, completed })
-      }
+  const subtaskTotals = useMemo(() => {
+    const subtasks = [...myTodos, ...partnerTodos].filter(t => t.parent_id === todoId)
+    if (subtasks.length === 0) return null
+    return {
+      total: subtasks.length,
+      completed: subtasks.filter(t => t.completed).length
     }
-    fetchCounts()
-    return () => { cancelled = true }
-  }, [supabase, todoId, initialCount])
+  }, [myTodos, partnerTodos, todoId])
 
-  const totalSub = useMemo(() => subtaskTotals?.total ?? (initialCount ?? 0), [subtaskTotals?.total, initialCount])
+  const totalSub = useMemo(() => {
+    if (subtaskTotals) return subtaskTotals.total
+    if (typeof initialCount === 'number') return initialCount
+    if (Array.isArray(initialCount) && typeof (initialCount[0] as any)?.count === 'number') {
+      return (initialCount[0] as any).count
+    }
+    if (initialCount && typeof (initialCount as any).count === 'number') {
+      return (initialCount as any).count
+    }
+    return 0
+  }, [subtaskTotals, initialCount])
   const completedSub = useMemo(() => subtaskTotals?.completed ?? 0, [subtaskTotals?.completed])
   const subProgress = useMemo(() => (totalSub > 0 ? (completedSub / totalSub) * 100 : 0), [completedSub, totalSub])
 
@@ -44,7 +45,7 @@ export function SubtaskProgressBar({ todoId, initialCount }: Props) {
     return DONE_MESSAGES[index % DONE_MESSAGES.length]
   }, [subtaskTotals, completedSub, totalSub, todoId])
 
-  if (!initialCount || initialCount <= 0 || !subtaskTotals) return null
+  if (totalSub <= 0) return null
 
   return (
     <div className="mt-1">

@@ -4,6 +4,7 @@ import { useId, useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Todo } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
+import { useTodoStore } from '@/stores/todo-store'
 import { format, addDays } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -52,24 +53,32 @@ export default function TodoList({
   userId,
   isOwner,
   parentId, 
-  todos, 
   onRefresh,
   useInternalDndContext = true,
   hideProgress = false
 }: Props) {
-  const [localTodos, setLocalTodos] = useState<Todo[]>(todos ?? [])
-  const [prevTodos, setPrevTodos] = useState<Todo[] | undefined>(todos)
-  const [prevParentId, setPrevParentId] = useState<string | null>(parentId)
+  const storeMyTodos = useTodoStore(s => s.myTodos)
+  const storePartnerTodos = useTodoStore(s => s.partnerTodos)
+  const loading = useTodoStore(s => s.loading)
+  const storeTodos = isOwner ? storeMyTodos : storePartnerTodos
+  
+  const localTodos = useMemo(() => {
+    return storeTodos.filter(t => t.parent_id === parentId)
+  }, [storeTodos, parentId])
+
   const [title, setTitle] = useState('')
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [energyFilter, setEnergyFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all')
-  const [loading, setLoading] = useState(!todos && !!parentId)
   const [questLinkMap, setQuestLinkMap] = useState<Record<string, { icon: string; name: string; status: string }[]>>({})
   const prevIdsRef = useRef<string>('')
   const [streamingNudges, setStreamingNudges] = useState<Map<string, string>>(new Map())
   const intervalsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set())
   const unmountedRef = useRef(false)
+  
+  const supabase = useMemo(() => createClient(), [])
+  const dndContextId = useId()
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   useEffect(() => {
     const intervals = intervalsRef.current
@@ -78,46 +87,6 @@ export default function TodoList({
       intervals.forEach(id => clearInterval(id))
     }
   }, [])
-
-  // Adjust localTodos if props change from above
-  if (todos !== prevTodos || parentId !== prevParentId) {
-    setPrevTodos(todos)
-    setPrevParentId(parentId)
-    if (todos) {
-      setLocalTodos(todos)
-      setLoading(false)
-    } else if (parentId) {
-      setLoading(true)
-    }
-  }
-  const supabase = useMemo(() => createClient(), [])
-  const dndContextId = useId()
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
-
-  useEffect(() => {
-    if (!todos && parentId) {
-      let ignore = false
-      const fetch = async () => {
-        const { data } = await supabase
-          .from('todos')
-          .select('*, subtasks_count:todos(count)')
-          .eq('parent_id', parentId)
-          .order('index', { ascending: true, nullsFirst: false })
-        
-        if (ignore) return
-
-        const formatted = (data ?? []).map(t => ({
-          ...t,
-          subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
-        }))
-        setLocalTodos(formatted)
-        setLoading(false)
-      }
-      fetch()
-      return () => { ignore = true }
-    }
-  }, [todos, parentId, supabase])
 
   useEffect(() => {
     const ids = localTodos.map(t => t.id)
@@ -162,9 +131,7 @@ export default function TodoList({
           return next
         })
         if (text) {
-          setLocalTodos(prev => prev.map(t =>
-            t.id === id ? { ...t, motivation_nudge: text } : t
-          ))
+          useTodoStore.getState().updateTodo(id, { motivation_nudge: text })
         }
       },
     })
@@ -206,9 +173,7 @@ export default function TodoList({
     const lastIndex = localTodos.length > 0 ? (localTodos[localTodos.length - 1].index || null) : null
     const newIndex = generateKeyBetween(lastIndex, null)
 
-    const tempId = `temp-${Date.now()}`
-    const optimistic: Todo = {
-      id: tempId,
+    const todoData = {
       user_id: userId,
       title: title.trim(),
       description: null,
@@ -217,39 +182,15 @@ export default function TodoList({
       scheduled_time: null,
       parent_id: parentId,
       index: newIndex,
-      created_at: new Date().toISOString(),
-      subtasks_count: 0,
       completed: false,
       motivation_nudge: null,
       completion_nudge: null,
-      energy_level: 'low',
+      energy_level: 'low' as const,
       momentum_contribution: 0,
     }
 
-    setLocalTodos(prev => [...prev, optimistic])
     setTitle('')
-
-    const { data, error } = await supabase.from('todos').insert({
-      user_id: userId,
-      title: optimistic.title,
-      due_date: optimistic.due_date,
-      parent_id: parentId,
-      index: newIndex,
-      energy_level: optimistic.energy_level,
-    }).select().single()
-
-    if (error) {
-      console.error('Error adding todo:', error)
-      toast.error('Failed to add task: ' + error.message)
-      setLocalTodos(prev => prev.filter(t => t.id !== tempId))
-      return
-    }
-
-    if (data) {
-      setLocalTodos(prev => prev.map(t => t.id === tempId ? { ...data, motivation_nudge: null, completion_nudge: null } : t))
-      startAiMetadataStream(data.id)
-    }
-    onRefresh()
+    await useTodoStore.getState().addTodo(todoData)
   }
 
   function invalidateQuestLinks() {
@@ -262,9 +203,7 @@ export default function TodoList({
   async function toggleTodo(todo: Todo) {
     const completing = !todo.completed
 
-    setLocalTodos(prev =>
-      prev.map(t => t.id === todo.id ? { ...t, completed: completing } : t)
-    )
+    await useTodoStore.getState().toggleTodo(todo.id, completing)
 
     if (completing) {
       // "On a roll" logic
@@ -278,8 +217,6 @@ export default function TodoList({
         setTimeout(() => setOnARoll(false), 3000)
         lastCompletionsRef.current = [] // reset
       }
-
-      await supabase.from('todos').update({ completed: true }).eq('id', todo.id)
 
       // Completion nudge
       if (todo.completion_nudge) {
@@ -314,32 +251,19 @@ export default function TodoList({
       if (todo.recurrence) {
         setTimeout(async () => {
           const due = nextDueDate(todo.recurrence!)
-          await supabase
-            .from('todos')
-            .update({ completed: false, due_date: due })
-            .eq('id', todo.id)
-          onRefresh()
+          await useTodoStore.getState().updateTodo(todo.id, { completed: false, due_date: due })
         }, 1500)
-      } else {
-        onRefresh()
       }
-    } else {
-      await supabase.from('todos').update({ completed: false }).eq('id', todo.id)
-      onRefresh()
     }
   }
 
   async function editTodo(id: string, newTitle: string) {
-    setLocalTodos(prev => prev.map(t => t.id === id ? { ...t, title: newTitle } : t))
-    await supabase.from('todos').update({ title: newTitle }).eq('id', id)
+    await useTodoStore.getState().updateTodo(id, { title: newTitle })
     startAiMetadataStream(id)
-    onRefresh()
   }
 
   async function deleteTodo(id: string) {
-    setLocalTodos(prev => prev.filter(t => t.id !== id))
-    await supabase.from('todos').delete().eq('id', id)
-    onRefresh()
+    await useTodoStore.getState().deleteTodo(id)
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -358,9 +282,7 @@ export default function TodoList({
       const after = newIndex < reordered.length - 1 ? (reordered[newIndex + 1].index || null) : null
       const computedIndex = generateKeyBetween(before, after)
 
-      setLocalTodos(reordered.map((t, i) => i === newIndex ? { ...t, index: computedIndex } : t))
-
-      await supabase.from('todos').update({ index: computedIndex }).eq('id', active.id)
+      await useTodoStore.getState().updateTodo(active.id as string, { index: computedIndex })
     }
   }
 

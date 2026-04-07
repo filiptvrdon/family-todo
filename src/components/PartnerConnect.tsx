@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useUserStore } from '@/stores/user-store'
 import { Link2 } from 'lucide-react'
 
 interface Props {
@@ -13,12 +14,12 @@ export default function PartnerConnect({ myId, onConnected }: Props) {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
 
   async function connect(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
+    const supabase = createClient()
 
     const { data: partner } = await supabase
       .from('users')
@@ -39,8 +40,8 @@ export default function PartnerConnect({ myId, onConnected }: Props) {
     }
 
     // Link both directions
-    await supabase.from('users').update({ partner_id: partner.id }).eq('id', myId)
-    await supabase.from('users').update({ partner_id: myId }).eq('id', partner.id)
+    await useUserStore.getState().updateUser(myId, { partner_id: partner.id })
+    await useUserStore.getState().updateUser(partner.id, { partner_id: myId })
 
     setLoading(false)
     onConnected()
