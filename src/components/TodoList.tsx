@@ -24,14 +24,6 @@ import TodoDetailPanel from '@/components/TodoDetailPanel'
 import TodoCard from '@/components/TodoCard'
 import { triggerAiMetadata } from '@/lib/ai-metadata'
 
-const CELEBRATIONS = [
-  'Badass 🍑',
-  'You rock 🤘',
-  'Nailed it 🔨',
-  "That's my girl 💙 ",
-  'Knocked it out 🥊',
-]
-
 type Recurrence = 'daily' | 'weekly' | 'monthly'
 
 function nextDueDate(recurrence: Recurrence): string {
@@ -287,14 +279,6 @@ export default function TodoList({
         lastCompletionsRef.current = [] // reset
       }
 
-      toast(CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)], {
-        duration: 2000,
-        style: {
-          color: 'var(--color-completion)',
-          fontWeight: '500',
-        },
-      })
-
       await supabase.from('todos').update({ completed: true }).eq('id', todo.id)
 
       // Completion nudge
@@ -431,7 +415,6 @@ export default function TodoList({
             {displayTodos.map(todo => (
               <motion.div
                 key={todo.id}
-                layout
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}

@@ -157,7 +157,10 @@ export default function TodoCard({
     // Only set opacity via style when dragging — otherwise let Framer Motion own it
     // to avoid conflicting with completing/exit animations
     opacity: isDragging ? 0.4 : undefined,
-    transform: CSS.Transform.toString(sortable.transform),
+    // Guard DnD transform during completion/exit: when AnimatePresence keeps the element
+    // alive after it leaves SortableContext.items, DnD kit can apply a correction transform
+    // with an x component that causes a visible leftward slide.
+    transform: (completing || todo.completed) ? undefined : CSS.Transform.toString(sortable.transform),
     // Only apply DnD transition during active drag; Framer Motion handles all other transitions
     transition: isDragging ? sortable.transition : undefined,
   }
