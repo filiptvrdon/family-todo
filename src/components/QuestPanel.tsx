@@ -305,20 +305,31 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                 </div>
 
                 {/* Icon picker */}
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Icon</p>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateIconPicker(v => !v)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-full border-[1.5px] border-border bg-card cursor-pointer transition w-fit"
-                  >
-                    <span style={{ color: 'var(--color-primary)' }}>
-                      <QuestIcon name={newIcon} size={20} />
-                    </span>
-                    <span className="text-sm text-muted-foreground">{showCreateIconPicker ? 'Close' : 'Change'}</span>
-                  </button>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={newIcon}
+                        onChange={e => setNewIcon(e.target.value)}
+                        className="w-14 h-14 text-center text-2xl rounded-2xl border-[1.5px] border-border bg-card focus:border-primary focus:outline-none transition shadow-sm"
+                        maxLength={10}
+                        placeholder="✨"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Icon</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateIconPicker(v => !v)}
+                        className="text-xs text-primary font-semibold hover:underline cursor-pointer w-fit"
+                      >
+                        {showCreateIconPicker ? 'Hide presets' : 'Show presets'}
+                      </button>
+                    </div>
+                  </div>
                   {showCreateIconPicker && (
-                    <div className="grid grid-cols-6 gap-2">
+                    <div className="grid grid-cols-6 gap-2 p-3 rounded-2xl bg-foam/40 border border-border/50">
                       {QUEST_ICONS.map((emoji) => {
                         const selected = newIcon === emoji
                         return (
@@ -405,20 +416,31 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                 {/* Edit mode: icon picker + fields */}
                 {isEditing && (
                   <>
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Icon</p>
-                      <button
-                        type="button"
-                        onClick={() => setShowEditIconPicker(v => !v)}
-                        className="flex items-center gap-3 px-4 py-3 rounded-full border-[1.5px] border-border bg-card cursor-pointer transition w-fit"
-                      >
-                        <span style={{ color: 'var(--color-primary)' }}>
-                          <QuestIcon name={editIcon} size={20} />
-                        </span>
-                        <span className="text-sm text-muted-foreground">{showEditIconPicker ? 'Close' : 'Change'}</span>
-                      </button>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={editIcon}
+                            onChange={e => setEditIcon(e.target.value)}
+                            className="w-14 h-14 text-center text-2xl rounded-2xl border-[1.5px] border-border bg-card focus:border-primary focus:outline-none transition shadow-sm"
+                            maxLength={10}
+                            placeholder="✨"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Icon</p>
+                          <button
+                            type="button"
+                            onClick={() => setShowEditIconPicker(v => !v)}
+                            className="text-xs text-primary font-semibold hover:underline cursor-pointer w-fit"
+                          >
+                            {showEditIconPicker ? 'Hide presets' : 'Show presets'}
+                          </button>
+                        </div>
+                      </div>
                       {showEditIconPicker && (
-                        <div className="grid grid-cols-6 gap-2">
+                        <div className="grid grid-cols-6 gap-2 p-3 rounded-2xl bg-foam/40 border border-border/50">
                           {QUEST_ICONS.map((emoji) => {
                             const selected = editIcon === emoji
                             return (
