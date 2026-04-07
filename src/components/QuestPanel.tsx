@@ -49,14 +49,14 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
 
   // Create form state
   const [newName, setNewName] = useState('')
-  const [newIcon, setNewIcon] = useState(QUEST_ICONS[0].name)
+  const [newIcon, setNewIcon] = useState(QUEST_ICONS[0])
   const [newDescription, setNewDescription] = useState('')
   const [saving, setSaving] = useState(false)
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState('')
-  const [editIcon, setEditIcon] = useState(QUEST_ICONS[0].name)
+  const [editIcon, setEditIcon] = useState(QUEST_ICONS[0])
   const [editDescription, setEditDescription] = useState('')
 
   const [showCreateIconPicker, setShowCreateIconPicker] = useState(false)
@@ -109,7 +109,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
       })
       onQuestsChanged()
       setNewName('')
-      setNewIcon(QUEST_ICONS[0].name)
+      setNewIcon(QUEST_ICONS[0])
       setNewDescription('')
       setShowCreateIconPicker(false)
       setView('list')
@@ -319,21 +319,22 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                   </button>
                   {showCreateIconPicker && (
                     <div className="grid grid-cols-6 gap-2">
-                      {QUEST_ICONS.map(({ name, component: Icon }) => {
-                        const selected = newIcon === name
+                      {QUEST_ICONS.map((emoji) => {
+                        const selected = newIcon === emoji
                         return (
                           <button
-                            key={name}
+                            key={emoji}
                             type="button"
-                            onClick={() => { setNewIcon(name); setShowCreateIconPicker(false) }}
+                            onClick={() => { setNewIcon(emoji); setShowCreateIconPicker(false) }}
                             className="flex items-center justify-center rounded-full w-10 h-10 transition cursor-pointer"
                             style={{
                               background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
                               color: selected ? '#fff' : 'var(--color-text-secondary)',
                               border: selected ? '1.5px solid var(--color-primary)' : '1.5px solid transparent',
+                              fontSize: '18px'
                             }}
                           >
-                            <Icon size={18} />
+                            {emoji}
                           </button>
                         )
                       })}
@@ -418,21 +419,22 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                       </button>
                       {showEditIconPicker && (
                         <div className="grid grid-cols-6 gap-2">
-                          {QUEST_ICONS.map(({ name, component: Icon }) => {
-                            const selected = editIcon === name
+                          {QUEST_ICONS.map((emoji) => {
+                            const selected = editIcon === emoji
                             return (
                               <button
-                                key={name}
+                                key={emoji}
                                 type="button"
-                                onClick={() => { setEditIcon(name); setShowEditIconPicker(false) }}
+                                onClick={() => { setEditIcon(emoji); setShowEditIconPicker(false) }}
                                 className="flex items-center justify-center rounded-full w-10 h-10 transition cursor-pointer"
                                 style={{
                                   background: selected ? 'var(--color-primary)' : 'var(--color-foam)',
                                   color: selected ? '#fff' : 'var(--color-text-secondary)',
                                   border: selected ? '1.5px solid var(--color-primary)' : '1.5px solid transparent',
+                                  fontSize: '18px'
                                 }}
                               >
-                                <Icon size={18} />
+                                {emoji}
                               </button>
                             )
                           })}

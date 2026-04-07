@@ -24,7 +24,7 @@ Individual tasks feel disconnected and low-meaning. For users who think in terms
 
 1. User taps "New Quest" via the `Swords` icon in the navbar.
    - **LATER:** one-tap quick creation — a single input field in the navbar dropdown that creates a quest with just a name (icon defaults, description skipped). Same fast-path philosophy as task creation.
-2. Fills in: **name** (required), **Lucide icon** (required, selected from a 30-icon grid, stored as icon name string e.g. `"swords"`), **description** (optional).
+2. Fills in: **name** (required), **emoji icon** (required, selected from a 30-emoji grid, stored as emoji string e.g. `"⚔️"`), **description** (optional).
 3. Quest is created with `status = active` and appears in the quests list.
 4. From the quests list, the user can **pin up to 3 quests to the navbar**. The navbar shows the icon + name of each pinned quest.
 
@@ -70,7 +70,7 @@ Individual tasks feel disconnected and low-meaning. For users who think in terms
 | `id` | `uuid` | PK |
 | `user_id` | `uuid` | FK → `profiles.id` |
 | `name` | `text` | required |
-| `icon` | `text` | Lucide icon name, e.g. `"swords"` — rendered via `QuestIcon` in `src/lib/questIcons.tsx` |
+| `icon` | `text` | Emoji character, e.g. `"⚔️"` — rendered via `QuestIcon` in `src/lib/questIcons.tsx` |
 | `description` | `text` | nullable |
 | `status` | `text` | `active` \| `completed`, default `active` |
 | `pinned` | `boolean` | default `false` — user pins up to 3 to navbar |
@@ -113,7 +113,7 @@ Migration: `supabase migration new add_quests`
 
 ## Done When
 
-- [x] User can create a quest with name, Lucide icon, and optional description.
+- [x] User can create a quest with name, emoji icon, and optional description.
 - [x] User can pin up to 3 quests to the navbar; navbar shows icon + name.
 - [x] User can edit quest name, icon, description from the detail view.
 - [x] When editing a task, user can link it to one or more quests via a picker.
@@ -131,7 +131,7 @@ Migration: `supabase migration new add_quests`
 - None.
 
 **Implementation notes**
-- Icons use Lucide React, mapped in `src/lib/questIcons.tsx` via `QUEST_ICONS` array and `QuestIcon` component.
+- Icons use regular emojis, stored as text in `QUEST_ICONS` array and rendered via `QuestIcon` component in `src/lib/questIcons.tsx`.
 - Quest link icons on task cards are batch-fetched in `TodoList` (one query for all visible todo IDs) — not per-card. Map invalidates when task detail is saved.
 - Quest link sync on task save: delete-all + re-insert pattern (simple, no diffing needed at this scale).
 - Subtasks inherit parent's quests: implemented in `TodoStore` (`addTodo` and `updateTodo`) by fetching parent's quest links and applying them to the child.
