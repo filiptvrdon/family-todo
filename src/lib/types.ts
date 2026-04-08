@@ -58,6 +58,34 @@ export interface Quest {
   motivation_nudge: string | null
 }
 
+export type HabitValueType = 'count' | 'time' | 'boolean' | 'freeform'
+export type HabitGoalPeriod = 'daily' | 'weekly'
+
+export interface Habit {
+  id: string
+  user_id: string
+  title: string
+  description: string | null
+  icon: string | null
+  value_type: HabitValueType
+  unit_label: string | null     // 'reps', 'min', 'glasses', etc. — null for boolean
+  goal_value: number | null     // null = no goal
+  goal_period: HabitGoalPeriod
+  index: string
+  is_archived: boolean
+  created_at: string
+}
+
+export interface HabitTracking {
+  id: string
+  habit_id: string
+  user_id: string
+  value: number                 // minutes for time; count otherwise; 1/0 for boolean
+  logged_at: string
+  period_date: string           // YYYY-MM-DD local date
+  note: string | null
+}
+
 export interface CalendarEvent {
   id: string
   user_id: string
