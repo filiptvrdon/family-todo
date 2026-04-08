@@ -67,18 +67,18 @@ export default function ResponsiveDashboard(props: Props) {
 
       <div className="flex-1 flex overflow-hidden min-h-0">
 
-        {/* ── Habits column (desktop lg: leftmost ~30%; mobile: own tab) ── */}
+        {/* ── Habits column (desktop lg: leftmost ~33%; mobile: own tab) ── */}
         <div
-          className={`lg:flex-initial lg:w-[30%] lg:border-r border-border bg-card flex-col ${
+          className={`lg:flex-initial lg:w-1/3 lg:border-r border-border bg-card flex-col ${
             mobileTab === 'habits' ? 'flex flex-1 min-w-0' : 'hidden lg:flex'
           }`}
         >
           <HabitList userId={user.id} />
         </div>
 
-        {/* ── Task Board (desktop lg: center ~40%; mobile: tab 1) ── */}
+        {/* ── Task Board (desktop lg: center ~33%; mobile: tab 1) ── */}
         <div
-          className={`lg:flex-initial lg:w-[40%] lg:border-r border-border bg-card flex-col ${
+          className={`lg:flex-initial lg:w-1/3 lg:border-r border-border bg-card flex-col ${
             mobileTab === 'tasks' ? 'flex flex-1 min-w-0' : 'hidden lg:flex'
           }`}
         >
