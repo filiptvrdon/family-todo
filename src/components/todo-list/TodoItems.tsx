@@ -16,6 +16,9 @@ interface TodoItemsProps {
   streamingNudges: Map<string, string>
   loading: boolean
   isDragging?: boolean
+  expandedIds?: Set<string>
+  onToggleExpand?: (id: string) => void
+  renderSubList?: (todoId: string) => React.ReactNode
 }
 
 export function TodoItems({
@@ -29,6 +32,9 @@ export function TodoItems({
   streamingNudges,
   loading,
   isDragging = false,
+  expandedIds,
+  onToggleExpand,
+  renderSubList,
 }: TodoItemsProps) {
   if (loading) {
     return <p className="text-sm text-center py-6 text-text-disabled">Loading tasks…</p>
@@ -49,29 +55,40 @@ export function TodoItems({
         }}
       >
         <AnimatePresence initial={false}>
-          {todos.map(todo => (
-            <motion.div
-              key={todo.id}
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-            >
-              <TodoCard
-                todo={todo}
-                isOwner={isOwner}
-                onToggle={onToggle}
-                onDelete={onDelete}
-                onOpen={onOpen}
-                onEdit={onEdit}
-                isSortable={isOwner}
-                isDraggable={isOwner}
-                isDroppable={isOwner}
-                quests={questLinkMap[todo.id]}
-                streamingNudge={streamingNudges.get(todo.id)}
-              />
-            </motion.div>
-          ))}
+          {todos.map(todo => {
+            const isExpanded = expandedIds?.has(todo.id) ?? false
+            return (
+              <motion.div
+                key={todo.id}
+                className="flex flex-col"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+              >
+                <TodoCard
+                  todo={todo}
+                  isOwner={isOwner}
+                  onToggle={onToggle}
+                  onDelete={onDelete}
+                  onOpen={onOpen}
+                  onEdit={onEdit}
+                  isSortable={isOwner}
+                  isDraggable={isOwner}
+                  isDroppable={isOwner}
+                  isExpanded={isExpanded}
+                  onToggleExpand={() => onToggleExpand?.(todo.id)}
+                  quests={questLinkMap[todo.id]}
+                  streamingNudge={streamingNudges.get(todo.id)}
+                />
+                {isExpanded && renderSubList && (
+                  <div className="ml-8 mt-1 border-l border-border/40 pl-2">
+                    {renderSubList(todo.id)}
+                  </div>
+                )}
+              </motion.div>
+            )
+          })}
         </AnimatePresence>
       </div>
     </SortableContext>

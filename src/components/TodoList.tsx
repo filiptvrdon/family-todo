@@ -197,6 +197,17 @@ export default function TodoList({
     prevIdsRef.current = ''
   }
 
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  function toggleExpand(id: string) {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   const [isDraggingActive, setIsDraggingActive] = useState(false)
   const [draggingTodo, setDraggingTodo] = useState<Todo | null>(null)
 
@@ -370,6 +381,18 @@ export default function TodoList({
         streamingNudges={streamingNudges}
         loading={loading}
         isDragging={isDraggingActive}
+        expandedIds={expandedIds}
+        onToggleExpand={toggleExpand}
+        renderSubList={(todoId) => (
+          <TodoList
+            userId={userId}
+            isOwner={isOwner}
+            parentId={todoId}
+            onRefresh={onRefresh}
+            useInternalDndContext={false}
+            hideProgress={true}
+          />
+        )}
       />
     </div>
   )

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Todo, QuestLink } from '@/lib/types'
+import { ChevronRight, ChevronDown } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
@@ -27,6 +28,8 @@ interface Props {
   isSortable?: boolean
   isDraggable?: boolean
   isDroppable?: boolean
+  isExpanded?: boolean
+  onToggleExpand?: () => void
   quests?: QuestLink[]
   streamingNudge?: string
 }
@@ -41,6 +44,8 @@ export default function TodoCard({
   isSortable = false,
   isDraggable = false,
   isDroppable = false,
+  isExpanded = false,
+  onToggleExpand,
   quests,
   streamingNudge,
 }: Props) {
@@ -154,10 +159,22 @@ export default function TodoCard({
         isVisible={completing} 
       />
 
-      <DragHandle 
-        isVisible={isOwner && (isSortable || isDraggable) && !todo.completed} 
-        listeners={isSortable ? sortable.listeners : draggable.listeners} 
+      <DragHandle
+        isVisible={isOwner && (isSortable || isDraggable) && !todo.completed}
+        listeners={isSortable ? sortable.listeners : draggable.listeners}
       />
+
+      {todo.subtasks_count !== undefined && todo.subtasks_count > 0 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleExpand?.()
+          }}
+          className="shrink-0 p-0.5 -ml-1 rounded hover:bg-muted-foreground/10 transition text-text-disabled hover:text-foreground"
+        >
+          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </button>
+      )}
 
       <TodoCheckbox 
         completed={todo.completed} 
