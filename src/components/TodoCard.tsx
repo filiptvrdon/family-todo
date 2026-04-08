@@ -49,7 +49,6 @@ export default function TodoCard({
   onToggleExpand,
   isSubtaskMode = false,
   quests,
-  streamingNudge,
 }: Props) {
   const [completing, setCompleting] = useState(false)
   const [editing, setEditing] = useState(false)

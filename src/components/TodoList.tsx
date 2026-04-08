@@ -14,7 +14,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
 } from '@dnd-kit/core'
 import { subtaskCollisionDetection } from '@/lib/dnd-utils'
 import { useSubtaskMode } from '@/hooks/useSubtaskMode'
@@ -88,7 +87,7 @@ export default function TodoList({
   const dndContextId = useId()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
-  const collisionDetection = useCallback((args: any) => {
+  const collisionDetection = useCallback((args: Parameters<typeof subtaskCollisionDetection>[0]) => {
     return subtaskCollisionDetection(args, isSubtaskMode)
   }, [isSubtaskMode])
 
@@ -344,7 +343,7 @@ export default function TodoList({
       const [moved] = reordered.splice(oldIndex, 1)
       reordered.splice(newIndex, 0, moved)
 
-      let before = newIndex > 0 ? (reordered[newIndex - 1].index || null) : null
+      const before = newIndex > 0 ? (reordered[newIndex - 1].index || null) : null
       let after = newIndex < reordered.length - 1 ? (reordered[newIndex + 1].index || null) : null
 
       // Robustness: fractional-indexing requires before < after

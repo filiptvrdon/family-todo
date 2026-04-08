@@ -27,7 +27,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
 } from '@dnd-kit/core'
 import { format } from 'date-fns'
 import { generateKeyBetween } from 'fractional-indexing'
@@ -62,7 +61,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const dndContextId = useId()
 
-  const collisionDetection = useCallback((args: any) => {
+  const collisionDetection = useCallback((args: Parameters<typeof subtaskCollisionDetection>[0]) => {
     return subtaskCollisionDetection(args, isSubtaskMode)
   }, [isSubtaskMode])
 
@@ -165,7 +164,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
       })
       return
     }
-  }, [dayDate, myTodos, partnerTodos, updateTodoStore])
+  }, [dayDate, myTodos, partnerTodos, updateTodoStore, isSubtaskMode])
 
   const completeTodo = useCallback(async (todoId: string) => {
     useTodoStore.getState().toggleTodo(todoId, true)
