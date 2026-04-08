@@ -30,6 +30,7 @@ interface Props {
   isDroppable?: boolean
   isExpanded?: boolean
   onToggleExpand?: () => void
+  isSubtaskMode?: boolean
   quests?: QuestLink[]
   streamingNudge?: string
 }
@@ -46,6 +47,7 @@ export default function TodoCard({
   isDroppable = false,
   isExpanded = false,
   onToggleExpand,
+  isSubtaskMode = false,
   quests,
   streamingNudge,
 }: Props) {
@@ -55,15 +57,15 @@ export default function TodoCard({
   // Sortable hook
   const sortable = useSortable({
     id: todo.id,
-    disabled: !isSortable || !isOwner || editing,
+    disabled: !isSortable || !isOwner || editing || isSubtaskMode,
     data: isDraggable ? { source: 'todo-column', todo } : undefined,
   })
 
-  // Draggable hook (for calendar drops - fallback for non-sortable lists)
+  // Draggable hook (fallback when sorting is disabled by subtask mode or list type)
   const draggable = useDraggable({
     id: todo.id,
     data: { source: 'todo-column', todo },
-    disabled: !isDraggable || isSortable || todo.completed || editing,
+    disabled: !isDraggable || (isSortable && !isSubtaskMode) || todo.completed || editing,
   })
 
   // Droppable hook (for creating sub-tasks)

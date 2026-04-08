@@ -17,6 +17,7 @@ import {
   closestCenter,
 } from '@dnd-kit/core'
 import { subtaskCollisionDetection } from '@/lib/dnd-utils'
+import { useSubtaskMode } from '@/hooks/useSubtaskMode'
 import { generateKeyBetween } from 'fractional-indexing'
 import TodoDetailPanel from '@/components/TodoDetailPanel'
 import { triggerAiMetadata } from '@/lib/ai-metadata'
@@ -46,6 +47,7 @@ interface Props {
   onRefresh: () => void
   useInternalDndContext?: boolean
   hideProgress?: boolean
+  isSubtaskMode?: boolean
 }
 
 
@@ -55,15 +57,21 @@ export default function TodoList({
   parentId, 
   onRefresh,
   useInternalDndContext = true,
-  hideProgress = false
+  hideProgress = false,
+  isSubtaskMode: isSubtaskModeProp
 }: Props) {
+  const { isSubtaskMode: isSubtaskModeHook } = useSubtaskMode()
+  const isSubtaskMode = isSubtaskModeProp ?? isSubtaskModeHook
+
   const storeMyTodos = useTodoStore(s => s.myTodos)
   const storePartnerTodos = useTodoStore(s => s.partnerTodos)
   const loading = useTodoStore(s => s.loading)
   const storeTodos = isOwner ? storeMyTodos : storePartnerTodos
   
   const localTodos = useMemo(() => {
-    return storeTodos.filter(t => t.parent_id === parentId)
+    return storeTodos
+      .filter(t => t.parent_id === parentId)
+      .sort((a, b) => (a.index || '') < (b.index || '') ? -1 : (a.index || '') > (b.index || '') ? 1 : 0)
   }, [storeTodos, parentId])
 
   const [title, setTitle] = useState('')
@@ -79,6 +87,10 @@ export default function TodoList({
   const supabase = useMemo(() => createClient(), [])
   const dndContextId = useId()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  const collisionDetection = useCallback((args: any) => {
+    return subtaskCollisionDetection(args, isSubtaskMode)
+  }, [isSubtaskMode])
 
   useEffect(() => {
     const intervals = intervalsRef.current
@@ -296,14 +308,16 @@ export default function TodoList({
     if (!over) return
 
     // 1. Handle making it a subtask
-    if (over.data.current?.type === 'todo-drop-target') {
+    if (over.data.current?.type === 'todo-drop-target' && isSubtaskMode) {
       const targetId = over.data.current.todoId as string
       if (active.id !== targetId) {
         // Only subtask if the custom collision detection chose this target.
         // If the collision detection chose a sortable item, 'over' would not be todo-drop-target.
         
         // Compute index at the end of existing subtasks
-        const existingSubTasks = storeTodos.filter(t => t.parent_id === targetId)
+        const existingSubTasks = storeTodos
+          .filter(t => t.parent_id === targetId)
+          .sort((a, b) => (a.index || '') < (b.index || '') ? -1 : (a.index || '') > (b.index || '') ? 1 : 0)
         const lastIndex = existingSubTasks.length > 0
           ? (existingSubTasks[existingSubTasks.length - 1].index || null)
           : null
@@ -330,8 +344,14 @@ export default function TodoList({
       const [moved] = reordered.splice(oldIndex, 1)
       reordered.splice(newIndex, 0, moved)
 
-      const before = newIndex > 0 ? (reordered[newIndex - 1].index || null) : null
-      const after = newIndex < reordered.length - 1 ? (reordered[newIndex + 1].index || null) : null
+      let before = newIndex > 0 ? (reordered[newIndex - 1].index || null) : null
+      let after = newIndex < reordered.length - 1 ? (reordered[newIndex + 1].index || null) : null
+
+      // Robustness: fractional-indexing requires before < after
+      if (before !== null && after !== null && before >= after) {
+        after = null // Fallback: put it after before
+      }
+
       const computedIndex = generateKeyBetween(before, after)
 
       await useTodoStore.getState().updateTodo(active.id as string, { index: computedIndex })
@@ -381,6 +401,7 @@ export default function TodoList({
         streamingNudges={streamingNudges}
         loading={loading}
         isDragging={isDraggingActive}
+        isSubtaskMode={isSubtaskMode}
         expandedIds={expandedIds}
         onToggleExpand={toggleExpand}
         renderSubList={(todoId) => (
@@ -391,6 +412,7 @@ export default function TodoList({
             onRefresh={onRefresh}
             useInternalDndContext={false}
             hideProgress={true}
+            isSubtaskMode={isSubtaskMode}
           />
         )}
       />
@@ -416,7 +438,7 @@ export default function TodoList({
       />
 
       {useInternalDndContext ? (
-        <DndContext id={dndContextId} sensors={sensors} collisionDetection={subtaskCollisionDetection}>
+        <DndContext id={dndContextId} sensors={sensors} collisionDetection={collisionDetection}>
           {ListContent}
           <DragOverlay dropAnimation={null}>
             {draggingTodo && (

@@ -15,10 +15,11 @@ interface Props {
   myName: string
   partnerName: string
   onRefresh: () => void
+  isSubtaskMode: boolean
 }
 
 export default function TaskBoard({
-  user, partner, myTodos, partnerTodos, myName, partnerName, onRefresh
+  user, partner, myTodos, partnerTodos, myName, partnerName, onRefresh, isSubtaskMode
 }: Props) {
   const [view, setView] = useState<'me' | 'partner'>('me')
   const [showConnect, setShowConnect] = useState(false)
@@ -59,6 +60,7 @@ export default function TaskBoard({
           parentId={null}
           onRefresh={onRefresh}
           useInternalDndContext={false}
+          isSubtaskMode={isSubtaskMode}
         />
       </div>
     </div>

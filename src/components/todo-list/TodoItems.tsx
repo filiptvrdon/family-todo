@@ -16,6 +16,7 @@ interface TodoItemsProps {
   streamingNudges: Map<string, string>
   loading: boolean
   isDragging?: boolean
+  isSubtaskMode?: boolean
   expandedIds?: Set<string>
   onToggleExpand?: (id: string) => void
   renderSubList?: (todoId: string) => React.ReactNode
@@ -32,6 +33,7 @@ export function TodoItems({
   streamingNudges,
   loading,
   isDragging = false,
+  isSubtaskMode = false,
   expandedIds,
   onToggleExpand,
   renderSubList,
@@ -50,7 +52,7 @@ export function TodoItems({
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: isDragging ? '16px' : '8px',
+          gap: (isDragging && !isSubtaskMode) ? '16px' : '8px',
           transition: 'gap 0.15s ease',
         }}
       >
@@ -78,6 +80,7 @@ export function TodoItems({
                   isDroppable={isOwner}
                   isExpanded={isExpanded}
                   onToggleExpand={() => onToggleExpand?.(todo.id)}
+                  isSubtaskMode={isSubtaskMode}
                   quests={questLinkMap[todo.id]}
                   streamingNudge={streamingNudges.get(todo.id)}
                 />

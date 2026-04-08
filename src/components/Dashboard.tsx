@@ -18,6 +18,7 @@ import { Logo } from '@/components/Logo'
 import { QuestIcon } from '@/lib/questIcons'
 import { useTheme } from '@/lib/hooks/useTheme'
 import { subtaskCollisionDetection } from '@/lib/dnd-utils'
+import { useSubtaskMode } from '@/hooks/useSubtaskMode'
 import {
   DndContext,
   DragEndEvent,
@@ -44,6 +45,7 @@ interface Props {
 export default function Dashboard({ user: initialUser, partner: initialPartner, allEvents, googleConnected, pinnedQuests }: Props) {
   const user = useUserStore(s => s.user || initialUser)
   const partner = useUserStore(s => s.partner || initialPartner)
+  const { isSubtaskMode } = useSubtaskMode()
 
   useStoreInit({ user })
   const myTodos = useTodoStore(s => s.myTodos)
@@ -59,6 +61,10 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const dndContextId = useId()
+
+  const collisionDetection = useCallback((args: any) => {
+    return subtaskCollisionDetection(args, isSubtaskMode)
+  }, [isSubtaskMode])
 
   const [showCheckin, setShowCheckin] = useState(() => {
     if (typeof window !== 'undefined') return !hasCheckedInToday()
@@ -130,7 +136,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
     }
 
     // Drop onto another todo to make it a sub-task
-    if (over.data.current?.type === 'todo-drop-target') {
+    if (over.data.current?.type === 'todo-drop-target' && isSubtaskMode) {
       const parentId = over.data.current.todoId
       if (parentId === todoId) return // Cannot drop onto itself
 
@@ -144,7 +150,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
       const targetIsMine = myTodos.some(t => t.id === parentId)
       const targetList = targetIsMine ? myTodos : partnerTodos
       const existingSubTasks = targetList.filter(t => t.parent_id === parentId)
-        .sort((a, b) => (a.index || '').localeCompare(b.index || ''))
+        .sort((a, b) => (a.index || '') < (b.index || '') ? -1 : (a.index || '') > (b.index || '') ? 1 : 0)
 
       const lastIndex = existingSubTasks.length > 0
         ? (existingSubTasks[existingSubTasks.length - 1].index || null)
@@ -203,10 +209,11 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
     monthCalDate,
     setMonthCalDate,
     isDragging: !!draggingTodoId,
+    isSubtaskMode,
   }
 
   return (
-    <DndContext id={dndContextId} sensors={sensors} collisionDetection={subtaskCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext id={dndContextId} sensors={sensors} collisionDetection={collisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-col h-[100dvh] overflow-hidden bg-background">
         {/* ── Header ── */}
         <header className="shrink-0 bg-card border-b border-border shadow-[var(--shadow-card)]">

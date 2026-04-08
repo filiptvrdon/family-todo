@@ -27,6 +27,7 @@ interface Props {
   monthCalDate: Date
   setMonthCalDate: (d: Date) => void
   isDragging: boolean
+  isSubtaskMode: boolean
 }
 
 export default function ResponsiveDashboard(props: Props) {
@@ -77,6 +78,7 @@ export default function ResponsiveDashboard(props: Props) {
             myName={myName}
             partnerName={partnerName}
             onRefresh={onRefresh}
+            isSubtaskMode={props.isSubtaskMode}
           />
         </div>
 
