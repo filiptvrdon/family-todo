@@ -9,7 +9,6 @@ interface TodoItemsProps {
   todos: Todo[]
   isOwner: boolean
   onToggle: (todo: Todo) => void
-  onDelete: (id: string) => void
   onOpen: (todo: Todo) => void
   onEdit: (id: string, newTitle: string) => void
   questLinkMap: Record<string, QuestLink[]>
@@ -26,7 +25,6 @@ export function TodoItems({
   todos,
   isOwner,
   onToggle,
-  onDelete,
   onOpen,
   onEdit,
   questLinkMap,
@@ -72,7 +70,6 @@ export function TodoItems({
                   todo={todo}
                   isOwner={isOwner}
                   onToggle={onToggle}
-                  onDelete={onDelete}
                   onOpen={onOpen}
                   onEdit={onEdit}
                   isSortable={isOwner}

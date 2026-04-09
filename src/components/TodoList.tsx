@@ -287,10 +287,6 @@ export default function TodoList({
     startAiMetadataStream(id)
   }
 
-  async function deleteTodo(id: string) {
-    await useTodoStore.getState().deleteTodo(id)
-  }
-
   function handleDragStart(event: DragStartEvent) {
     const todo = localTodos.find(t => t.id === event.active.id)
     setDraggingTodo(todo ?? null)
@@ -393,7 +389,6 @@ export default function TodoList({
         todos={displayTodos}
         isOwner={isOwner}
         onToggle={toggleTodo}
-        onDelete={deleteTodo}
         onOpen={openDetail}
         onEdit={editTodo}
         questLinkMap={questLinkMap}

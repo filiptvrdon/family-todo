@@ -16,13 +16,11 @@ import { TodoTitleInput } from './todo-card/TodoTitleInput'
 import { TodoDisplay } from './todo-card/TodoDisplay'
 import { SubtaskProgressBar } from './todo-card/SubtaskProgressBar'
 import { TodoMetadata } from './todo-card/TodoMetadata'
-import { TodoActions } from './todo-card/TodoActions'
 
 interface Props {
   todo: Todo
   isOwner: boolean
   onToggle: (t: Todo) => void
-  onDelete: (id: string) => void
   onOpen: (t: Todo) => void
   onEdit?: (id: string, newTitle: string) => void
   isSortable?: boolean
@@ -39,7 +37,6 @@ export default function TodoCard({
   todo,
   isOwner,
   onToggle,
-  onDelete,
   onOpen,
   onEdit,
   isSortable = false,
@@ -92,16 +89,6 @@ export default function TodoCard({
       setCompleting(false)
       onToggle(todo)
     }
-  }
-
-  function handleDelete(e: React.MouseEvent) {
-    e.stopPropagation()
-    onDelete(todo.id)
-  }
-
-  function handleEdit(e: React.MouseEvent) {
-    e.stopPropagation()
-    setEditing(true)
   }
 
   function handleSave(newTitle: string) {
@@ -209,11 +196,6 @@ export default function TodoCard({
       {!editing && (
         <div className="flex items-center gap-2 shrink-0">
           <TodoMetadata todo={todo} quests={quests} />
-          <TodoActions 
-            isOwner={isOwner} 
-            onEdit={handleEdit} 
-            onDelete={handleDelete} 
-          />
         </div>
       )}
     </motion.div>
