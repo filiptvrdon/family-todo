@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Minus, Check, Trash2 } from 'lucide-react'
 import { Habit, HabitTracking } from '@/lib/types'
 import { useHabitStore, todayDate, weekStartDate } from '@/stores/habit-store'
+import { Progress } from '@/components/ui/progress'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -398,17 +399,13 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
         </div>
       </div>
 
-      {/* Thin progress underline */}
-      {progressPct !== null && progressPct > 0 && (
-        <div className="mx-3 h-[2px] rounded-full overflow-hidden" style={{ background: 'var(--color-foam)' }}>
-          <motion.div
-            className="h-full rounded-full"
-            style={{ background: completed ? 'var(--color-completion)' : 'var(--color-primary)', opacity: 0.6 }}
-            initial={false}
-            animate={{ width: `${progressPct}%` }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          />
-        </div>
+      {/* Progress bar */}
+      {progressPct !== null && (
+        <Progress
+          value={progressPct}
+          fillColor={completed ? 'var(--color-completion)' : undefined}
+          className="mx-3"
+        />
       )}
 
       {/* ── Expanded area ── */}

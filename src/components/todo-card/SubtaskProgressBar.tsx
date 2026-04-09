@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { useTodoStore } from '@/stores/todo-store'
-import { motion } from 'framer-motion'
+import { Progress } from '@/components/ui/progress'
 import { START_MESSAGES, IN_PROGRESS_MESSAGES, DONE_MESSAGES } from '@/constants/messages'
 
 interface Props {
@@ -47,19 +47,7 @@ export function SubtaskProgressBar({ todoId, initialCount }: Props) {
         <span className="font-semibold">{completedSub}/{totalSub}</span>
         {encouragement && <span className="italic">{encouragement}</span>}
       </div>
-      <div className="h-1 w-full bg-foam rounded-full overflow-hidden mt-0.5 relative">
-        <motion.div
-          className="h-full bg-primary"
-          initial={{ width: 0 }}
-          animate={{ width: `${subProgress}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-        <motion.div
-          className="absolute top-0 bottom-0 bg-white/30 w-2 blur-[1px]"
-          animate={{ left: `${subProgress}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-      </div>
+      <Progress value={subProgress} className="mt-0.5" />
     </div>
   )
 }
