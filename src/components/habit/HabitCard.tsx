@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Minus, Check, Trash2 } from 'lucide-react'
+import { Plus, Minus, Check, Trash2, Pencil } from 'lucide-react'
 import { Habit, HabitTracking } from '@/lib/types'
 import { useHabitStore, todayDate, weekStartDate } from '@/stores/habit-store'
 import { Progress } from '@/components/ui/progress'
@@ -202,9 +202,10 @@ interface HabitCardProps {
   habit: Habit
   userId: string
   onEdit: (habit: Habit) => void
+  onDelete: (id: string) => void
 }
 
-export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
+export default function HabitCard({ habit, userId, onEdit, onDelete }: HabitCardProps) {
   const { logEntry, removeLastEntry, removeEntry, todayEntries, weekEntries, periodTotal } = useHabitStore()
 
   const today = todayDate()
@@ -276,7 +277,7 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
   return (
     <motion.div
       layout
-      className="relative rounded-2xl overflow-hidden transition-colors"
+      className="relative rounded-2xl overflow-hidden transition-colors group"
       style={{
         background: completed
           ? 'color-mix(in srgb, var(--color-completion) 8%, var(--card))'
@@ -397,15 +398,25 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
             </>
           )}
 
-          {/* Edit button */}
-          <button
-            onClick={() => onEdit(habit)}
-            className="flex items-center justify-center w-6 h-7 rounded opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity text-xs"
-            style={{ color: 'var(--color-text-secondary)' }}
-            aria-label="Edit habit"
-          >
-            ···
-          </button>
+          {/* Edit / delete actions — visible on hover, matching TodoActions */}
+          <div className="hidden md:flex items-center gap-0.5">
+            <button
+              onClick={() => onEdit(habit)}
+              className="opacity-0 group-hover:opacity-100 transition p-1 rounded-lg"
+              style={{ color: 'var(--color-text-disabled)' }}
+              aria-label="Edit habit"
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              onClick={() => onDelete(habit.id)}
+              className="opacity-0 group-hover:opacity-100 transition p-1 rounded-lg hover:text-destructive"
+              style={{ color: 'var(--color-text-disabled)' }}
+              aria-label="Delete habit"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
         </div>
       </div>
 

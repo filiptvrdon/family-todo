@@ -13,7 +13,7 @@ interface HabitListProps {
 }
 
 export default function HabitList({ userId }: HabitListProps) {
-  const { myHabits, loading, subscribe } = useHabitStore()
+  const { myHabits, loading, subscribe, deleteHabit } = useHabitStore()
   const [formOpen, setFormOpen] = useState(false)
   const [editHabit, setEditHabit] = useState<Habit | null>(null)
 
@@ -94,6 +94,7 @@ export default function HabitList({ userId }: HabitListProps) {
                 habit={habit}
                 userId={userId}
                 onEdit={openEdit}
+                onDelete={deleteHabit}
               />
             </motion.div>
           ))}
