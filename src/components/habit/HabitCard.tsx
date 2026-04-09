@@ -301,28 +301,38 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
           <span className="text-base shrink-0 leading-none">{habit.icon}</span>
         )}
 
-        {/* Title + inline progress pill for non-boolean */}
-        <div className="flex-1 flex items-center gap-2 min-w-0 py-2">
-          <span
-            className="text-sm truncate"
-            style={{
-              color: completed ? 'var(--color-completion)' : 'var(--color-text)',
-              fontWeight: 450,
-            }}
-          >
-            {habit.title}
-          </span>
-          {/* Progress pill — only when non-boolean and has a goal or any progress */}
-          {habit.value_type !== 'boolean' && (total > 0 || habit.goal_value !== null) && (
+        {/* Title + progress bar (mirrors TodoCard flex-1 min-w-0 structure) */}
+        <div className="flex-1 min-w-0 py-2">
+          <div className="flex items-center gap-2">
             <span
-              className="shrink-0 text-[11px] tabular-nums font-medium px-1.5 py-0.5 rounded-md"
+              className="text-sm truncate"
               style={{
-                background: completed ? 'color-mix(in srgb, var(--color-completion) 15%, transparent)' : 'var(--color-foam)',
-                color: completed ? 'var(--color-completion)' : 'var(--color-text-secondary)',
+                color: completed ? 'var(--color-completion)' : 'var(--color-text)',
+                fontWeight: 450,
               }}
             >
-              {formatProgress(habit, total)}
+              {habit.title}
             </span>
+            {/* Progress pill label */}
+            {habit.value_type !== 'boolean' && (total > 0 || habit.goal_value !== null) && (
+              <span
+                className="shrink-0 text-[11px] tabular-nums font-medium px-1.5 py-0.5 rounded-md"
+                style={{
+                  background: completed ? 'color-mix(in srgb, var(--color-completion) 15%, transparent)' : 'var(--color-foam)',
+                  color: completed ? 'var(--color-completion)' : 'var(--color-text-secondary)',
+                }}
+              >
+                {formatProgress(habit, total)}
+              </span>
+            )}
+          </div>
+          {/* Progress bar — inside content area, same position as SubtaskProgressBar in TodoCard */}
+          {progressPct !== null && (
+            <Progress
+              value={progressPct}
+              fillColor={completed ? 'var(--color-completion)' : undefined}
+              className="mt-1"
+            />
           )}
         </div>
 
@@ -398,15 +408,6 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
           </button>
         </div>
       </div>
-
-      {/* Progress bar */}
-      {progressPct !== null && (
-        <Progress
-          value={progressPct}
-          fillColor={completed ? 'var(--color-completion)' : undefined}
-          className="mx-3"
-        />
-      )}
 
       {/* ── Expanded area ── */}
       <AnimatePresence>
