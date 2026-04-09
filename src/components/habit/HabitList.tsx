@@ -94,7 +94,6 @@ export default function HabitList({ userId }: HabitListProps) {
                 habit={habit}
                 userId={userId}
                 onEdit={openEdit}
-                onDelete={deleteHabit}
               />
             </motion.div>
           ))}
@@ -107,6 +106,7 @@ export default function HabitList({ userId }: HabitListProps) {
         onClose={() => setFormOpen(false)}
         userId={userId}
         editHabit={editHabit}
+        onDelete={deleteHabit}
       />
     </div>
   )

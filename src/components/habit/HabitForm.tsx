@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Drawer } from '@base-ui/react'
-import { X, Plus, Minus, Check, Trash2 } from 'lucide-react'
+import { X, Plus, Minus, Check, Trash2, Trash } from 'lucide-react'
 import { Habit, HabitValueType, HabitGoalPeriod, HabitTracking } from '@/lib/types'
 import { useHabitStore, todayDate, weekStartDate } from '@/stores/habit-store'
 
@@ -295,9 +295,10 @@ interface HabitFormProps {
   onClose: () => void
   userId: string
   editHabit?: Habit | null
+  onDelete?: (id: string) => void
 }
 
-export default function HabitForm({ open, onClose, userId, editHabit }: HabitFormProps) {
+export default function HabitForm({ open, onClose, userId, editHabit, onDelete }: HabitFormProps) {
   const { addHabit, updateHabit } = useHabitStore()
   const [form, setForm] = useState<FormState>(blankForm())
   const [saving, setSaving] = useState(false)
@@ -539,6 +540,18 @@ export default function HabitForm({ open, onClose, userId, editHabit }: HabitFor
               >
                 {saving ? 'Saving…' : editHabit ? 'Save changes' : 'Add habit'}
               </button>
+
+              {/* Delete — only when editing */}
+              {editHabit && onDelete && (
+                <button
+                  onClick={() => { onDelete(editHabit.id); onClose() }}
+                  className="w-full py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
+                  style={{ color: 'var(--color-alert)', background: 'transparent', border: '1px solid color-mix(in srgb, var(--color-alert) 30%, transparent)' }}
+                >
+                  <Trash size={14} />
+                  Delete habit
+                </button>
+              )}
             </div>
           </div>
         </Drawer.Popup>

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Minus, Check, Trash2, Pencil } from 'lucide-react'
+import { Plus, Minus, Check } from 'lucide-react'
 import { Habit } from '@/lib/types'
 import { useHabitStore, todayDate } from '@/stores/habit-store'
 import { Progress } from '@/components/ui/progress'
@@ -72,10 +72,9 @@ interface HabitCardProps {
   habit: Habit
   userId: string
   onEdit: (habit: Habit) => void
-  onDelete: (id: string) => void
 }
 
-export default function HabitCard({ habit, userId, onEdit, onDelete }: HabitCardProps) {
+export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
   const { logEntry, removeLastEntry, todayEntries, periodTotal } = useHabitStore()
 
   const today = todayDate()
@@ -129,7 +128,7 @@ export default function HabitCard({ habit, userId, onEdit, onDelete }: HabitCard
   return (
     <motion.div
       layout
-      className="relative rounded-2xl overflow-hidden transition-colors group cursor-pointer"
+      className="relative rounded-2xl overflow-hidden transition-colors cursor-pointer"
       style={{
         background: completed
           ? 'color-mix(in srgb, var(--color-completion) 8%, var(--card))'
@@ -233,25 +232,6 @@ export default function HabitCard({ habit, userId, onEdit, onDelete }: HabitCard
             </>
           )}
 
-          {/* Edit / delete — visible on hover */}
-          <div className="hidden md:flex items-center gap-0.5">
-            <button
-              onClick={() => onEdit(habit)}
-              className="opacity-0 group-hover:opacity-100 transition p-1 rounded-lg"
-              style={{ color: 'var(--color-text-disabled)' }}
-              aria-label="Edit habit"
-            >
-              <Pencil size={13} />
-            </button>
-            <button
-              onClick={() => onDelete(habit.id)}
-              className="opacity-0 group-hover:opacity-100 transition p-1 rounded-lg hover:text-destructive"
-              style={{ color: 'var(--color-text-disabled)' }}
-              aria-label="Delete habit"
-            >
-              <Trash2 size={13} />
-            </button>
-          </div>
         </div>
       </div>
     </motion.div>
