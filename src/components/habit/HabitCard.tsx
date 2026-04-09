@@ -273,15 +273,24 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
     : null
 
   return (
-    <motion.div layout className="relative">
+    <motion.div
+      layout
+      className="relative rounded-2xl overflow-hidden transition-colors"
+      style={{
+        background: completed
+          ? 'color-mix(in srgb, var(--color-completion) 8%, var(--card))'
+          : 'var(--card)',
+        boxShadow: 'var(--shadow-card)',
+        border: completed
+          ? '1px solid color-mix(in srgb, var(--color-completion) 30%, transparent)'
+          : '1px solid var(--border)',
+      }}
+    >
       {/* ── Main row ── */}
       <div
-        className="flex items-center gap-2 px-3 rounded-xl transition-colors"
+        className="flex items-center gap-2 px-3 transition-colors"
         style={{
-          minHeight: 40,
-          background: completed
-            ? 'color-mix(in srgb, var(--color-completion) 8%, var(--card))'
-            : 'var(--card)',
+          minHeight: 44,
           cursor: hasExpandedContent ? 'pointer' : 'default',
         }}
         onClick={() => hasExpandedContent && setExpanded(v => !v)}
@@ -391,7 +400,7 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
 
       {/* Thin progress underline */}
       {progressPct !== null && progressPct > 0 && (
-        <div className="mx-3 h-[2px] rounded-full overflow-hidden -mt-px" style={{ background: 'var(--color-foam)' }}>
+        <div className="mx-3 h-[2px] rounded-full overflow-hidden" style={{ background: 'var(--color-foam)' }}>
           <motion.div
             className="h-full rounded-full"
             style={{ background: completed ? 'var(--color-completion)' : 'var(--color-primary)', opacity: 0.6 }}
@@ -410,7 +419,7 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.15 }}
-            className="overflow-hidden px-3"
+            className="overflow-hidden px-3 pb-2"
           >
             {showWeekDots && <BooleanWeekDots weekEntries={weekEnts} />}
 
