@@ -31,6 +31,15 @@ import { DndMonitor } from './todo-list/DndMonitor'
 
 type Recurrence = 'daily' | 'weekly' | 'monthly'
 
+function sortByDateTime(a: Todo, b: Todo): number {
+  const dateA = a.due_date ?? '9999-99-99'
+  const dateB = b.due_date ?? '9999-99-99'
+  if (dateA !== dateB) return dateA < dateB ? -1 : 1
+  const timeA = a.scheduled_time ?? ''
+  const timeB = b.scheduled_time ?? ''
+  return timeA < timeB ? -1 : timeA > timeB ? 1 : 0
+}
+
 function nextDueDate(recurrence: Recurrence): string {
   const today = new Date()
   if (recurrence === 'daily') return format(addDays(today, 1), 'yyyy-MM-dd')
@@ -200,6 +209,7 @@ export default function TodoList({
       completion_nudge: null,
       energy_level: 'low' as const,
       momentum_contribution: 0,
+      completed_at: null,
     }
 
     setTitle('')
@@ -359,17 +369,17 @@ export default function TodoList({
   }
 
   const today = format(new Date(), 'yyyy-MM-dd')
-  const weekEnd = format(addDays(new Date(), 6), 'yyyy-MM-dd')
+  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd')
+  const thisWeekEnd = format(addDays(new Date(), 7), 'yyyy-MM-dd')
+  const nextWeekEnd = format(addDays(new Date(), 14), 'yyyy-MM-dd')
 
   const filteredTodos = useMemo(() => {
     const list = parentId
       ? localTodos
       : localTodos.filter(todo => !todo.completed || todo.due_date === today)
 
-    if (energyFilter !== 'all') {
-      return list.filter(t => t.energy_level === energyFilter)
-    }
-    return list
+    const filtered = energyFilter !== 'all' ? list.filter(t => t.energy_level === energyFilter) : list
+    return parentId ? filtered : [...filtered].sort(sortByDateTime)
   }, [localTodos, parentId, today, energyFilter])
 
   const displayTodos = filteredTodos
@@ -377,7 +387,8 @@ export default function TodoList({
   // Subtasks with a due_date surface in the main list under the correct time-bucket
   const surfacedSubtasks = useMemo(() => {
     if (parentId) return []
-    return storeTodos.filter(t => t.parent_id !== null && t.due_date !== null && !t.completed)
+    return [...storeTodos.filter(t => t.parent_id !== null && t.due_date !== null && !t.completed)]
+      .sort(sortByDateTime)
   }, [storeTodos, parentId])
 
   const parentTitleMap = useMemo(() => {
@@ -398,17 +409,27 @@ export default function TodoList({
         surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! <= today),
       },
       {
+        label: 'Tomorrow',
+        todos: filteredTodos.filter(t => t.due_date === tomorrow),
+        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date === tomorrow),
+      },
+      {
         label: 'This Week',
-        todos: filteredTodos.filter(t => t.due_date && t.due_date > today && t.due_date <= weekEnd),
-        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > today && t.due_date! <= weekEnd),
+        todos: filteredTodos.filter(t => t.due_date && t.due_date > tomorrow && t.due_date <= thisWeekEnd),
+        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > tomorrow && t.due_date! <= thisWeekEnd),
+      },
+      {
+        label: 'Next Week',
+        todos: filteredTodos.filter(t => t.due_date && t.due_date > thisWeekEnd && t.due_date <= nextWeekEnd),
+        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > thisWeekEnd && t.due_date! <= nextWeekEnd),
       },
       {
         label: 'Later',
-        todos: filteredTodos.filter(t => !t.due_date || t.due_date > weekEnd),
-        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > weekEnd),
+        todos: filteredTodos.filter(t => !t.due_date || t.due_date > nextWeekEnd),
+        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > nextWeekEnd),
       },
     ]
-  }, [filteredTodos, parentId, today, weekEnd, surfacedSubtasks])
+  }, [filteredTodos, parentId, today, tomorrow, thisWeekEnd, nextWeekEnd, surfacedSubtasks])
 
   const completedCount = localTodos.filter(t => t.completed).length
   const totalCount = localTodos.length
