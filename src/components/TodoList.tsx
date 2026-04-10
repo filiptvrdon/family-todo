@@ -394,8 +394,8 @@ export default function TodoList({
     return [
       {
         label: 'Today',
-        todos: filteredTodos.filter(t => t.due_date === today),
-        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date === today),
+        todos: filteredTodos.filter(t => !t.due_date || t.due_date <= today),
+        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! <= today),
       },
       {
         label: 'This Week',
@@ -404,7 +404,7 @@ export default function TodoList({
       },
       {
         label: 'Later',
-        todos: filteredTodos.filter(t => !t.due_date || t.due_date > weekEnd),
+        todos: filteredTodos.filter(t => t.due_date && t.due_date > weekEnd),
         surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > weekEnd),
       },
     ]

@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Calendar } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, parseISO, startOfDay, isBefore } from 'date-fns'
 import { QuestIcon } from '@/lib/questIcons'
 import { Todo, QuestLink } from '@/lib/types'
 
@@ -46,12 +46,18 @@ export function TodoMetadata({ todo, quests }: Props) {
           {todo.recurrence.charAt(0).toUpperCase() + todo.recurrence.slice(1)}
         </span>
       )}
-      {todo.due_date && (
-        <span className="flex items-center gap-1 text-xs text-text-disabled">
-          <Calendar size={11} />
-          {format(new Date(todo.due_date + 'T00:00:00'), 'MMM d')}
-        </span>
-      )}
+      {todo.due_date && (() => {
+        const isOverdue = !todo.completed && isBefore(parseISO(todo.due_date), startOfDay(new Date()))
+        return (
+          <span
+            className="flex items-center gap-1 text-xs"
+            style={{ color: isOverdue ? 'var(--color-destructive)' : 'var(--color-text-disabled)' }}
+          >
+            <Calendar size={11} />
+            {format(new Date(todo.due_date + 'T00:00:00'), 'MMM d')}
+          </span>
+        )
+      })()}
     </div>
   )
 }
