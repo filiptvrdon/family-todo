@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { User, Todo, CalendarEvent } from '@/lib/types'
 import DayTimeline from '@/components/DayTimeline'
 import WeekCalendar from '@/components/calendar/WeekCalendar'
@@ -50,6 +50,28 @@ export default function CalendarSuite({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      {/* Section header — shown only in dashboard day-only mode */}
+      {dayOnly && (
+        <div
+          className="shrink-0 flex items-center justify-between px-4 py-3 border-b"
+          style={{ borderColor: 'var(--border)' }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+            Schedule
+          </h2>
+          <button
+            onClick={() => {
+              // TODO: open event creation dialog (spec pending)
+            }}
+            className="flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
+            style={{ background: 'var(--color-foam)', color: 'var(--color-primary)' }}
+            aria-label="Add event"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Tab bar */}
       {!dayOnly && (
         <div className="shrink-0 flex items-end px-4 pt-[10px] border-b border-border gap-0.5 bg-card">
