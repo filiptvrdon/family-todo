@@ -359,11 +359,13 @@ export default function TodoList({
   }
 
   const today = format(new Date(), 'yyyy-MM-dd')
+  const weekEnd = format(addDays(new Date(), 6), 'yyyy-MM-dd')
+
   const filteredTodos = useMemo(() => {
-    const list = parentId 
-      ? localTodos 
+    const list = parentId
+      ? localTodos
       : localTodos.filter(todo => !todo.completed || todo.due_date === today)
-    
+
     if (energyFilter !== 'all') {
       return list.filter(t => t.energy_level === energyFilter)
     }
@@ -371,6 +373,42 @@ export default function TodoList({
   }, [localTodos, parentId, today, energyFilter])
 
   const displayTodos = filteredTodos
+
+  // Subtasks with a due_date surface in the main list under the correct time-bucket
+  const surfacedSubtasks = useMemo(() => {
+    if (parentId) return []
+    return storeTodos.filter(t => t.parent_id !== null && t.due_date !== null && !t.completed)
+  }, [storeTodos, parentId])
+
+  const parentTitleMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const sub of surfacedSubtasks) {
+      const parent = storeTodos.find(t => t.id === sub.parent_id)
+      if (parent) map[sub.id] = parent.title
+    }
+    return map
+  }, [surfacedSubtasks, storeTodos])
+
+  const todoSections = useMemo(() => {
+    if (parentId) return undefined
+    return [
+      {
+        label: 'Today',
+        todos: filteredTodos.filter(t => t.due_date === today),
+        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date === today),
+      },
+      {
+        label: 'This Week',
+        todos: filteredTodos.filter(t => t.due_date && t.due_date > today && t.due_date <= weekEnd),
+        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > today && t.due_date! <= weekEnd),
+      },
+      {
+        label: 'Later',
+        todos: filteredTodos.filter(t => !t.due_date || t.due_date > weekEnd),
+        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > weekEnd),
+      },
+    ]
+  }, [filteredTodos, parentId, today, weekEnd, surfacedSubtasks])
 
   const completedCount = localTodos.filter(t => t.completed).length
   const totalCount = localTodos.length
@@ -389,6 +427,7 @@ export default function TodoList({
       />
       <TodoItems
         todos={displayTodos}
+        sections={todoSections}
         isOwner={isOwner}
         onToggle={toggleTodo}
         onOpen={openDetail}
@@ -400,6 +439,7 @@ export default function TodoList({
         isSubtaskMode={isSubtaskMode}
         expandedIds={expandedIds}
         onToggleExpand={toggleExpand}
+        parentTitleMap={parentTitleMap}
         renderSubList={(todoId) => (
           <TodoList
             userId={userId}

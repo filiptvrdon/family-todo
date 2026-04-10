@@ -4,9 +4,10 @@ interface Props {
   title: string
   completed: boolean
   nudge?: string | null
+  parentTitle?: string
 }
 
-export function TodoDisplay({ title, completed, nudge }: Props) {
+export function TodoDisplay({ title, completed, nudge, parentTitle }: Props) {
   return (
     <>
       <p
@@ -15,6 +16,11 @@ export function TodoDisplay({ title, completed, nudge }: Props) {
       >
         {title}
       </p>
+      {parentTitle && (
+        <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--color-text-disabled)' }}>
+          ↳ {parentTitle}
+        </p>
+      )}
       {!completed && nudge && (
         <p className="text-[11px] italic mt-0.5 line-clamp-2" style={{ color: 'var(--color-text-secondary)' }}>
           {nudge}

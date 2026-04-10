@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
-import { X } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
 import { toast } from 'sonner'
 import { Todo, Quest } from '@/lib/types'
@@ -114,6 +113,13 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
 
   async function handleSave() {
     if (!editTitle.trim()) return
+
+    // Block subtask due date that exceeds parent's due date
+    if (todo.parent_id && editDueDate && parentTodo?.due_date && editDueDate > parentTodo.due_date) {
+      toast.error(`Due date can't be after the parent task's deadline (${format(new Date(parentTodo.due_date + 'T00:00:00'), 'MMM d')})`)
+      return
+    }
+
     setIsSaving(true)
 
     try {
@@ -197,16 +203,6 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
           </div>
 
           <div className="px-5 pb-8 pt-2 flex flex-col gap-5">
-            {/* Header */}
-            <div className="flex items-center justify-between gap-3">
-              <Drawer.Title className="text-base font-semibold text-foreground truncate">
-                {todo.title}
-              </Drawer.Title>
-              <Drawer.Close className="flex-shrink-0 flex items-center justify-center rounded-full w-8 h-8 transition text-muted-foreground bg-foam">
-                <X size={16} />
-              </Drawer.Close>
-            </div>
-
             {/* Parent Todo */}
             {parentTodo && (
               <div className="flex items-center justify-between bg-foam rounded-xl px-4 py-2 -mt-2">
@@ -257,7 +253,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
             {/* AI nudge */}
             {(todo.completed ? todo.completion_nudge : todo.motivation_nudge) && (
               <p
-                className="text-sm italic rounded-xl px-4 py-3"
+                className="text-sm italic rounded-xl px-4 py-3 w-full"
                 style={{ background: 'var(--color-foam)', color: 'var(--color-primary-dark)' }}
               >
                 {todo.completed ? todo.completion_nudge : todo.motivation_nudge}

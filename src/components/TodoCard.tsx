@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Todo, QuestLink } from '@/lib/types'
-import { ChevronRight, ChevronDown } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
@@ -12,7 +11,6 @@ import { motion } from 'framer-motion'
 import { CompletionReward } from './todo-card/CompletionReward'
 import { DragHandle } from './todo-card/DragHandle'
 import { TodoCheckbox } from './todo-card/TodoCheckbox'
-import { TodoTitleInput } from './todo-card/TodoTitleInput'
 import { TodoDisplay } from './todo-card/TodoDisplay'
 import { SubtaskProgressBar } from './todo-card/SubtaskProgressBar'
 import { TodoMetadata } from './todo-card/TodoMetadata'
@@ -31,6 +29,7 @@ interface Props {
   isSubtaskMode?: boolean
   quests?: QuestLink[]
   streamingNudge?: string
+  parentTitle?: string
 }
 
 export default function TodoCard({
@@ -38,22 +37,19 @@ export default function TodoCard({
   isOwner,
   onToggle,
   onOpen,
-  onEdit,
   isSortable = false,
   isDraggable = false,
   isDroppable = false,
-  isExpanded = false,
-  onToggleExpand,
   isSubtaskMode = false,
   quests,
+  parentTitle,
 }: Props) {
   const [completing, setCompleting] = useState(false)
-  const [editing, setEditing] = useState(false)
 
   // Sortable hook
   const sortable = useSortable({
     id: todo.id,
-    disabled: !isSortable || !isOwner || editing || isSubtaskMode,
+    disabled: !isSortable || !isOwner || isSubtaskMode,
     data: isDraggable ? { source: 'todo-column', todo } : undefined,
   })
 
@@ -61,14 +57,14 @@ export default function TodoCard({
   const draggable = useDraggable({
     id: todo.id,
     data: { source: 'todo-column', todo },
-    disabled: !isDraggable || (isSortable && !isSubtaskMode) || todo.completed || editing,
+    disabled: !isDraggable || (isSortable && !isSubtaskMode) || todo.completed,
   })
 
   // Droppable hook (for creating sub-tasks)
   const droppable = useDroppable({
     id: `todo-${todo.id}`,
     data: { type: 'todo-drop-target', todoId: todo.id },
-    disabled: !isDroppable || editing,
+    disabled: !isDroppable,
   })
 
   function handleToggle(e: React.MouseEvent | React.KeyboardEvent) {
@@ -89,11 +85,6 @@ export default function TodoCard({
       setCompleting(false)
       onToggle(todo)
     }
-  }
-
-  function handleSave(newTitle: string) {
-    onEdit?.(todo.id, newTitle)
-    setEditing(false)
   }
 
   const isDragging = sortable.isDragging || draggable.isDragging
@@ -124,8 +115,8 @@ export default function TodoCard({
       style={style}
       role="button"
       tabIndex={0}
-      onClick={() => !editing && onOpen(todo)}
-      onKeyDown={e => !editing && (e.key === 'Enter' || e.key === ' ') && onOpen(todo)}
+      onClick={() => onOpen(todo)}
+      onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onOpen(todo)}
       initial={false}
       whileTap={{ scale: 0.98, boxShadow: 'none' }}
       animate={completing ? {
@@ -152,18 +143,6 @@ export default function TodoCard({
         listeners={isSortable ? sortable.listeners : draggable.listeners}
       />
 
-      {todo.subtasks_count !== undefined && todo.subtasks_count > 0 && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleExpand?.()
-          }}
-          className="shrink-0 p-0.5 -ml-1 rounded hover:bg-muted-foreground/10 transition text-text-disabled hover:text-foreground"
-        >
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </button>
-      )}
-
       <TodoCheckbox 
         completed={todo.completed} 
         completing={completing} 
@@ -172,20 +151,12 @@ export default function TodoCard({
       />
 
       <div className="flex-1 min-w-0">
-        {editing ? (
-          <TodoTitleInput 
-            value={todo.title} 
-            onSave={handleSave} 
-            onCancel={() => setEditing(false)} 
-          />
-        ) : (
-          <TodoDisplay 
-            title={todo.title} 
-            completed={todo.completed} 
-            // nudge={todo.motivation_nudge || streamingNudge}
-              nudge={todo.description}
-          />
-        )}
+        <TodoDisplay
+            title={todo.title}
+            completed={todo.completed}
+            nudge={todo.description}
+            parentTitle={parentTitle}
+        />
         
         <SubtaskProgressBar 
           todoId={todo.id} 
@@ -193,11 +164,9 @@ export default function TodoCard({
         />
       </div>
 
-      {!editing && (
-        <div className="flex items-center gap-2 shrink-0">
-          <TodoMetadata todo={todo} quests={quests} />
-        </div>
-      )}
+      <div className="flex items-center gap-2 shrink-0">
+        <TodoMetadata todo={todo} quests={quests} />
+      </div>
     </motion.div>
   )
 }
