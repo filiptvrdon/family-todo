@@ -6,16 +6,15 @@ import { createClient } from '@/lib/supabase/client'
 import { useStoreInit } from '@/hooks/useStoreInit'
 import { useTodoStore } from '@/stores/todo-store'
 import { useUserStore } from '@/stores/user-store'
-import { useQuestStore } from '@/stores/quest-store'
 import { useEventStore } from '@/stores/event-store'
-import { User, Todo, CalendarEvent, Quest } from '@/lib/types'
+import { User, Todo, CalendarEvent } from '@/lib/types'
 import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import UserModal from '@/components/UserModal'
 import QuestPanel from '@/components/QuestPanel'
 import ResponsiveDashboard from '@/components/ResponsiveDashboard'
-import { UserCircle, Moon, Sun, Swords } from 'lucide-react'
+import CalendarSuite from '@/components/CalendarSuite'
+import { UserCircle, Moon, Sun, Swords, Home, Calendar } from 'lucide-react'
 import { Logo } from '@/components/Logo'
-import { QuestIcon } from '@/lib/questIcons'
 import { useTheme } from '@/lib/hooks/useTheme'
 import { subtaskCollisionDetection } from '@/lib/dnd-utils'
 import { useSubtaskMode } from '@/hooks/useSubtaskMode'
@@ -38,10 +37,9 @@ interface Props {
   partnerTodos: Todo[]
   allEvents: CalendarEvent[]
   googleConnected: boolean
-  pinnedQuests: Quest[]
 }
 
-export default function Dashboard({ user: initialUser, partner: initialPartner, allEvents, googleConnected, pinnedQuests }: Props) {
+export default function Dashboard({ user: initialUser, partner: initialPartner, allEvents, googleConnected }: Props) {
   const user = useUserStore(s => s.user || initialUser)
   const partner = useUserStore(s => s.partner || initialPartner)
   const { isSubtaskMode } = useSubtaskMode()
@@ -50,7 +48,6 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
   const myTodos = useTodoStore(s => s.myTodos)
   const partnerTodos = useTodoStore(s => s.partnerTodos)
   const updateTodoStore = useTodoStore(s => s.updateTodo)
-  const quests = useQuestStore(s => s.quests)
   const eventsFromStore = useEventStore(s => s.events)
   
   const [dayDate, setDayDate] = useState<Date>(new Date())
@@ -72,9 +69,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
   const [showProfile, setShowProfile] = useState(false)
   const [showQuests, setShowQuests] = useState(false)
   const [questPanelInitialId, setQuestPanelInitialId] = useState<string | null>(null)
-  
-  const pinnedQuestsFromStore = quests.filter(q => q.status === 'active' && q.pinned).slice(0, 3)
-  const localPinnedQuests = pinnedQuestsFromStore.length > 0 ? pinnedQuestsFromStore : pinnedQuests
+  const [topView, setTopView] = useState<'dashboard' | 'calendar'>('dashboard')
 
   const { isDark, toggle: toggleTheme } = useTheme()
   const router = useRouter()
@@ -222,26 +217,35 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
               <span className="font-semibold text-foreground">Momentum</span>
             </div>
 
-            {/* Pinned quests */}
-            <div className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
-              {localPinnedQuests.map(quest => (
-                <button
-                  key={quest.id}
-                  onClick={() => { setQuestPanelInitialId(quest.id); setShowQuests(true) }}
-                  title={quest.name}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition shrink-0 cursor-pointer"
-                  style={{ background: 'var(--color-foam)', color: 'var(--color-primary-dark)' }}
-                >
-                  <QuestIcon name={quest.icon} size={14} />
-                  <span className="max-w-[80px] truncate hidden sm:inline">{quest.name}</span>
-                </button>
-              ))}
+            {/* Top nav */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setTopView('dashboard')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                style={topView === 'dashboard'
+                  ? { background: 'var(--color-foam)', color: 'var(--color-primary)' }
+                  : { color: 'var(--color-text-secondary)' }}
+              >
+                <Home size={14} />
+                <span>Dashboard</span>
+              </button>
+              <button
+                onClick={() => setTopView('calendar')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                style={topView === 'calendar'
+                  ? { background: 'var(--color-foam)', color: 'var(--color-primary)' }
+                  : { color: 'var(--color-text-secondary)' }}
+              >
+                <Calendar size={14} />
+                <span>Calendar</span>
+              </button>
               <button
                 onClick={() => { setQuestPanelInitialId(null); setShowQuests(true) }}
-                className="flex items-center justify-center w-8 h-8 rounded-full transition text-muted-foreground hover:text-foreground shrink-0"
-                title="Quests"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                style={{ color: showQuests ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}
               >
-                <Swords size={17} />
+                <Swords size={14} />
+                <span>Quests</span>
               </button>
             </div>
 
@@ -278,8 +282,28 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
           </div>
         </header>
 
-        {/* ── Responsive Shell ── */}
-        <ResponsiveDashboard {...sharedProps} onTodoComplete={completeTodo} />
+        {/* ── Main content ── */}
+        {topView === 'calendar' ? (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <CalendarSuite
+              user={user}
+              partner={partner}
+              myTodos={sharedProps.myTodos}
+              allEvents={allEventsCombined}
+              onRefresh={onRefresh}
+              onTodoComplete={completeTodo}
+              dayDate={dayDate}
+              setDayDate={setDayDate}
+              weekCalDate={weekCalDate}
+              setWeekCalDate={setWeekCalDate}
+              monthCalDate={monthCalDate}
+              setMonthCalDate={setMonthCalDate}
+              isDragging={!!draggingTodoId}
+            />
+          </div>
+        ) : (
+          <ResponsiveDashboard {...sharedProps} onTodoComplete={completeTodo} />
+        )}
 
         {showProfile && (
           <UserModal

@@ -47,17 +47,19 @@ interface Props {
   useInternalDndContext?: boolean
   hideProgress?: boolean
   isSubtaskMode?: boolean
+  hideTopAddInput?: boolean
 }
 
 
 export default function TodoList({
   userId,
   isOwner,
-  parentId, 
+  parentId,
   onRefresh,
   useInternalDndContext = true,
   hideProgress = false,
-  isSubtaskMode: isSubtaskModeProp
+  isSubtaskMode: isSubtaskModeProp,
+  hideTopAddInput = false,
 }: Props) {
   const { isSubtaskMode: isSubtaskModeHook } = useSubtaskMode()
   const isSubtaskMode = isSubtaskModeProp ?? isSubtaskModeHook
@@ -428,7 +430,7 @@ export default function TodoList({
         onChange={setTitle}
         onSubmit={addTodo}
         isSubtask={!!parentId}
-        isVisible={isOwner}
+        isVisible={isOwner && (!hideTopAddInput || !!parentId)}
       />
 
       {useInternalDndContext ? (

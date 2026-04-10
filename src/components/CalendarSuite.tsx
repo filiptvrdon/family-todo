@@ -25,13 +25,15 @@ interface Props {
   monthCalDate: Date
   setMonthCalDate: (d: Date) => void
   isDragging: boolean
+  dayOnly?: boolean
 }
 
 export default function CalendarSuite({
   user, partner, myTodos, allEvents, onRefresh, onTodoComplete,
-  dayDate, setDayDate, weekCalDate, setWeekCalDate, monthCalDate, setMonthCalDate, isDragging
+  dayDate, setDayDate, weekCalDate, setWeekCalDate, monthCalDate, setMonthCalDate, isDragging, dayOnly
 }: Props) {
   const [tab, setTab] = useState<CalendarTab>('day')
+  const activeTab = dayOnly ? 'day' : tab
 
   const dayKey = format(dayDate, 'yyyy-MM-dd')
   const scheduledTodos = myTodos.filter((t) => {
@@ -49,31 +51,33 @@ export default function CalendarSuite({
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Tab bar */}
-      <div className="shrink-0 flex items-end px-4 pt-[10px] border-b border-border gap-0.5 bg-card">
-        {tabs.map(({ id, label }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className="text-[13px] font-medium cursor-pointer transition-[background,color] duration-150"
-            style={{
-              padding: '5px 14px',
-              borderRadius: '8px 8px 0 0',
-              border: '1px solid var(--color-border)',
-              borderBottom: tab === id ? '1px solid var(--card)' : '1px solid var(--color-border)',
-              background: tab === id ? 'var(--card)' : 'transparent',
-              color: tab === id ? 'var(--color-text)' : 'var(--color-text-secondary)',
-              marginBottom: tab === id ? -1 : 0,
-              position: 'relative',
-              zIndex: tab === id ? 1 : 0,
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {!dayOnly && (
+        <div className="shrink-0 flex items-end px-4 pt-[10px] border-b border-border gap-0.5 bg-card">
+          {tabs.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className="text-[13px] font-medium cursor-pointer transition-[background,color] duration-150"
+              style={{
+                padding: '5px 14px',
+                borderRadius: '8px 8px 0 0',
+                border: '1px solid var(--color-border)',
+                borderBottom: tab === id ? '1px solid var(--card)' : '1px solid var(--color-border)',
+                background: tab === id ? 'var(--card)' : 'transparent',
+                color: tab === id ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                marginBottom: tab === id ? -1 : 0,
+                position: 'relative',
+                zIndex: tab === id ? 1 : 0,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Day navigation header */}
-      {tab === 'day' && (
+      {activeTab === 'day' && (
         <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border bg-card">
           <button
             onClick={() => setDayDate(subDays(dayDate, 1))}
@@ -107,7 +111,7 @@ export default function CalendarSuite({
       {/* Panel content */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
         <AnimatePresence mode="wait">
-          {tab === 'day' && (
+          {activeTab === 'day' && (
             <motion.div
               key="day"
               initial={{ opacity: 0, x: 8 }}
@@ -126,7 +130,7 @@ export default function CalendarSuite({
             </motion.div>
           )}
 
-          {tab === 'week' && (
+          {activeTab === 'week' && (
             <motion.div
               key="week"
               initial={{ opacity: 0, x: 8 }}
@@ -150,7 +154,7 @@ export default function CalendarSuite({
             </motion.div>
           )}
 
-          {tab === 'month' && (
+          {activeTab === 'month' && (
             <motion.div
               key="month"
               initial={{ opacity: 0, x: 8 }}

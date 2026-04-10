@@ -4,12 +4,10 @@ import { useState } from 'react'
 import { User, Todo, CalendarEvent } from '@/lib/types'
 import TaskBoard from '@/components/TaskBoard'
 import CalendarSuite from '@/components/CalendarSuite'
-import FocusMode from '@/components/FocusMode'
 import HabitList from '@/components/habit/HabitList'
-import { Calendar, Focus, ListTodo, Repeat2 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Calendar, ListTodo, Repeat2 } from 'lucide-react'
 
-type MainTab = 'tasks' | 'habits' | 'schedule' | 'focus'
+type MainTab = 'tasks' | 'habits' | 'schedule'
 
 interface Props {
   user: User
@@ -33,18 +31,15 @@ interface Props {
 
 export default function ResponsiveDashboard(props: Props) {
   const [mobileTab, setMobileTab] = useState<MainTab>('tasks')
-  const [desktopTab, setDesktopTab] = useState<'schedule' | 'focus'>('schedule')
 
-  const {
-    user, partner, myTodos, partnerTodos, myName, partnerName, onRefresh
-  } = props
+  const { user, myTodos, onRefresh } = props
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* ── Mobile Tab Bar (only < lg) ── */}
       <div className="lg:hidden shrink-0 flex justify-center px-4 py-2 bg-background border-b border-border">
         <div className="flex items-center rounded-lg p-1 gap-1 bg-foam">
-          {(['tasks', 'habits', 'schedule', 'focus'] as MainTab[]).map((t) => (
+          {(['tasks', 'habits', 'schedule'] as MainTab[]).map((t) => (
             <button
               key={t}
               onClick={() => setMobileTab(t)}
@@ -58,7 +53,6 @@ export default function ResponsiveDashboard(props: Props) {
               {t === 'tasks' && <ListTodo size={14} />}
               {t === 'habits' && <Repeat2 size={14} />}
               {t === 'schedule' && <Calendar size={14} />}
-              {t === 'focus' && <Focus size={14} />}
               <span>{t}</span>
             </button>
           ))}
@@ -84,116 +78,19 @@ export default function ResponsiveDashboard(props: Props) {
         >
           <TaskBoard
             user={user}
-            partner={partner}
             myTodos={myTodos}
-            partnerTodos={partnerTodos}
-            myName={myName}
-            partnerName={partnerName}
             onRefresh={onRefresh}
             isSubtaskMode={props.isSubtaskMode}
           />
         </div>
 
-        {/* ── Schedule / Focus column (desktop lg: right ~30%; mobile: tabs 3/4) ── */}
+        {/* ── Schedule column (desktop lg: right ~30%; mobile: schedule tab) ── */}
         <div
           className={`flex-1 flex flex-col min-w-0 bg-background ${
-            (mobileTab === 'schedule' || mobileTab === 'focus') ? 'flex' : 'hidden lg:flex'
+            mobileTab === 'schedule' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          {/* Desktop detail tabs (only ≥ lg) */}
-          <div className="hidden lg:flex shrink-0 items-center gap-4 px-6 py-3 border-b border-border bg-card">
-            <button
-              onClick={() => setDesktopTab('schedule')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                desktopTab === 'schedule' ? 'bg-foam text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Calendar size={16} />
-              Schedule
-            </button>
-            <button
-              onClick={() => setDesktopTab('focus')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                desktopTab === 'focus' ? 'bg-foam text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Focus size={16} />
-              Focus Mode
-            </button>
-          </div>
-
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            {/* Mobile: schedule / focus tabs */}
-            <div className="flex-1 flex flex-col min-h-0 lg:hidden relative">
-              <AnimatePresence mode="wait">
-                {mobileTab === 'schedule' && (
-                  <motion.div
-                    key="schedule"
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-1 flex flex-col min-h-0"
-                  >
-                    <CalendarSuite {...props} />
-                  </motion.div>
-                )}
-                {mobileTab === 'focus' && (
-                  <motion.div
-                    key="focus"
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-1 flex flex-col min-h-0"
-                  >
-                    <FocusMode
-                      myTodos={myTodos}
-                      partnerTodos={partnerTodos}
-                      partnerName={partnerName}
-                      myUserId={user.id}
-                      onRefresh={onRefresh}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Desktop: desktopTab toggle */}
-            <div className="hidden lg:flex flex-1 flex-col min-h-0 relative">
-              <AnimatePresence mode="wait">
-                {desktopTab === 'schedule' ? (
-                  <motion.div
-                    key="schedule"
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-1 flex flex-col min-h-0"
-                  >
-                    <CalendarSuite {...props} />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="focus"
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-1 flex flex-col min-h-0"
-                  >
-                    <FocusMode
-                      myTodos={myTodos}
-                      partnerTodos={partnerTodos}
-                      partnerName={partnerName}
-                      myUserId={user.id}
-                      onRefresh={onRefresh}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
+          <CalendarSuite {...props} dayOnly />
         </div>
       </div>
     </div>
