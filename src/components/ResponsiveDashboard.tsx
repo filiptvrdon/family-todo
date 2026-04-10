@@ -86,7 +86,7 @@ export default function ResponsiveDashboard(props: Props) {
 
         {/* ── Schedule column (desktop lg: right ~30%; mobile: schedule tab) ── */}
         <div
-          className={`flex-1 flex flex-col min-w-0 bg-background ${
+          className={`flex-1 flex flex-col min-w-0 bg-card ${
             mobileTab === 'schedule' ? 'flex' : 'hidden lg:flex'
           }`}
         >
