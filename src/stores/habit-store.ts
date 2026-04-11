@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { Habit, HabitTracking } from '@/lib/types'
 
-const supabase = undefined  // removed — was Supabase client
 
 /** Returns today's date as YYYY-MM-DD in local time */
 export function todayDate(): string {
@@ -51,8 +50,6 @@ async function apiFetch(path: string, options?: RequestInit) {
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
-
-void supabase
 
 export const useHabitStore = create<HabitStore>((set, get) => ({
   myHabits: [],

@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react'
 import { useUserStore } from '@/stores/user-store'
-import { createClient } from '@/lib/supabase/client'
 import { User } from '@/lib/types'
 import { X, User as UserIcon, Camera, CalendarDays, Loader2, LogOut } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -16,13 +15,17 @@ interface Props {
 }
 
 export default function UserModal({ user, googleConnected, onClose, onGoogleDisconnected, onSignOut }: Props) {
-  const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [displayName, setDisplayName] = useState(user.display_name || '')
   const [username, setUsername] = useState(user.username || '')
   const [customizationPrompt, setCustomizationPrompt] = useState(user.customization_prompt || '')
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar_url || null)
+
+  // Show DB avatar if exists, otherwise fall back to legacy avatar_url
+  const initialAvatar = user.avatar_data
+    ? `/api/avatar/${user.id}`
+    : (user.avatar_url || null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(initialAvatar)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -50,31 +53,23 @@ export default function UserModal({ user, googleConnected, onClose, onGoogleDisc
     setError('')
     setSaving(true)
 
-    let avatarUrl = user.avatar_url
-
     if (avatarFile) {
-      const ext = avatarFile.name.split('.').pop()
-      const path = `${user.id}/avatar.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type })
-
-      if (uploadError) {
+      const res = await fetch(`/api/avatar/${user.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': avatarFile.type },
+        body: avatarFile,
+      })
+      if (!res.ok) {
         setError('Failed to upload avatar. Please try again.')
         setSaving(false)
         return
       }
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-      // Bust cache by appending a timestamp
-      avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`
     }
 
     const patch = {
       display_name: displayName.trim(),
       username: username.trim() || null,
       customization_prompt: customizationPrompt.trim() || null,
-      avatar_url: avatarUrl,
     }
 
     try {

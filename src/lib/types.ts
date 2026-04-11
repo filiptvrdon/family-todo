@@ -5,6 +5,7 @@ export interface User {
   username: string | null
   customization_prompt: string | null
   avatar_url: string | null
+  avatar_data: boolean | null  // true if DB has avatar bytes; actual bytes served via /api/avatar/[userId]
   partner_id: string | null
   google_refresh_token: string | null
   momentum: number
