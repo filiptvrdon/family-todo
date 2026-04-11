@@ -141,7 +141,7 @@ export async function toggleTodo(
 ): Promise<Todo> {
   const { data, error } = await supabase
     .from('todos')
-    .update({ completed })
+    .update({ completed, completed_at: completed ? new Date().toISOString() : null })
     .eq('id', id)
     .select()
     .single()

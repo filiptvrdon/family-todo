@@ -31,6 +31,7 @@ export interface Todo {
   completion_nudge: string | null
   energy_level: 'low' | 'medium' | 'high'
   momentum_contribution: number
+  completed_at: string | null
 }
 
 export interface QuestLink {

@@ -80,24 +80,36 @@ export default function HabitList({ userId }: HabitListProps) {
           </div>
         )}
 
-        <AnimatePresence initial={false}>
-          {myHabits.map(habit => (
-            <motion.div
-              key={habit.id}
-              layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.18 }}
-            >
-              <HabitCard
-                habit={habit}
-                userId={userId}
-                onEdit={openEdit}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {(['daily', 'weekly'] as const).map(period => {
+          const habits = myHabits.filter(h => h.goal_period === period)
+          if (habits.length === 0) return null
+          return (
+            <div key={period} className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide px-1 pt-1"
+                style={{ color: 'var(--color-text-secondary)' }}>
+                {period === 'daily' ? 'Daily' : 'Weekly'}
+              </p>
+              <AnimatePresence initial={false}>
+                {habits.map(habit => (
+                  <motion.div
+                    key={habit.id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    <HabitCard
+                      habit={habit}
+                      userId={userId}
+                      onEdit={openEdit}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )
+        })}
       </div>
 
       {/* Form drawer */}

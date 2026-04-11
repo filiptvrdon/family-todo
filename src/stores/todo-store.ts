@@ -31,7 +31,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     set(s => {
       const key = isMine ? 'myTodos' : 'partnerTodos'
       return {
-        [key]: s[key].map(t => t.id === id ? { ...t, completed } : t)
+        [key]: s[key].map(t => t.id === id ? { ...t, completed, completed_at: completed ? new Date().toISOString() : null } : t)
       }
     })
 
