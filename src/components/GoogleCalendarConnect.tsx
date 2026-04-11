@@ -41,6 +41,7 @@ export default function GoogleCalendarConnect({ connected, onDisconnected }: Pro
   }
 
   return (
+    // eslint-disable-next-line @next/next/no-html-link-for-pages
     <a
       href="/api/auth/google"
       className="flex items-center gap-1 text-xs font-medium transition"

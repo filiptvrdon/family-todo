@@ -1,22 +1,19 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
 import { refreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar'
 import { CalendarEvent } from '@/lib/types'
-import { upsertUser, fetchUser } from '@/services/user-service'
+import { fetchUser } from '@/services/user-service'
 import { fetchTopLevelTodos } from '@/services/todo-service'
 import { fetchCalendarEvents } from '@/services/event-service'
 
 export default async function Home() {
-  // Auth still via Supabase — replaced in Phase 3
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth()
+  if (!session?.user?.id) redirect('/login')
 
-  // Ensure user row exists in local DB
-  await upsertUser(user.id, user.email!)
+  const userId = session.user.id
 
-  const dbUser = await fetchUser(user.id)
+  const dbUser = await fetchUser(userId)
   if (!dbUser) redirect('/login?error=user_missing')
 
   let partner = null
@@ -25,9 +22,9 @@ export default async function Home() {
   }
 
   const [myTodos, partnerTodos, myEvents, partnerEvents] = await Promise.all([
-    fetchTopLevelTodos(user.id),
+    fetchTopLevelTodos(userId),
     dbUser.partner_id ? fetchTopLevelTodos(dbUser.partner_id) : Promise.resolve([]),
-    fetchCalendarEvents(user.id),
+    fetchCalendarEvents(userId),
     dbUser.partner_id ? fetchCalendarEvents(dbUser.partner_id) : Promise.resolve([]),
   ])
 
@@ -37,7 +34,7 @@ export default async function Home() {
       const accessToken = await refreshAccessToken(dbUser.google_refresh_token)
       const now = new Date()
       const twoWeeksOut = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
-      googleEvents = await fetchGoogleCalendarEvents(accessToken, user.id, now, twoWeeksOut)
+      googleEvents = await fetchGoogleCalendarEvents(accessToken, userId, now, twoWeeksOut)
     } catch (err) {
       console.error('[google calendar] failed to fetch events', err)
     }

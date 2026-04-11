@@ -227,6 +227,7 @@ export default function UserModal({ user, googleConnected, onClose, onGoogleDisc
                 Disconnect
               </button>
             ) : (
+              // eslint-disable-next-line @next/next/no-html-link-for-pages
               <a href="/api/auth/google" className="text-xs font-medium transition text-primary">
                 Connect
               </a>

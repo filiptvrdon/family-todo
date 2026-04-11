@@ -1,11 +1,9 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useSearchParams } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import { Logo } from '@/components/Logo'
-
-type Mode = 'magic' | 'password'
 
 export default function LoginPage() {
   return (
@@ -16,48 +14,35 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const [mode, setMode] = useState<Mode>('magic')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const supabase = createClient()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
 
-  async function handleMagicLink(e: { preventDefault(): void }) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setSubmitError(null)
-    const { error: otpError } = await supabase.auth.signInWithOtp({
+
+    const result = await signIn('credentials', {
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      password,
+      redirect: false,
     })
-    if (otpError) {
-      setSubmitError(
-        otpError.status === 429
-          ? 'Too many requests — please wait a few minutes before trying again.'
-          : otpError.message
-      )
+
+    if (result?.error) {
+      setSubmitError('Invalid email or password.')
     } else {
-      setSent(true)
+      window.location.href = '/'
     }
     setLoading(false)
   }
 
-  async function handlePassword(e: { preventDefault(): void }) {
-    e.preventDefault()
+  async function handleGoogle() {
     setLoading(true)
-    setSubmitError(null)
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-    if (signInError) {
-      setSubmitError(signInError.message)
-    } else {
-      router.push('/')
-    }
-    setLoading(false)
+    await signIn('google', { callbackUrl: '/' })
   }
 
   const inputStyle = {
@@ -90,87 +75,63 @@ function LoginForm() {
               border: '1px solid rgba(255,159,127,0.3)',
             }}
           >
-            {submitError ?? (error === 'user_missing' || error === 'profile_missing' ? 'Account setup incomplete — please try signing in again.' : 'That link has expired. Please request a new one.')}
+            {submitError ?? 'Sign-in failed. Please try again.'}
           </div>
         )}
 
-        {sent ? (
-          <div className="text-center">
-            <p className="font-medium" style={{ color: 'var(--color-text)' }}>Check your email!</p>
-            <p className="text-sm mt-2" style={{ color: 'var(--color-text-secondary)' }}>
-              We sent a magic link to <span className="font-medium">{email}</span>
-            </p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Email address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              style={inputStyle}
+            />
           </div>
-        ) : (
-          <>
-            <div
-              className="flex rounded-lg p-1 mb-6 gap-1"
-              style={{ background: 'var(--color-foam)' }}
-            >
-              {(['magic', 'password'] as Mode[]).map(m => (
-                <button
-                  key={m}
-                  onClick={() => { setMode(m); setSubmitError(null) }}
-                  className="flex-1 text-sm py-1.5 rounded-md font-medium transition"
-                  style={
-                    mode === m
-                      ? { background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', color: 'var(--color-text)', minHeight: '36px' }
-                      : { color: 'var(--color-text-secondary)', minHeight: '36px' }
-                  }
-                >
-                  {m === 'magic' ? 'Magic link' : 'Password'}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              style={inputStyle}
+            />
+          </div>
+          <button type="submit" disabled={loading} className="btn-primary w-full transition disabled:opacity-50">
+            {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
 
-            {mode === 'magic' ? (
-              <form onSubmit={handleMagicLink} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Email address</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    style={inputStyle}
-                  />
-                </div>
-                <button type="submit" disabled={loading} className="btn-primary w-full transition disabled:opacity-50">
-                  {loading ? 'Sending…' : 'Send magic link'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handlePassword} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Email address</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    style={inputStyle}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    style={inputStyle}
-                  />
-                </div>
-                <button type="submit" disabled={loading} className="btn-primary w-full transition disabled:opacity-50">
-                  {loading ? 'Signing in…' : 'Sign in'}
-                </button>
-              </form>
-            )}
-          </>
-        )}
+        <div className="flex items-center gap-3 my-4">
+          <div className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
+          <span className="text-xs" style={{ color: 'var(--color-text-disabled)' }}>or</span>
+          <div className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 text-sm font-medium rounded-xl border-[1.5px] min-h-[44px] transition disabled:opacity-50"
+          style={{
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text)',
+            background: 'var(--color-card)',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
       </div>
     </div>
   )

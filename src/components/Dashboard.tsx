@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useId, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { signOut as nextAuthSignOut } from 'next-auth/react'
 import { useStoreInit } from '@/hooks/useStoreInit'
 import { useTodoStore } from '@/stores/todo-store'
 import { useUserStore } from '@/stores/user-store'
@@ -73,7 +73,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
 
   const { isDark, toggle: toggleTheme } = useTheme()
   const router = useRouter()
-  const supabase = createClient()
+
 
   const refresh = useCallback(() => router.refresh(), [router])
 
@@ -170,8 +170,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
   }, [])
 
   async function signOut() {
-    await supabase.auth.signOut()
-    router.push('/login')
+    await nextAuthSignOut({ callbackUrl: '/login' })
   }
 
   const myName = user?.display_name || user?.email?.split('@')[0] || 'You'

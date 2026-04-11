@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useUserStore } from '@/stores/user-store'
 import { Link2 } from 'lucide-react'
 
@@ -19,13 +18,9 @@ export default function PartnerConnect({ myId, onConnected }: Props) {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const supabase = createClient()
 
-    const { data: partner } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email.trim())
-      .single()
+    const res = await fetch(`/api/users/by-email?email=${encodeURIComponent(email.trim())}`)
+    const partner = res.ok ? await res.json() : null
 
     if (!partner) {
       setError('No account found with that email. Ask your partner to sign in first.')
