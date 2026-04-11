@@ -1,7 +1,7 @@
 # Feature: Remove Supabase — Migrate to Vanilla PostgreSQL
 
 > **File:** `026_supabase-removal.md`
-> **Status:** ready
+> **Status:** done
 
 ## What & Why
 
@@ -130,4 +130,7 @@ Supabase free-tier egress limit (5 GB/month) is being blown through during local
 - DB image: `postgres:17.4-alpine` (pinned minor version).
 
 **Implementation notes**
-_Filled in during/after implementation._
+- Phase 1: Docker PostgreSQL 17.4-alpine on port 5433. Data migrated from remote Supabase via pg_dump.
+- Phase 2: postgres npm for all service layer queries. Client components use fetch() to API routes. Zustand stores replaced Supabase Realtime with 5-second polling. New batch endpoint GET /api/todos/quest-links added.
+- Phase 3: Auth.js v5 (next-auth@beta) with Credentials and Google providers. Next.js 16 uses proxy.ts (not middleware.ts) for middleware. bcrypt password hash set for existing user.
+- Phase 4: Avatar stored as bytea in users table; served via GET/POST /api/avatar/[userId]. avatar_data serialized as boolean flag in User type (presence indicator). Supabase packages fully removed.
