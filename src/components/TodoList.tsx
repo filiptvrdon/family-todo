@@ -2,9 +2,9 @@
 
 import { useId, useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
-import {QuestLink, Todo} from '@/lib/types'
-import { createClient } from '@/lib/supabase/client'
+import { QuestLink, Todo } from '@/lib/types'
 import { useTodoStore } from '@/stores/todo-store'
+import { useQuestStore } from '@/stores/quest-store'
 import { format, addDays } from 'date-fns'
 import {
   DndContext,
@@ -94,7 +94,7 @@ export default function TodoList({
   const intervalsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set())
   const unmountedRef = useRef(false)
   
-  const supabase = useMemo(() => createClient(), [])
+  const quests = useQuestStore(s => s.quests)
   const dndContextId = useId()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -117,23 +117,14 @@ export default function TodoList({
     prevIdsRef.current = key
     let ignore = false
     async function fetchQuestLinks() {
-      const { data } = await supabase
-        .from('quest_tasks')
-        .select('task_id, quests(icon, name, status)')
-        .in('task_id', ids)
-      if (ignore || !data) return
-      const map: Record<string, QuestLink[]> = {}
-      for (const row of data as { task_id: string; quests: QuestLink | QuestLink[] | null }[]) {
-        const q = Array.isArray(row.quests) ? row.quests[0] : row.quests
-        if (!q) continue
-        if (!map[row.task_id]) map[row.task_id] = []
-        map[row.task_id].push(q)
-      }
+      const res = await fetch(`/api/todos/quest-links?ids=${ids.join(',')}`)
+      if (ignore || !res.ok) return
+      const map: Record<string, QuestLink[]> = await res.json()
       setQuestLinkMap(map)
     }
     fetchQuestLinks()
     return () => { ignore = true }
-  }, [localTodos, supabase])
+  }, [localTodos])
 
   const startAiMetadataStream = useCallback((taskId: string) => {
     triggerAiMetadata(taskId, {
@@ -165,11 +156,9 @@ export default function TodoList({
       if (unmountedRef.current) { clearInterval(iv); return }
       attempts++
       if (attempts > 20) { clearInterval(iv); intervalsRef.current.delete(iv); return }
-      const { data } = await supabase
-        .from('todos')
-        .select('completion_nudge')
-        .eq('id', todoId)
-        .single()
+      const res = await fetch(`/api/todos/${todoId}`)
+      if (!res.ok) return
+      const data = await res.json()
       if (data?.completion_nudge) {
         clearInterval(iv)
         intervalsRef.current.delete(iv)
@@ -180,7 +169,7 @@ export default function TodoList({
       }
     }, 1000)
     intervalsRef.current.add(iv)
-  }, [supabase])
+  }, [])
 
   function openDetail(todo: Todo) {
     setSelectedTodo(todo)
@@ -266,16 +255,9 @@ export default function TodoList({
       }
 
       // Quest nudge: check if task is linked to any quests
-      const { data: links } = await supabase
-        .from('quest_tasks')
-        .select('quest_id, quests(name, icon)')
-        .eq('task_id', todo.id)
-      if (links && links.length > 0) {
-        const quests = links.map((l: { quests: { name: string; icon: string } | { name: string; icon: string }[] | null }) => {
-          const q = Array.isArray(l.quests) ? l.quests[0] : l.quests
-          return q
-        }).filter(Boolean) as { name: string; icon: string }[]
-        const questLabel = quests.map(q => q.name).join(' and ')
+      const linkedQuestLinks = questLinkMap[todo.id]
+      if (linkedQuestLinks && linkedQuestLinks.length > 0) {
+        const questLabel = linkedQuestLinks.map(q => q.name).join(' and ')
         toast(`That moves you closer to ${questLabel}.`, {
           duration: 3500,
           style: {
@@ -283,6 +265,22 @@ export default function TodoList({
             fontWeight: '500',
           },
         })
+      } else {
+        // Fall back to API if not in local map (e.g. first render)
+        const res = await fetch(`/api/todos/${todo.id}/quests`)
+        if (res.ok) {
+          const questIds: string[] = await res.json()
+          if (questIds.length > 0) {
+            const linkedQuests = quests.filter(q => questIds.includes(q.id))
+            if (linkedQuests.length > 0) {
+              const questLabel = linkedQuests.map(q => q.name).join(' and ')
+              toast(`That moves you closer to ${questLabel}.`, {
+                duration: 3500,
+                style: { color: 'var(--color-primary-dark)', fontWeight: '500' },
+              })
+            }
+          }
+        }
       }
 
       if (todo.recurrence) {

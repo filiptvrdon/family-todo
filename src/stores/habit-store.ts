@@ -1,9 +1,7 @@
 import { create } from 'zustand'
-import { createClient } from '@/lib/supabase/client'
-import * as habitService from '@/services/habit-service'
 import { Habit, HabitTracking } from '@/lib/types'
 
-const supabase = createClient()
+const supabase = undefined  // removed — was Supabase client
 
 /** Returns today's date as YYYY-MM-DD in local time */
 export function todayDate(): string {
@@ -14,13 +12,12 @@ export function todayDate(): string {
 /** Returns the Monday of the current week as YYYY-MM-DD */
 export function weekStartDate(): string {
   const d = new Date()
-  const day = d.getDay() // 0 = Sun
+  const day = d.getDay()
   const diff = (day === 0 ? -6 : 1 - day)
   d.setDate(d.getDate() + diff)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-/** All dates from weekStart through today (YYYY-MM-DD) */
 function weekDates(): string[] {
   const start = new Date(weekStartDate())
   const today = new Date(todayDate())
@@ -35,27 +32,27 @@ function weekDates(): string[] {
 
 interface HabitStore {
   myHabits: Habit[]
-  tracking: HabitTracking[]        // entries for current day (daily) + current week (weekly)
+  tracking: HabitTracking[]
   loading: boolean
-
-  // Queries
   todayEntries: (habitId: string) => HabitTracking[]
   weekEntries: (habitId: string) => HabitTracking[]
   periodTotal: (habitId: string) => number
-
-  // Habit mutations
   addHabit: (habit: Omit<Habit, 'id' | 'created_at'>) => Promise<void>
   updateHabit: (id: string, patch: Partial<Omit<Habit, 'id' | 'created_at' | 'user_id'>>) => Promise<void>
   deleteHabit: (id: string) => Promise<void>
-
-  // Tracking mutations
   logEntry: (entry: Omit<HabitTracking, 'id' | 'logged_at'>) => Promise<void>
   removeLastEntry: (habitId: string) => Promise<void>
   removeEntry: (entryId: string) => Promise<void>
-
-  // Realtime lifecycle
   subscribe: (userId: string) => () => void
 }
+
+async function apiFetch(path: string, options?: RequestInit) {
+  const res = await fetch(path, options)
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+void supabase
 
 export const useHabitStore = create<HabitStore>((set, get) => ({
   myHabits: [],
@@ -89,7 +86,11 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const optimistic: Habit = { ...habit, id: tempId, created_at: new Date().toISOString() }
     set(s => ({ myHabits: [...s.myHabits, optimistic] }))
     try {
-      const created = await habitService.createHabit(supabase, habit)
+      const created = await apiFetch('/api/habits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(habit),
+      })
       set(s => ({ myHabits: s.myHabits.map(h => h.id === tempId ? created : h) }))
     } catch (err) {
       console.error('Failed to add habit:', err)
@@ -101,7 +102,11 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const prev = get().myHabits.find(h => h.id === id)
     set(s => ({ myHabits: s.myHabits.map(h => h.id === id ? { ...h, ...patch } : h) }))
     try {
-      await habitService.updateHabit(supabase, id, patch)
+      await apiFetch(`/api/habits/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
     } catch (err) {
       console.error('Failed to update habit:', err)
       if (prev) set(s => ({ myHabits: s.myHabits.map(h => h.id === id ? prev : h) }))
@@ -112,7 +117,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const prev = get().myHabits.find(h => h.id === id)
     set(s => ({ myHabits: s.myHabits.filter(h => h.id !== id) }))
     try {
-      await habitService.deleteHabit(supabase, id)
+      await apiFetch(`/api/habits/${id}`, { method: 'DELETE' })
     } catch (err) {
       console.error('Failed to delete habit:', err)
       if (prev) set(s => ({ myHabits: [...s.myHabits, prev] }))
@@ -124,7 +129,11 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const optimistic: HabitTracking = { ...entry, id: tempId, logged_at: new Date().toISOString() }
     set(s => ({ tracking: [...s.tracking, optimistic] }))
     try {
-      const created = await habitService.logEntry(supabase, entry)
+      const created = await apiFetch('/api/habit-tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+      })
       set(s => ({ tracking: s.tracking.map(e => e.id === tempId ? created : e) }))
     } catch (err) {
       console.error('Failed to log habit entry:', err)
@@ -141,7 +150,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     if (!last) return
     set(s => ({ tracking: s.tracking.filter(e => e.id !== last.id) }))
     try {
-      await habitService.deleteEntry(supabase, last.id)
+      await apiFetch(`/api/habit-tracking/${last.id}`, { method: 'DELETE' })
     } catch (err) {
       console.error('Failed to remove habit entry:', err)
       set(s => ({ tracking: [...s.tracking, last] }))
@@ -152,55 +161,34 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const entry = get().tracking.find(e => e.id === entryId)
     set(s => ({ tracking: s.tracking.filter(e => e.id !== entryId) }))
     try {
-      await habitService.deleteEntry(supabase, entryId)
+      await apiFetch(`/api/habit-tracking/${entryId}`, { method: 'DELETE' })
     } catch (err) {
       console.error('Failed to remove habit entry:', err)
       if (entry) set(s => ({ tracking: [...s.tracking, entry] }))
     }
   },
 
-  subscribe: (userId) => {
+  subscribe: (_userId) => {
     const refetch = async () => {
-      const dates = weekDates()
-      const [habits, tracking] = await Promise.all([
-        habitService.fetchHabits(supabase, userId),
-        habitService.fetchTrackingForPeriod(supabase, userId, dates),
-      ])
-      set({ myHabits: habits, tracking, loading: false })
+      try {
+        const dates = weekDates()
+        const [habits, tracking] = await Promise.all([
+          apiFetch('/api/habits'),
+          apiFetch(`/api/habit-tracking?dates=${dates.join(',')}`),
+        ])
+        set({ myHabits: habits, tracking, loading: false })
+      } catch (err) {
+        console.error('[habit-store] refetch failed:', err)
+        set({ loading: false })
+      }
     }
 
-    const channel = supabase
-      .channel('habits-all')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'habits', filter: `user_id=eq.${userId}` },
-        ({ eventType, new: record, old }) => {
-          set(s => {
-            const habits = s.myHabits
-            if (eventType === 'INSERT') return { myHabits: [...habits, record as Habit] }
-            if (eventType === 'UPDATE') return { myHabits: habits.map(h => h.id === record.id ? { ...h, ...(record as Habit) } : h) }
-            if (eventType === 'DELETE') return { myHabits: habits.filter(h => h.id !== old.id) }
-            return s
-          })
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'habit_tracking', filter: `user_id=eq.${userId}` },
-        ({ eventType, new: record, old }) => {
-          set(s => {
-            const tracking = s.tracking
-            if (eventType === 'INSERT') return { tracking: [...tracking, record as HabitTracking] }
-            if (eventType === 'UPDATE') return { tracking: tracking.map(e => e.id === record.id ? { ...e, ...(record as HabitTracking) } : e) }
-            if (eventType === 'DELETE') return { tracking: tracking.filter(e => e.id !== old.id) }
-            return s
-          })
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') refetch()
-      })
+    refetch()
 
-    return () => { supabase.removeChannel(channel) }
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) refetch()
+    }, 5000)
+
+    return () => clearInterval(interval)
   },
 }))

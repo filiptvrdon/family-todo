@@ -6,8 +6,6 @@ import { Drawer } from '@base-ui/react'
 import { toast } from 'sonner'
 import { Todo, Quest } from '@/lib/types'
 import { triggerAiMetadata } from '@/lib/ai-metadata'
-import { createClient } from '@/lib/supabase/client'
-import { fetchTodoById } from '@/services/todo-service'
 import { useTodoStore } from '@/stores/todo-store'
 import { useQuestStore } from '@/stores/quest-store'
 import { QuestIcon } from '@/lib/questIcons'
@@ -52,7 +50,6 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
   const [isSaving, setIsSaving] = useState(false)
   const [isUnlinking, setIsUnlinking] = useState(false)
   const quests = useQuestStore(s => s.quests)
-  const supabase = useMemo(() => createClient(), [])
   const placeholder = useMemo(() => getRandomWhyQuestion(), [])
 
   useEffect(() => {
@@ -61,10 +58,11 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
 
     async function loadQuests() {
       const active = quests.filter(q => q.status === 'active' && q.user_id === todo.user_id)
-      const { data: links } = await supabase.from('quest_tasks').select('quest_id').eq('task_id', todo.id)
+      const res = await fetch(`/api/todos/${todo.id}/quests`)
+      const questIds: string[] = res.ok ? await res.json() : []
       if (ignore) return
       setActiveQuests(active)
-      const ids = new Set((links ?? []).map((l: { quest_id: string }) => l.quest_id))
+      const ids = new Set(questIds)
       setLinkedQuestIds(ids)
       setInitialLinkedQuestIds(new Set(ids))
     }
@@ -73,7 +71,7 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
     return () => { ignore = true }
     // We only want to load once when the panel opens or if the todo changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, isOwner, todo.id, todo.user_id, supabase])
+  }, [open, isOwner, todo.id, todo.user_id])
 
   useEffect(() => {
     if (!open || !todo.parent_id) {
@@ -92,15 +90,15 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
 
       // Fetch from API
       try {
-        const p = await fetchTodoById(supabase, todo.parent_id!)
-        setParentTodo(p)
+        const res = await fetch(`/api/todos/${todo.parent_id}`)
+        setParentTodo(res.ok ? await res.json() : null)
       } catch (err) {
         console.error('Failed to load parent todo:', err)
       }
     }
 
     loadParent()
-  }, [open, todo.parent_id, supabase])
+  }, [open, todo.parent_id])
 
   function toggleQuestLink(questId: string) {
     setLinkedQuestIds(prev => {

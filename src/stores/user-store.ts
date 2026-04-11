@@ -1,18 +1,18 @@
 import { create } from 'zustand'
-import { createClient } from '@/lib/supabase/client'
-import * as userService from '@/services/user-service'
 import { User } from '@/lib/types'
-
-const supabase = createClient()
 
 interface UserStore {
   user: User | null
   partner: User | null
   loading: boolean
-  // Mutations
   updateUser: (id: string, patch: Partial<User>) => Promise<void>
-  // Realtime lifecycle
   subscribe: (userId: string, partnerId: string | null) => () => void
+}
+
+async function apiFetch(path: string, options?: RequestInit) {
+  const res = await fetch(path, options)
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
 }
 
 export const useUserStore = create<UserStore>((set, get) => ({
@@ -22,62 +22,42 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
   updateUser: async (id, patch) => {
     const isMe = get().user?.id === id
+    const key = isMe ? 'user' : 'partner'
     const prev = isMe ? get().user : get().partner
 
-    set(s => {
-      const key = isMe ? 'user' : 'partner'
-      const current = s[key]
-      return {
-        [key]: current ? { ...current, ...patch } : null
-      }
-    })
+    set(s => ({
+      [key]: s[key as keyof typeof s] ? { ...(s[key as keyof typeof s] as User), ...patch } : null
+    }))
 
     try {
-      await userService.updateUser(supabase, id, patch)
+      await apiFetch('/api/users/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
     } catch (err) {
       console.error('Failed to update user:', err)
-      const key = isMe ? 'user' : 'partner'
       set({ [key]: prev })
     }
   },
 
-  subscribe: (userId, partnerId) => {
+  subscribe: (_userId, _partnerId) => {
     const refetch = async () => {
-      const [user, partner] = await Promise.all([
-        userService.fetchUser(supabase, userId),
-        partnerId ? userService.fetchPartner(supabase, partnerId) : Promise.resolve(null),
-      ])
-      set({ user, partner, loading: false })
-    }
-
-    const channel = supabase
-      .channel('users-all')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
-        ({ new: record }) => {
-          set({ user: record as User })
-        }
-      )
-
-    if (partnerId) {
-      channel.on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${partnerId}` },
-        ({ new: record }) => {
-          set({ partner: record as User })
-        }
-      )
-    }
-
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        refetch()
+      try {
+        const { user, partner } = await apiFetch('/api/users/me')
+        set({ user, partner, loading: false })
+      } catch (err) {
+        console.error('[user-store] refetch failed:', err)
+        set({ loading: false })
       }
-    })
-
-    return () => {
-      supabase.removeChannel(channel)
     }
+
+    refetch()
+
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) refetch()
+    }, 5000)
+
+    return () => clearInterval(interval)
   },
 }))

@@ -1,21 +1,21 @@
 import { create } from 'zustand'
-import { createClient } from '@/lib/supabase/client'
-import * as questService from '@/services/quest-service'
 import { Quest } from '@/lib/types'
-
-const supabase = createClient()
 
 interface QuestStore {
   quests: Quest[]
   loading: boolean
-  // Mutations
   addQuest: (quest: Omit<Quest, 'id' | 'created_at' | 'momentum' | 'day_start_momentum' | 'last_momentum_increase' | 'last_momentum_decay' | 'last_momentum_nudge' | 'motivation_nudge'>) => Promise<void>
   updateQuest: (id: string, patch: Partial<Quest>) => Promise<void>
   deleteQuest: (id: string) => Promise<void>
   linkTask: (questId: string, taskId: string) => Promise<void>
   unlinkTask: (questId: string, taskId: string) => Promise<void>
-  // Realtime lifecycle
   subscribe: (userId: string) => () => void
+}
+
+async function apiFetch(path: string, options?: RequestInit) {
+  const res = await fetch(path, options)
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
 }
 
 export const useQuestStore = create<QuestStore>((set, get) => ({
@@ -24,9 +24,9 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
 
   addQuest: async (quest) => {
     const tempId = `temp-${Date.now()}`
-    const optimistic = { 
-      ...quest, 
-      id: tempId, 
+    const optimistic = {
+      ...quest,
+      id: tempId,
       created_at: new Date().toISOString(),
       momentum: 0,
       day_start_momentum: 0,
@@ -34,101 +34,75 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
       last_momentum_decay: null,
       last_momentum_nudge: null,
       motivation_nudge: null,
-      status: 'active',
-      pinned: false
     } as Quest
-    
     set(s => ({ quests: [optimistic, ...s.quests] }))
-    
+
     try {
-      const created = await questService.createQuest(supabase, quest)
-      set(s => ({ 
-        quests: s.quests.map(q => q.id === tempId ? created : q) 
-      }))
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      console.error('Failed to add quest:', message)
-      set(s => ({ 
-        quests: s.quests.filter(q => q.id !== tempId) 
-      }))
+      const created = await apiFetch('/api/quests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quest),
+      })
+      set(s => ({ quests: s.quests.map(q => q.id === tempId ? created : q) }))
+    } catch (err) {
+      console.error('Failed to add quest:', err)
+      set(s => ({ quests: s.quests.filter(q => q.id !== tempId) }))
     }
   },
 
   updateQuest: async (id, patch) => {
     const prev = get().quests.find(q => q.id === id)
-    set(s => ({
-      quests: s.quests.map(q => q.id === id ? { ...q, ...patch } : q)
-    }))
+    set(s => ({ quests: s.quests.map(q => q.id === id ? { ...q, ...patch } : q) }))
 
     try {
-      await questService.updateQuest(supabase, id, patch)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      console.error('Failed to update quest:', message)
-      if (prev) {
-        set(s => ({
-          quests: s.quests.map(q => q.id === id ? prev : q)
-        }))
-      }
+      await apiFetch(`/api/quests/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+    } catch (err) {
+      console.error('Failed to update quest:', err)
+      if (prev) set(s => ({ quests: s.quests.map(q => q.id === id ? prev : q) }))
     }
   },
 
   deleteQuest: async (id) => {
     const prev = get().quests.find(q => q.id === id)
-    set(s => ({
-      quests: s.quests.filter(q => q.id !== id)
-    }))
+    set(s => ({ quests: s.quests.filter(q => q.id !== id) }))
 
     try {
-      await questService.deleteQuest(supabase, id)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      console.error('Failed to delete quest:', message)
-      if (prev) {
-        set(s => ({
-          quests: [...s.quests, prev]
-        }))
-      }
+      await apiFetch(`/api/quests/${id}`, { method: 'DELETE' })
+    } catch (err) {
+      console.error('Failed to delete quest:', err)
+      if (prev) set(s => ({ quests: [...s.quests, prev] }))
     }
   },
 
   linkTask: async (questId, taskId) => {
-    await questService.linkTask(supabase, questId, taskId)
+    await apiFetch(`/api/quests/${questId}/tasks/${taskId}`, { method: 'PUT' })
   },
 
   unlinkTask: async (questId, taskId) => {
-    await questService.unlinkTask(supabase, questId, taskId)
+    await apiFetch(`/api/quests/${questId}/tasks/${taskId}`, { method: 'DELETE' })
   },
 
-  subscribe: (userId) => {
+  subscribe: (_userId) => {
     const refetch = async () => {
-      const quests = await questService.fetchQuests(supabase, userId)
-      set({ quests, loading: false })
+      try {
+        const quests = await apiFetch('/api/quests')
+        set({ quests, loading: false })
+      } catch (err) {
+        console.error('[quest-store] refetch failed:', err)
+        set({ loading: false })
+      }
     }
 
-    const channel = supabase
-      .channel('quests-all')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'quests', filter: `user_id=eq.${userId}` },
-        ({ eventType, new: record, old }) => {
-          set(s => {
-            const quests = s.quests
-            if (eventType === 'INSERT') return { quests: [record as Quest, ...quests] }
-            if (eventType === 'UPDATE') return { quests: quests.map(q => q.id === record.id ? { ...q, ...(record as Quest) } : q) }
-            if (eventType === 'DELETE') return { quests: quests.filter(q => q.id !== old.id) }
-            return s
-          })
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          refetch()
-        }
-      })
+    refetch()
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) refetch()
+    }, 5000)
+
+    return () => clearInterval(interval)
   },
 }))

@@ -1,150 +1,93 @@
-import { SupabaseClient } from '@supabase/supabase-js'
+import sql from '@/lib/db'
 import { Todo } from '@/lib/types'
 
-interface RawTodo extends Record<string, unknown> {
-  subtasks_count?: number | { count: number } | { count: number }[]
+// Strip non-column fields before sending to DB
+function cleanTodo(data: Record<string, unknown>): Record<string, unknown> {
+  const { subtasks_count, ...rest } = data
+  void subtasks_count
+  return Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined))
 }
 
-export async function fetchTodos(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<Todo[]> {
-  const { data, error } = await supabase
-    .from('todos')
-    .select('*, subtasks_count:todos!parent_id(count)')
-    .eq('user_id', userId)
-    .order('index')
-  if (error) throw error
-  
-  return (data || []).map((todo: RawTodo) => {
-    let count = 0
-    if (typeof todo.subtasks_count === 'number') {
-      count = todo.subtasks_count
-    } else if (Array.isArray(todo.subtasks_count)) {
-      count = (todo.subtasks_count[0] as { count: number })?.count ?? 0
-    } else if (todo.subtasks_count && typeof todo.subtasks_count === 'object') {
-      count = (todo.subtasks_count as { count: number }).count ?? 0
-    }
-
-    return {
-      ...todo,
-      subtasks_count: count
-    } as Todo
-  })
+function parseTodo(row: Record<string, unknown>): Todo {
+  return { ...row, subtasks_count: Number(row.subtasks_count ?? 0) } as Todo
 }
 
-export async function fetchTodoById(
-  supabase: SupabaseClient,
-  id: string
-): Promise<Todo | null> {
-  const { data, error } = await supabase
-    .from('todos')
-    .select('*, subtasks_count:todos!parent_id(count)')
-    .eq('id', id)
-    .single()
-  if (error) {
-    if (error.code === 'PGRST116') return null // Not found
-    throw error
+export async function fetchTodos(userId: string): Promise<Todo[]> {
+  const rows = await sql<Record<string, unknown>[]>`
+    SELECT t.*,
+      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id)::int AS subtasks_count
+    FROM todos t
+    WHERE t.user_id = ${userId}
+    ORDER BY t.index
+  `
+  return rows.map(parseTodo)
+}
+
+export async function fetchTopLevelTodos(userId: string): Promise<Todo[]> {
+  const rows = await sql<Record<string, unknown>[]>`
+    SELECT t.*,
+      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id)::int AS subtasks_count
+    FROM todos t
+    WHERE t.user_id = ${userId}
+      AND t.parent_id IS NULL
+    ORDER BY t.index
+  `
+  return rows.map(parseTodo)
+}
+
+export async function fetchTodoById(id: string): Promise<Todo | null> {
+  const rows = await sql<Record<string, unknown>[]>`
+    SELECT t.*,
+      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id)::int AS subtasks_count
+    FROM todos t
+    WHERE t.id = ${id}
+  `
+  return rows[0] ? parseTodo(rows[0]) : null
+}
+
+export async function fetchSubtasks(parentId: string): Promise<Todo[]> {
+  const rows = await sql<Record<string, unknown>[]>`
+    SELECT t.*,
+      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id)::int AS subtasks_count
+    FROM todos t
+    WHERE t.parent_id = ${parentId}
+    ORDER BY t.index
+  `
+  return rows.map(parseTodo)
+}
+
+export async function createTodo(todo: Omit<Todo, 'id' | 'created_at'>): Promise<Todo> {
+  const data = cleanTodo(todo as Record<string, unknown>)
+  const [row] = await sql<Record<string, unknown>[]>`
+    INSERT INTO todos ${sql(data)} RETURNING *
+  `
+  return parseTodo({ ...row, subtasks_count: 0 })
+}
+
+export async function updateTodo(id: string, patch: Partial<Todo>): Promise<Todo> {
+  const data = cleanTodo(patch as Record<string, unknown>)
+  if (Object.keys(data).length === 0) {
+    const existing = await fetchTodoById(id)
+    if (!existing) throw new Error('Todo not found')
+    return existing
   }
-  
-  const todo = data as RawTodo
-  let count = 0
-  if (typeof todo.subtasks_count === 'number') {
-    count = todo.subtasks_count
-  } else if (Array.isArray(todo.subtasks_count)) {
-    count = (todo.subtasks_count[0] as { count: number })?.count ?? 0
-  } else if (todo.subtasks_count && typeof todo.subtasks_count === 'object') {
-    count = (todo.subtasks_count as { count: number }).count ?? 0
-  }
-
-  return {
-    ...todo,
-    subtasks_count: count
-  } as Todo
+  const [row] = await sql<Record<string, unknown>[]>`
+    UPDATE todos SET ${sql(data)} WHERE id = ${id} RETURNING *
+  `
+  return parseTodo({ ...row, subtasks_count: 0 })
 }
 
-export async function fetchSubtasks(
-  supabase: SupabaseClient,
-  parentId: string
-): Promise<Todo[]> {
-  const { data, error } = await supabase
-    .from('todos')
-    .select('*, subtasks_count:todos!parent_id(count)')
-    .eq('parent_id', parentId)
-    .order('index')
-  if (error) throw error
-  
-  return (data || []).map((todo: RawTodo) => {
-    let count = 0
-    if (typeof todo.subtasks_count === 'number') {
-      count = todo.subtasks_count
-    } else if (Array.isArray(todo.subtasks_count)) {
-      count = (todo.subtasks_count[0] as { count: number })?.count ?? 0
-    } else if (todo.subtasks_count && typeof todo.subtasks_count === 'object') {
-      count = (todo.subtasks_count as { count: number }).count ?? 0
-    }
-
-    return {
-      ...todo,
-      subtasks_count: count
-    } as Todo
-  })
+export async function deleteTodo(id: string): Promise<void> {
+  await sql`DELETE FROM todos WHERE id = ${id}`
 }
 
-export async function createTodo(
-  supabase: SupabaseClient,
-  todo: Omit<Todo, 'id' | 'created_at'>
-): Promise<Todo> {
-  const insertData = { ...todo } as Record<string, unknown>
-  delete insertData.subtasks_count
-  const { data, error } = await supabase
-    .from('todos')
-    .insert([insertData])
-    .select()
-    .single()
-  if (error) throw error
-  return data
-}
-
-export async function updateTodo(
-  supabase: SupabaseClient,
-  id: string,
-  patch: Partial<Todo>
-): Promise<Todo> {
-  const updateData = { ...patch } as Record<string, unknown>
-  delete updateData.subtasks_count
-  const { data, error } = await supabase
-    .from('todos')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single()
-  if (error) throw error
-  return data
-}
-
-export async function deleteTodo(
-  supabase: SupabaseClient,
-  id: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('todos')
-    .delete()
-    .eq('id', id)
-  if (error) throw error
-}
-
-export async function toggleTodo(
-  supabase: SupabaseClient,
-  id: string,
-  completed: boolean
-): Promise<Todo> {
-  const { data, error } = await supabase
-    .from('todos')
-    .update({ completed, completed_at: completed ? new Date().toISOString() : null })
-    .eq('id', id)
-    .select()
-    .single()
-  if (error) throw error
-  return data
+export async function toggleTodo(id: string, completed: boolean): Promise<Todo> {
+  const completedAt = completed ? new Date().toISOString() : null
+  const [row] = await sql<Record<string, unknown>[]>`
+    UPDATE todos
+    SET completed = ${completed}, completed_at = ${completedAt}
+    WHERE id = ${id}
+    RETURNING *
+  `
+  return parseTodo({ ...row, subtasks_count: 0 })
 }

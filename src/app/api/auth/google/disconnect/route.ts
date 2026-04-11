@@ -1,22 +1,12 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/get-user'
+import sql from '@/lib/db'
 
 export async function POST() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const { error } = await supabase
-    .from('users')
-    .update({ google_refresh_token: null })
-    .eq('id', user.id)
-
-  if (error) {
-    return NextResponse.json({ error: 'Failed to disconnect' }, { status: 500 })
-  }
+  await sql`UPDATE users SET google_refresh_token = null WHERE id = ${user.id}`
 
   return NextResponse.json({ ok: true })
 }

@@ -5,9 +5,7 @@ import { X, ArrowLeft, Pin, PinOff, Plus, CheckCircle2, Pencil } from 'lucide-re
 import { Drawer } from '@base-ui/react'
 import { toast } from 'sonner'
 import { Quest } from '@/lib/types'
-import { createClient } from '@/lib/supabase/client'
 import { useQuestStore } from '@/stores/quest-store'
-import * as questService from '@/services/quest-service'
 import { QUEST_ICONS, QuestIcon } from '@/lib/questIcons'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -62,8 +60,6 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
   const [showCreateIconPicker, setShowCreateIconPicker] = useState(false)
   const [showEditIconPicker, setShowEditIconPicker] = useState(false)
 
-  const supabase = createClient()
-
   useEffect(() => {
     if (open && initialQuestId && quests.length > 0) {
       const quest = quests.find(q => q.id === initialQuestId)
@@ -77,7 +73,8 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
     setView('detail')
     setLoadingTasks(true)
     try {
-      const tasks = await questService.fetchLinkedTasks(supabase, quest.id)
+      const res = await fetch(`/api/quests/${quest.id}/tasks`)
+      const tasks = res.ok ? await res.json() : []
       setLinkedTasks(tasks as LinkedTask[])
     } catch (err) {
       console.error('Error fetching linked tasks:', err)
@@ -164,7 +161,7 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
 
   async function unlinkTask(taskId: string) {
     if (!selectedQuest) return
-    await questService.unlinkTask(supabase, selectedQuest.id, taskId)
+    await fetch(`/api/quests/${selectedQuest.id}/tasks/${taskId}`, { method: 'DELETE' })
     setLinkedTasks(prev => prev.filter(t => t.id !== taskId))
   }
 

@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/get-user'
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
+  const user = await getAuthUser()
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
@@ -21,8 +19,8 @@ export async function GET(request: Request) {
     response_type: 'code',
     scope: SCOPES.join(' '),
     access_type: 'offline',
-    prompt: 'consent',          // ensures refresh_token is always returned
-    state: user.id,             // passed through to callback for verification
+    prompt: 'consent',
+    state: user.id,
   })
 
   return NextResponse.redirect(`${GOOGLE_AUTH_URL}?${params}`)

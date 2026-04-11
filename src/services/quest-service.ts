@@ -1,107 +1,74 @@
-import { SupabaseClient } from '@supabase/supabase-js'
+import sql from '@/lib/db'
 import { Quest } from '@/lib/types'
 
-export async function fetchQuests(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<Quest[]> {
-  const { data, error } = await supabase
-    .from('quests')
-    .select('*')
-    .eq('user_id', userId)
-    .order('pinned', { ascending: false })
-    .order('created_at', { ascending: false })
-  if (error) throw error
-  return data || []
+export async function fetchQuests(userId: string): Promise<Quest[]> {
+  return sql<Quest[]>`
+    SELECT * FROM quests
+    WHERE user_id = ${userId}
+    ORDER BY pinned DESC, created_at DESC
+  `
 }
 
 export async function createQuest(
-  supabase: SupabaseClient,
   quest: Omit<Quest, 'id' | 'created_at' | 'momentum' | 'day_start_momentum' | 'last_momentum_increase' | 'last_momentum_decay' | 'last_momentum_nudge' | 'motivation_nudge'>
 ): Promise<Quest> {
-  const { data, error } = await supabase
-    .from('quests')
-    .insert([quest])
-    .select()
-    .single()
-  if (error) throw error
-  return data
+  const [row] = await sql<Quest[]>`INSERT INTO quests ${sql(quest as Record<string, unknown>)} RETURNING *`
+  return row
 }
 
-export async function updateQuest(
-  supabase: SupabaseClient,
-  id: string,
-  patch: Partial<Quest>
-): Promise<Quest> {
-  const { data, error } = await supabase
-    .from('quests')
-    .update(patch)
-    .eq('id', id)
-    .select()
-    .single()
-  if (error) throw error
-  return data
+export async function updateQuest(id: string, patch: Partial<Quest>): Promise<Quest> {
+  const { id: _, created_at, ...data } = patch as Record<string, unknown>
+  void id; void created_at
+  const filtered = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined))
+  const [row] = await sql<Quest[]>`UPDATE quests SET ${sql(filtered)} WHERE id = ${id} RETURNING *`
+  return row
 }
 
-export async function deleteQuest(
-  supabase: SupabaseClient,
-  id: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('quests')
-    .delete()
-    .eq('id', id)
-  if (error) throw error
+export async function deleteQuest(id: string): Promise<void> {
+  await sql`DELETE FROM quests WHERE id = ${id}`
 }
 
-export async function fetchLinkedTasks(
-  supabase: SupabaseClient,
-  questId: string
-) {
-  const { data, error } = await supabase
-    .from('quest_tasks')
-    .select('task_id, todos(id, title, completed)')
-    .eq('quest_id', questId)
-  if (error) throw error
-  
-  return (data ?? []).map((row) => {
-    const t = Array.isArray(row.todos) ? row.todos[0] : row.todos
-    return t
-  }).filter(Boolean)
+export async function fetchLinkedTasks(questId: string): Promise<{ id: string; title: string; completed: boolean }[]> {
+  return sql<{ id: string; title: string; completed: boolean }[]>`
+    SELECT t.id, t.title, t.completed
+    FROM quest_tasks qt
+    JOIN todos t ON t.id = qt.task_id
+    WHERE qt.quest_id = ${questId}
+  `
 }
 
-export async function fetchQuestsForTask(
-  supabase: SupabaseClient,
-  taskId: string
-): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('quest_tasks')
-    .select('quest_id')
-    .eq('task_id', taskId)
-  if (error) throw error
-  return (data ?? []).map(r => r.quest_id)
+export async function fetchQuestsForTask(taskId: string): Promise<string[]> {
+  const rows = await sql<{ quest_id: string }[]>`
+    SELECT quest_id FROM quest_tasks WHERE task_id = ${taskId}
+  `
+  return rows.map(r => r.quest_id)
 }
 
-export async function linkTask(
-  supabase: SupabaseClient,
-  questId: string,
-  taskId: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('quest_tasks')
-    .upsert([{ quest_id: questId, task_id: taskId }], { onConflict: 'quest_id,task_id' })
-  if (error) throw error
+export async function fetchQuestLinksForTasks(
+  taskIds: string[]
+): Promise<Record<string, { icon: string; name: string; status: string }[]>> {
+  if (!taskIds.length) return {}
+  const rows = await sql<{ task_id: string; icon: string; name: string; status: string }[]>`
+    SELECT qt.task_id, q.icon, q.name, q.status
+    FROM quest_tasks qt
+    JOIN quests q ON q.id = qt.quest_id
+    WHERE qt.task_id = ANY(${taskIds}::uuid[])
+  `
+  const map: Record<string, { icon: string; name: string; status: string }[]> = {}
+  for (const row of rows) {
+    if (!map[row.task_id]) map[row.task_id] = []
+    map[row.task_id].push({ icon: row.icon, name: row.name, status: row.status })
+  }
+  return map
 }
 
-export async function unlinkTask(
-  supabase: SupabaseClient,
-  questId: string,
-  taskId: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('quest_tasks')
-    .delete()
-    .eq('quest_id', questId)
-    .eq('task_id', taskId)
-  if (error) throw error
+export async function linkTask(questId: string, taskId: string): Promise<void> {
+  await sql`
+    INSERT INTO quest_tasks (quest_id, task_id) VALUES (${questId}, ${taskId})
+    ON CONFLICT (quest_id, task_id) DO NOTHING
+  `
+}
+
+export async function unlinkTask(questId: string, taskId: string): Promise<void> {
+  await sql`DELETE FROM quest_tasks WHERE quest_id = ${questId} AND task_id = ${taskId}`
 }

@@ -3,75 +3,38 @@ import { redirect } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
 import { refreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar'
 import { CalendarEvent } from '@/lib/types'
+import { upsertUser, fetchUser } from '@/services/user-service'
+import { fetchTopLevelTodos } from '@/services/todo-service'
+import { fetchCalendarEvents } from '@/services/event-service'
 
 export default async function Home() {
+  // Auth still via Supabase — replaced in Phase 3
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) redirect('/login')
 
-  const { error: upsertError } = await supabase.from('users').upsert(
-    { id: user.id, email: user.email! },
-    { onConflict: 'id', ignoreDuplicates: true }
-  )
+  // Ensure user row exists in local DB
+  await upsertUser(user.id, user.email!)
 
-  if (upsertError) console.error('[user upsert]', upsertError)
-
-  const { data: dbUser, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (userError) console.error('[user select]', userError)
+  const dbUser = await fetchUser(user.id)
   if (!dbUser) redirect('/login?error=user_missing')
 
   let partner = null
-  if (dbUser?.partner_id) {
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', dbUser.partner_id)
-      .single()
-    partner = data
+  if (dbUser.partner_id) {
+    partner = await fetchUser(dbUser.partner_id)
   }
 
-  const { data: myTodosRaw } = await supabase
-    .from('todos')
-    .select('*, subtasks_count:todos(count)')
-    .eq('user_id', user.id)
-    .is('parent_id', null)
-    .order('index', { ascending: true })
+  const [myTodos, partnerTodos, myEvents, partnerEvents] = await Promise.all([
+    fetchTopLevelTodos(user.id),
+    dbUser.partner_id ? fetchTopLevelTodos(dbUser.partner_id) : Promise.resolve([]),
+    fetchCalendarEvents(user.id),
+    dbUser.partner_id ? fetchCalendarEvents(dbUser.partner_id) : Promise.resolve([]),
+  ])
 
-  const myTodos = (myTodosRaw ?? []).map(t => ({
-    ...t,
-    subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
-  }))
-
-  const { data: partnerTodosRaw } = dbUser?.partner_id
-    ? await supabase.from('todos').select('*, subtasks_count:todos(count)').eq('user_id', dbUser.partner_id).is('parent_id', null).order('index', { ascending: true })
-    : { data: [] }
-
-  const partnerTodos = (partnerTodosRaw ?? []).map(t => ({
-    ...t,
-    subtasks_count: (t.subtasks_count as unknown as { count: number }[])?.[0]?.count ?? 0
-  }))
-
-  const { data: myEvents } = await supabase
-    .from('calendar_events')
-    .select('*')
-    .eq('user_id', user.id)
-
-  const { data: partnerEvents } = dbUser?.partner_id
-    ? await supabase.from('calendar_events').select('*').eq('user_id', dbUser.partner_id)
-    : { data: [] }
-
-  // Fetch Google Calendar events if the user has connected their account
   let googleEvents: CalendarEvent[] = []
-  const googleRefreshToken = dbUser.google_refresh_token
-  if (googleRefreshToken) {
+  if (dbUser.google_refresh_token) {
     try {
-      const accessToken = await refreshAccessToken(googleRefreshToken)
+      const accessToken = await refreshAccessToken(dbUser.google_refresh_token)
       const now = new Date()
       const twoWeeksOut = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
       googleEvents = await fetchGoogleCalendarEvents(accessToken, user.id, now, twoWeeksOut)
@@ -84,10 +47,10 @@ export default async function Home() {
     <Dashboard
       user={dbUser}
       partner={partner}
-      myTodos={myTodos ?? []}
-      partnerTodos={partnerTodos ?? []}
-      allEvents={[...(myEvents ?? []), ...(partnerEvents ?? []), ...googleEvents]}
-      googleConnected={!!googleRefreshToken}
+      myTodos={myTodos}
+      partnerTodos={partnerTodos}
+      allEvents={[...myEvents, ...partnerEvents, ...googleEvents]}
+      googleConnected={!!dbUser.google_refresh_token}
     />
   )
 }

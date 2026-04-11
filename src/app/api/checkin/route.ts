@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/get-user'
 import { format, addDays } from 'date-fns'
 import { aiJSON, aiStream, AIMessage } from '@/lib/ai'
 import { maintainMomentum } from '@/lib/momentum'
+import sql from '@/lib/db'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 type OverdueTodo = { id: string; title: string; due_date: string }
@@ -18,7 +19,6 @@ function formatTodoList(todos: PendingTodo[], today: string): string {
     })
     .join('\n')
 }
-
 
 function buildChatSystem(
   userName: string,
@@ -103,10 +103,7 @@ Only include IDs where the user clearly said the task is done or no longer neede
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
@@ -118,7 +115,6 @@ export async function POST(req: NextRequest) {
     const { userName, pendingTodos = [] } = body as { userName: string; pendingTodos: PendingTodo[] }
     const hour = new Date().getHours()
     const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
-
     const hasTodos = pendingTodos.length > 0
     const stream = await aiStream([
       {
@@ -132,7 +128,6 @@ Ask what else is on their mind — new tasks, thoughts, plans, anything.
       },
       { role: 'user', content: 'start' },
     ])
-
     return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
   }
 
@@ -147,64 +142,57 @@ Ask what else is on their mind — new tasks, thoughts, plans, anything.
     }
 
     const systemPrompt = buildChatSystem(userName, overdueTodos, pendingTodos, isFirstUserMessage, today)
-
-    // AI provider requires first message to be from user
     const history: AIMessage[] =
       messages[0]?.role === 'assistant'
         ? [{ role: 'user', content: '.' }, ...messages]
         : messages
 
-    // Fire task extraction in background — don't await
     if (isFirstUserMessage) {
       const brainDump = messages[messages.length - 1]?.content ?? ''
       extractTasks(brainDump, today).then(async (tasks) => {
         if (tasks.length === 0) return
-        await supabase.from('todos').insert(
-          tasks.map((t: { title: string; due_date: string | null; recurrence: string | null }) => ({
-            user_id: user.id,
-            title: t.title,
-            due_date: t.due_date ?? today,
-            recurrence: (['daily', 'weekly', 'monthly'] as const).includes(
-              t.recurrence as 'daily' | 'weekly' | 'monthly',
+        for (const t of tasks as { title: string; due_date: string | null; recurrence: string | null }[]) {
+          await sql`
+            INSERT INTO todos (user_id, title, due_date, recurrence)
+            VALUES (
+              ${user.id},
+              ${t.title},
+              ${t.due_date ?? today},
+              ${(['daily', 'weekly', 'monthly'] as const).includes(t.recurrence as 'daily' | 'weekly' | 'monthly') ? t.recurrence : null}
             )
-              ? t.recurrence
-              : null,
-          })),
-        )
+          `
+        }
       })
     }
 
     const stream = await aiStream([{ role: 'system', content: systemPrompt }, ...history])
-
     return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
   }
 
-  // ── Finalize (apply overdue decisions + momentum maintenance) ───────────────
+  // ── Finalize ─────────────────────────────────────────────────────────────────
   if (action === 'finalize') {
     const { messages, overdueTodos } = body as {
       messages: Message[]
       overdueTodos: OverdueTodo[]
     }
+
     const deleteIds = await extractOverdueDecisions(messages, overdueTodos)
     if (deleteIds.length > 0) {
-      await supabase.from('todos').delete().in('id', deleteIds)
+      await sql`DELETE FROM todos WHERE id = ANY(${deleteIds}::uuid[])`
     }
 
-    // Momentum maintenance & quest nudges
     await maintainMomentum(user.id)
-    
-    // Reset day start momentum for the user now that they've checked in
-    const { data: userData } = await supabase.from('users').select('momentum').eq('id', user.id).single()
-    await supabase.from('users').update({ 
-      day_start_momentum: userData?.momentum || 0 
-    }).eq('id', user.id)
 
-    // Also reset for their active quests
-    const { data: activeQuests } = await supabase.from('quests').select('id, momentum').eq('user_id', user.id).eq('status', 'active')
-    if (activeQuests) {
-      for (const q of activeQuests) {
-        await supabase.from('quests').update({ day_start_momentum: q.momentum }).eq('id', q.id)
-      }
+    const [userData] = await sql<{ momentum: number }[]>`
+      SELECT momentum FROM users WHERE id = ${user.id}
+    `
+    await sql`UPDATE users SET day_start_momentum = ${userData?.momentum ?? 0} WHERE id = ${user.id}`
+
+    const activeQuests = await sql<{ id: string; momentum: number }[]>`
+      SELECT id, momentum FROM quests WHERE user_id = ${user.id} AND status = 'active'
+    `
+    for (const q of activeQuests) {
+      await sql`UPDATE quests SET day_start_momentum = ${q.momentum} WHERE id = ${q.id}`
     }
 
     return NextResponse.json({ ok: true, deleted: deleteIds.length })

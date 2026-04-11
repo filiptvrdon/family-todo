@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/get-user'
+import sql from '@/lib/db'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
@@ -12,14 +13,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/?google_error=${error ?? 'missing_code'}`)
   }
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
+  const user = await getAuthUser()
   if (!user) {
     return NextResponse.redirect(`${origin}/login`)
   }
 
-  // Exchange authorization code for tokens
   const redirectUri = `${origin}/api/auth/google/callback`
   const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
@@ -41,20 +39,10 @@ export async function GET(request: Request) {
   const { refresh_token } = await tokenRes.json()
 
   if (!refresh_token) {
-    // Google only returns a refresh_token on the first consent; if missing, the user already
-    // granted access and we should already have a token stored — just redirect.
     return NextResponse.redirect(`${origin}/`)
   }
 
-  const { error: dbError } = await supabase
-    .from('users')
-    .update({ google_refresh_token: refresh_token })
-    .eq('id', user.id)
-
-  if (dbError) {
-    console.error('[google/callback] failed to store token', dbError)
-    return NextResponse.redirect(`${origin}/?google_error=db_error`)
-  }
+  await sql`UPDATE users SET google_refresh_token = ${refresh_token} WHERE id = ${user.id}`
 
   return NextResponse.redirect(`${origin}/`)
 }

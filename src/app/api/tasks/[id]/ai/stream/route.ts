@@ -1,19 +1,19 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/get-user'
 import { aiStream, AIMessage } from '@/lib/ai'
 import { buildNudgeContext, buildContextString } from '../../_context'
+import sql from '@/lib/db'
 
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthUser()
   if (!user) return new Response('Unauthorized', { status: 401 })
 
   const { id: taskId } = await params
 
-  const ctx = await buildNudgeContext(supabase, taskId, user.id)
+  const ctx = await buildNudgeContext(taskId, user.id)
   if (!ctx) return new Response('', { status: 200 })
 
   const baseMomentum = ctx.energyLevel === 'low' ? 10 : ctx.energyLevel === 'medium' ? 20 : 30
@@ -30,7 +30,6 @@ export async function POST(
     const stream = await aiStream(messages)
     const [clientStream, dbStream] = stream.tee()
 
-    // Persist when stream ends
     ;(async () => {
       try {
         const reader = dbStream.getReader()
@@ -45,11 +44,11 @@ export async function POST(
           const bonusMatch = text.match(/\[BONUS:\s*(\d+)\]/)
           const bonus = bonusMatch ? parseInt(bonusMatch[1]) : 0
           const nudgeText = text.replace(/\[BONUS:\s*\d+\]/g, '').trim()
-          
-          await supabase.from('todos').update({ 
-            motivation_nudge: nudgeText,
-            momentum_contribution: baseMomentum + bonus
-          }).eq('id', taskId)
+          await sql`
+            UPDATE todos
+            SET motivation_nudge = ${nudgeText}, momentum_contribution = ${baseMomentum + bonus}
+            WHERE id = ${taskId}
+          `
         }
       } catch (e) {
         console.error('[ai/stream] failed to persist metadata:', e)

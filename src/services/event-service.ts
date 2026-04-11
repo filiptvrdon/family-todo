@@ -1,55 +1,37 @@
-import { SupabaseClient } from '@supabase/supabase-js'
+import sql from '@/lib/db'
 import { CalendarEvent } from '@/lib/types'
 
 export async function fetchCalendarEvents(
-  supabase: SupabaseClient,
   userId: string,
   partnerId: string | null = null
 ): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase
-    .from('calendar_events')
-    .select('*')
-    .or(`user_id.eq.${userId}${partnerId ? `,user_id.eq.${partnerId}` : ''}`)
-    .order('start_time')
-  if (error) throw error
-  return data || []
+  if (partnerId) {
+    return sql<CalendarEvent[]>`
+      SELECT * FROM calendar_events
+      WHERE user_id = ${userId} OR user_id = ${partnerId}
+      ORDER BY start_time
+    `
+  }
+  return sql<CalendarEvent[]>`
+    SELECT * FROM calendar_events
+    WHERE user_id = ${userId}
+    ORDER BY start_time
+  `
 }
 
-export async function createEvent(
-  supabase: SupabaseClient,
-  event: Omit<CalendarEvent, 'id' | 'created_at'>
-): Promise<CalendarEvent> {
-  const { data, error } = await supabase
-    .from('calendar_events')
-    .insert([event])
-    .select()
-    .single()
-  if (error) throw error
-  return data
+export async function createEvent(event: Omit<CalendarEvent, 'id' | 'created_at'>): Promise<CalendarEvent> {
+  const [row] = await sql<CalendarEvent[]>`INSERT INTO calendar_events ${sql(event as Record<string, unknown>)} RETURNING *`
+  return row
 }
 
-export async function updateEvent(
-  supabase: SupabaseClient,
-  id: string,
-  patch: Partial<CalendarEvent>
-): Promise<CalendarEvent> {
-  const { data, error } = await supabase
-    .from('calendar_events')
-    .update(patch)
-    .eq('id', id)
-    .select()
-    .single()
-  if (error) throw error
-  return data
+export async function updateEvent(id: string, patch: Partial<CalendarEvent>): Promise<CalendarEvent> {
+  const { id: _, created_at, ...data } = patch as Record<string, unknown>
+  void id; void created_at
+  const filtered = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined))
+  const [row] = await sql<CalendarEvent[]>`UPDATE calendar_events SET ${sql(filtered)} WHERE id = ${id} RETURNING *`
+  return row
 }
 
-export async function deleteEvent(
-  supabase: SupabaseClient,
-  id: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('calendar_events')
-    .delete()
-    .eq('id', id)
-  if (error) throw error
+export async function deleteEvent(id: string): Promise<void> {
+  await sql`DELETE FROM calendar_events WHERE id = ${id}`
 }

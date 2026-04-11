@@ -1,29 +1,28 @@
 // Server-only — not imported in client components
-import type { createClient } from '@/lib/supabase/server'
-
-type ServerClient = Awaited<ReturnType<typeof createClient>>
+import sql from '@/lib/db'
 
 export interface NudgeContext {
   taskTitle: string
   taskDescription: string | null
   taskDueDate: string | null
   energyLevel: 'low' | 'medium' | 'high'
-  parents: string[]                  // titles, immediate parent first
+  parents: string[]
   quests: { name: string; icon: string; description: string | null }[]
   firstName: string
   customizationPrompt: string | null
 }
 
 export async function buildNudgeContext(
-  supabase: ServerClient,
   taskId: string,
   userId: string
 ): Promise<NudgeContext | null> {
-  const { data: task } = await supabase
-    .from('todos')
-    .select('id, title, description, due_date, parent_id, user_id, energy_level')
-    .eq('id', taskId)
-    .single()
+  const [task] = await sql<{
+    id: string; title: string; description: string | null; due_date: string | null;
+    parent_id: string | null; user_id: string; energy_level: string
+  }[]>`
+    SELECT id, title, description, due_date, parent_id, user_id, energy_level
+    FROM todos WHERE id = ${taskId}
+  `
 
   if (!task || task.user_id !== userId) return null
 
@@ -31,33 +30,25 @@ export async function buildNudgeContext(
   const parents: string[] = []
   let currentParentId: string | null = task.parent_id
   while (currentParentId) {
-    const { data: parent } = await supabase
-      .from('todos')
-      .select('id, title, parent_id')
-      .eq('id', currentParentId)
-      .single()
+    const [parent] = await sql<{ id: string; title: string; parent_id: string | null }[]>`
+      SELECT id, title, parent_id FROM todos WHERE id = ${currentParentId}
+    `
     if (!parent) break
     parents.push(parent.title)
     currentParentId = parent.parent_id
   }
 
   // Linked quests
-  const { data: questLinks } = await supabase
-    .from('quest_tasks')
-    .select('quests(name, icon, description)')
-    .eq('task_id', taskId)
+  const quests = await sql<{ name: string; icon: string; description: string | null }[]>`
+    SELECT q.name, q.icon, q.description
+    FROM quest_tasks qt
+    JOIN quests q ON q.id = qt.quest_id
+    WHERE qt.task_id = ${taskId}
+  `
 
-  type QuestRow = { quests: { name: string; icon: string; description: string | null } | null }
-  const quests = ((questLinks ?? []) as unknown as QuestRow[])
-    .map(l => l.quests)
-    .filter((q): q is { name: string; icon: string; description: string | null } => q !== null)
-
-  // Owner user data
-  const { data: dbUser } = await supabase
-    .from('users')
-    .select('display_name, customization_prompt')
-    .eq('id', userId)
-    .single()
+  const [dbUser] = await sql<{ display_name: string; customization_prompt: string | null }[]>`
+    SELECT display_name, customization_prompt FROM users WHERE id = ${userId}
+  `
 
   return {
     taskTitle: task.title,
