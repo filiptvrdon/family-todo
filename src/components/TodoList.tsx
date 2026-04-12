@@ -408,12 +408,6 @@ export default function TodoList({
     return parentId ? filtered : [...filtered].sort(sortByDateTime)
   }, [localTodos, parentId, viewDateStr, energyFilter])
 
-  const displayTodos = useMemo(() => {
-    if (todoSections) return filteredTodos
-    if (parentId) return filteredTodos
-    return [...filteredTodos, ...surfacedSubtasks].sort(sortByDateTime)
-  }, [filteredTodos, surfacedSubtasks, todoSections, parentId])
-
   // Subtasks with a due_date surface in the main list under the correct time-bucket
   const surfacedSubtasks = useMemo(() => {
     if (parentId) return []
@@ -469,6 +463,12 @@ export default function TodoList({
       },
     ]
   }, [filteredTodos, parentId, today, tomorrow, thisWeekEnd, nextWeekEnd, surfacedSubtasks])
+
+  const displayTodos = useMemo(() => {
+    if (todoSections) return filteredTodos
+    if (parentId) return filteredTodos
+    return [...filteredTodos, ...surfacedSubtasks].sort(sortByDateTime)
+  }, [filteredTodos, surfacedSubtasks, todoSections, parentId])
 
   const completedCount = localTodos.filter(t => t.completed).length
   const totalCount = localTodos.length

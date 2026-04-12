@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import Providers from "@/components/Providers";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,20 +31,17 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        {/* Inline script runs synchronously before paint to prevent flash of wrong theme.
-            Reads localStorage and applies .dark to <html> before React hydrates. */}
-        <script dangerouslySetInnerHTML={{ __html: `
+      <body className="min-h-full flex flex-col">
+        <Script id="theme-initializer" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
           try {
             if (localStorage.getItem('theme') === 'dark') {
               document.documentElement.classList.add('dark');
             }
           } catch {}
         ` }} />
-      </head>
-      <body className="min-h-full flex flex-col">
         <Providers>
           {children}
           <Toaster position="top-center" duration={2000} />
