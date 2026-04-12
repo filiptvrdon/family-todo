@@ -44,15 +44,18 @@ export async function fetchQuestsForTask(taskId: string): Promise<string[]> {
   return rows.map(r => r.quest_id)
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function fetchQuestLinksForTasks(
   taskIds: string[]
 ): Promise<Record<string, { icon: string; name: string; status: string }[]>> {
-  if (!taskIds.length) return {}
+  const validIds = taskIds.filter(id => UUID_RE.test(id))
+  if (!validIds.length) return {}
   const rows = await sql<{ task_id: string; icon: string; name: string; status: string }[]>`
     SELECT qt.task_id, q.icon, q.name, q.status
     FROM quest_tasks qt
     JOIN quests q ON q.id = qt.quest_id
-    WHERE qt.task_id = ANY(${taskIds}::uuid[])
+    WHERE qt.task_id = ANY(${validIds}::uuid[])
   `
   const map: Record<string, { icon: string; name: string; status: string }[]> = {}
   for (const row of rows) {

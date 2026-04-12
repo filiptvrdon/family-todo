@@ -140,7 +140,8 @@ export default function TodoList({
   }, [])
 
   useEffect(() => {
-    const ids = localTodos.map(t => t.id)
+    // Exclude optimistic temp IDs — they aren't real UUIDs and would cause a 500
+    const ids = localTodos.map(t => t.id).filter(id => !id.startsWith('temp-'))
     const key = ids.join(',')
     if (!ids.length || key === prevIdsRef.current) return
     prevIdsRef.current = key

@@ -59,14 +59,14 @@ interface TodaySectionProps {
 }
 
 function TodaySection({ habit, userId }: TodaySectionProps) {
-  const { logEntry, removeLastEntry, removeEntry, todayEntries, weekEntries, periodTotal } = useHabitStore()
+  const { logEntry, removeLastEntry, removeEntry, dateEntries, weekEntries, periodTotal } = useHabitStore()
   const [freeformVal, setFreeformVal] = useState('')
   const [customTime, setCustomTime] = useState('')
 
   const today = todayDate()
-  const todayEnts = todayEntries(habit.id)
-  const weekEnts = weekEntries(habit.id)
-  const total = periodTotal(habit.id)
+  const todayEnts = dateEntries(habit.id, today)
+  const weekEnts = weekEntries(habit.id, today)
+  const total = periodTotal(habit.id, today)
   const atGoal = habit.goal_value !== null && total >= habit.goal_value
   const booleanDone = habit.value_type === 'boolean' && todayEnts.some(e => e.value === 1)
 
@@ -113,7 +113,7 @@ function TodaySection({ habit, userId }: TodaySectionProps) {
       {habit.value_type === 'boolean' && (
         <div className="flex flex-col gap-3">
           <button
-            onClick={() => booleanDone ? removeLastEntry(habit.id) : log(1)}
+            onClick={() => booleanDone ? removeLastEntry(habit.id, today) : log(1)}
             className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
             style={{
               background: booleanDone ? 'var(--color-completion)' : 'var(--card)',
@@ -162,7 +162,7 @@ function TodaySection({ habit, userId }: TodaySectionProps) {
       {habit.value_type === 'count' && (
         <div className="flex items-center gap-3">
           <button
-            onClick={() => removeLastEntry(habit.id)}
+            onClick={() => removeLastEntry(habit.id, today)}
             disabled={total <= 0}
             className="flex items-center justify-center w-9 h-9 rounded-xl transition disabled:opacity-30"
             style={{ background: 'var(--card)', color: 'var(--color-primary)', border: '1px solid var(--color-primary-light)' }}
