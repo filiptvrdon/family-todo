@@ -121,7 +121,7 @@ export function TodoItems({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap, transition: 'gap 0.15s ease' }}>
           <AnimatePresence initial={false}>
-            {todos.map(todo => renderTodo(todo))}
+            {todos.map(todo => renderTodo(todo, !!(parentTitleMap && parentTitleMap[todo.id])))}
           </AnimatePresence>
         </div>
       )}

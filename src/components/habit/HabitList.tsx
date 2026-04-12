@@ -10,9 +10,10 @@ import HabitForm from './HabitForm'
 
 interface HabitListProps {
   userId: string
+  dayDate: Date
 }
 
-export default function HabitList({ userId }: HabitListProps) {
+export default function HabitList({ userId, dayDate }: HabitListProps) {
   const { myHabits, loading, subscribe, deleteHabit } = useHabitStore()
   const [formOpen, setFormOpen] = useState(false)
   const [editHabit, setEditHabit] = useState<Habit | null>(null)
@@ -103,6 +104,7 @@ export default function HabitList({ userId }: HabitListProps) {
                       habit={habit}
                       userId={userId}
                       onEdit={openEdit}
+                      dayDate={dayDate}
                     />
                   </motion.div>
                 ))}

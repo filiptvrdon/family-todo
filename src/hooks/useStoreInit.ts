@@ -13,13 +13,16 @@ export function useStoreInit({ user }: { user: User | null }) {
   const subscribeUser = useUserStore(s => s.subscribe)
   const subscribeEvents = useEventStore(s => s.subscribe)
 
-  useEffect(() => {
-    if (!user) return
+  const userId = user?.id ?? null
+  const partnerId = user?.partner_id ?? null
 
-    const unsubTodos = subscribeTodos(user.id, user.partner_id)
-    const unsubQuests = subscribeQuests(user.id)
-    const unsubUser = subscribeUser(user.id, user.partner_id)
-    const unsubEvents = subscribeEvents(user.id, user.partner_id)
+  useEffect(() => {
+    if (!userId) return
+
+    const unsubTodos = subscribeTodos(userId, partnerId)
+    const unsubQuests = subscribeQuests(userId)
+    const unsubUser = subscribeUser(userId, partnerId)
+    const unsubEvents = subscribeEvents(userId, partnerId)
 
     return () => {
       unsubTodos()
@@ -27,5 +30,6 @@ export function useStoreInit({ user }: { user: User | null }) {
       unsubUser()
       unsubEvents()
     }
-  }, [user, subscribeTodos, subscribeQuests, subscribeUser, subscribeEvents])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, partnerId])
 }

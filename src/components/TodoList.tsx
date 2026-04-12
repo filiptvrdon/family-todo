@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { QuestLink, Todo } from '@/lib/types'
 import { useTodoStore } from '@/stores/todo-store'
 import { useQuestStore } from '@/stores/quest-store'
-import { format, addDays } from 'date-fns'
+import { format, addDays, isToday } from 'date-fns'
 import {
   DndContext,
   DragEndEvent,
@@ -57,6 +57,7 @@ interface Props {
   hideProgress?: boolean
   isSubtaskMode?: boolean
   hideTopAddInput?: boolean
+  dayDate?: Date
 }
 
 
@@ -69,6 +70,7 @@ export default function TodoList({
   hideProgress = false,
   isSubtaskMode: isSubtaskModeProp,
   hideTopAddInput = false,
+  dayDate,
 }: Props) {
   const { isSubtaskMode: isSubtaskModeHook } = useSubtaskMode()
   const isSubtaskMode = isSubtaskModeProp ?? isSubtaskModeHook
@@ -78,11 +80,38 @@ export default function TodoList({
   const loading = useTodoStore(s => s.loading)
   const storeTodos = isOwner ? storeMyTodos : storePartnerTodos
   
+  const viewDateStr = useMemo(() => dayDate ? format(dayDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), [dayDate])
+  const isActuallyToday = useMemo(() => dayDate ? isToday(dayDate) : true, [dayDate])
+
   const localTodos = useMemo(() => {
-    return storeTodos
-      .filter(t => t.parent_id === parentId)
-      .sort((a, b) => (a.index || '') < (b.index || '') ? -1 : (a.index || '') > (b.index || '') ? 1 : 0)
-  }, [storeTodos, parentId])
+    let filtered = storeTodos.filter(t => t.parent_id === parentId)
+
+    if (dayDate && !parentId) {
+      filtered = filtered.filter(t => {
+        // 1. Task is explicitly due on this date
+        if (t.due_date === viewDateStr) return true
+
+        // 2. Task was completed on this date
+        if (t.completed_at && t.completed_at.startsWith(viewDateStr)) return true
+
+        // 3. Task is uncompleted and should be visible today:
+        if (!t.completed) {
+          // a) It's overdue
+          if (t.due_date && t.due_date < viewDateStr) return true
+
+          // b) It's an Inbox task (no due date) that existed on this date
+          if (!t.due_date) {
+            const createdDateStr = format(new Date(t.created_at), 'yyyy-MM-dd')
+            if (createdDateStr <= viewDateStr) return true
+          }
+        }
+
+        return false
+      })
+    }
+
+    return filtered.sort((a, b) => (a.index || '') < (b.index || '') ? -1 : (a.index || '') > (b.index || '') ? 1 : 0)
+  }, [storeTodos, parentId, dayDate, viewDateStr])
 
   const [title, setTitle] = useState('')
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
@@ -180,7 +209,6 @@ export default function TodoList({
     e.preventDefault()
     if (!title.trim()) return
 
-    const today = format(new Date(), 'yyyy-MM-dd')
     const lastIndex = localTodos.length > 0 ? (localTodos[localTodos.length - 1].index || null) : null
     const newIndex = generateKeyBetween(lastIndex, null)
 
@@ -188,7 +216,7 @@ export default function TodoList({
       user_id: userId,
       title: title.trim(),
       description: null,
-      due_date: parentId ? null : today,
+      due_date: parentId ? null : viewDateStr,
       recurrence: null,
       scheduled_time: null,
       parent_id: parentId,
@@ -374,20 +402,33 @@ export default function TodoList({
   const filteredTodos = useMemo(() => {
     const list = parentId
       ? localTodos
-      : localTodos.filter(todo => !todo.completed || todo.due_date === today)
+      : localTodos.filter(todo => !todo.completed || todo.due_date === viewDateStr || (todo.completed_at && todo.completed_at.startsWith(viewDateStr)))
 
     const filtered = energyFilter !== 'all' ? list.filter(t => t.energy_level === energyFilter) : list
     return parentId ? filtered : [...filtered].sort(sortByDateTime)
-  }, [localTodos, parentId, today, energyFilter])
+  }, [localTodos, parentId, viewDateStr, energyFilter])
 
-  const displayTodos = filteredTodos
+  const displayTodos = useMemo(() => {
+    if (todoSections) return filteredTodos
+    if (parentId) return filteredTodos
+    return [...filteredTodos, ...surfacedSubtasks].sort(sortByDateTime)
+  }, [filteredTodos, surfacedSubtasks, todoSections, parentId])
 
   // Subtasks with a due_date surface in the main list under the correct time-bucket
   const surfacedSubtasks = useMemo(() => {
     if (parentId) return []
-    return [...storeTodos.filter(t => t.parent_id !== null && t.due_date !== null && !t.completed)]
-      .sort(sortByDateTime)
-  }, [storeTodos, parentId])
+    let filtered = storeTodos.filter(t => t.parent_id !== null && t.due_date !== null && !t.completed)
+
+    if (dayDate) {
+      filtered = filtered.filter(t => {
+        if (t.due_date === viewDateStr) return true
+        if (t.due_date! < viewDateStr) return true
+        return false
+      })
+    }
+
+    return [...filtered].sort(sortByDateTime)
+  }, [storeTodos, parentId, dayDate, viewDateStr])
 
   const parentTitleMap = useMemo(() => {
     const map: Record<string, string> = {}
@@ -399,7 +440,7 @@ export default function TodoList({
   }, [surfacedSubtasks, storeTodos])
 
   const todoSections = useMemo(() => {
-    if (parentId) return undefined
+    if (parentId || (dayDate && !isActuallyToday)) return undefined
     return [
       {
         label: 'Today',

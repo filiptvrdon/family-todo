@@ -33,14 +33,14 @@ interface HabitStore {
   myHabits: Habit[]
   tracking: HabitTracking[]
   loading: boolean
-  todayEntries: (habitId: string) => HabitTracking[]
-  weekEntries: (habitId: string) => HabitTracking[]
-  periodTotal: (habitId: string) => number
+  dateEntries: (habitId: string, dateStr: string) => HabitTracking[]
+  weekEntries: (habitId: string, dateStr: string) => HabitTracking[]
+  periodTotal: (habitId: string, dateStr: string) => number
   addHabit: (habit: Omit<Habit, 'id' | 'created_at'>) => Promise<void>
   updateHabit: (id: string, patch: Partial<Omit<Habit, 'id' | 'created_at' | 'user_id'>>) => Promise<void>
   deleteHabit: (id: string) => Promise<void>
   logEntry: (entry: Omit<HabitTracking, 'id' | 'logged_at'>) => Promise<void>
-  removeLastEntry: (habitId: string) => Promise<void>
+  removeLastEntry: (habitId: string, dateStr: string) => Promise<void>
   removeEntry: (entryId: string) => Promise<void>
   subscribe: (userId: string) => () => void
 }
@@ -56,25 +56,29 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   tracking: [],
   loading: true,
 
-  todayEntries: (habitId) => {
-    const today = todayDate()
-    return get().tracking.filter(e => e.habit_id === habitId && e.period_date === today)
+  dateEntries: (habitId, dateStr) => {
+    return get().tracking.filter(e => e.habit_id === habitId && e.period_date === dateStr)
   },
 
-  weekEntries: (habitId) => {
-    const start = weekStartDate()
-    const today = todayDate()
+  weekEntries: (habitId, dateStr) => {
+    // Find the Monday of the week containing dateStr
+    const d = new Date(dateStr)
+    const day = d.getDay()
+    const diff = (day === 0 ? -6 : 1 - day)
+    d.setDate(d.getDate() + diff)
+    const start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    
     return get().tracking.filter(
-      e => e.habit_id === habitId && e.period_date >= start && e.period_date <= today
+      e => e.habit_id === habitId && e.period_date >= start && e.period_date <= dateStr
     )
   },
 
-  periodTotal: (habitId) => {
+  periodTotal: (habitId, dateStr) => {
     const habit = get().myHabits.find(h => h.id === habitId)
     if (!habit) return 0
     const entries = habit.goal_period === 'daily'
-      ? get().todayEntries(habitId)
-      : get().weekEntries(habitId)
+      ? get().dateEntries(habitId, dateStr)
+      : get().weekEntries(habitId, dateStr)
     return entries.reduce((sum, e) => sum + e.value, 0)
   },
 
@@ -138,10 +142,9 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     }
   },
 
-  removeLastEntry: async (habitId) => {
-    const today = todayDate()
+  removeLastEntry: async (habitId, dateStr) => {
     const entries = get().tracking
-      .filter(e => e.habit_id === habitId && e.period_date === today)
+      .filter(e => e.habit_id === habitId && e.period_date === dateStr)
       .sort((a, b) => b.logged_at.localeCompare(a.logged_at))
     const last = entries[0]
     if (!last) return
@@ -182,10 +185,6 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
 
     refetch()
 
-    const interval = setInterval(() => {
-      if (typeof document !== 'undefined' && !document.hidden) refetch()
-    }, 5000)
-
-    return () => clearInterval(interval)
+    return () => {}
   },
 }))

@@ -14,16 +14,17 @@ interface Props {
   myTodos: Todo[]
   onRefresh: () => void
   isSubtaskMode: boolean
+  dayDate: Date
 }
 
-export default function TaskBoard({ user, myTodos, onRefresh, isSubtaskMode }: Props) {
+export default function TaskBoard({ user, myTodos, onRefresh, isSubtaskMode, dayDate }: Props) {
   const [showAdd, setShowAdd] = useState(false)
   const [title, setTitle] = useState('')
 
   async function addTodo(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
-    const today = format(new Date(), 'yyyy-MM-dd')
+    const dueDate = format(dayDate, 'yyyy-MM-dd')
     const sorted = [...myTodos].sort((a, b) =>
       (a.index || '') < (b.index || '') ? -1 : (a.index || '') > (b.index || '') ? 1 : 0
     )
@@ -33,7 +34,7 @@ export default function TaskBoard({ user, myTodos, onRefresh, isSubtaskMode }: P
       user_id: user.id,
       title: title.trim(),
       description: null,
-      due_date: today,
+      due_date: dueDate,
       recurrence: null,
       scheduled_time: null,
       parent_id: null,
@@ -89,6 +90,7 @@ export default function TaskBoard({ user, myTodos, onRefresh, isSubtaskMode }: P
           useInternalDndContext={false}
           isSubtaskMode={isSubtaskMode}
           hideTopAddInput={true}
+          dayDate={dayDate}
         />
       </div>
     </div>

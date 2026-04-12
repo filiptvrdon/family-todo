@@ -5,6 +5,7 @@ import { User, Todo, CalendarEvent } from '@/lib/types'
 import TaskBoard from '@/components/TaskBoard'
 import CalendarSuite from '@/components/CalendarSuite'
 import HabitList from '@/components/habit/HabitList'
+import DashboardDateHeader from '@/components/DashboardDateHeader'
 import { Calendar, ListTodo, Repeat2 } from 'lucide-react'
 
 type MainTab = 'tasks' | 'habits' | 'schedule'
@@ -36,6 +37,8 @@ export default function ResponsiveDashboard(props: Props) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <DashboardDateHeader date={props.dayDate} onChange={props.setDayDate} />
+
       {/* ── Mobile Tab Bar (only < lg) ── */}
       <div className="lg:hidden shrink-0 flex justify-center px-4 py-2 bg-background border-b border-border">
         <div className="flex items-center rounded-lg p-1 gap-1 bg-foam">
@@ -67,7 +70,7 @@ export default function ResponsiveDashboard(props: Props) {
             mobileTab === 'habits' ? 'flex flex-1 min-w-0' : 'hidden lg:flex'
           }`}
         >
-          <HabitList userId={user.id} />
+          <HabitList userId={user.id} dayDate={props.dayDate} />
         </div>
 
         {/* ── Task Board (desktop lg: center ~33%; mobile: tab 1) ── */}
@@ -81,6 +84,7 @@ export default function ResponsiveDashboard(props: Props) {
             myTodos={myTodos}
             onRefresh={onRefresh}
             isSubtaskMode={props.isSubtaskMode}
+            dayDate={props.dayDate}
           />
         </div>
 

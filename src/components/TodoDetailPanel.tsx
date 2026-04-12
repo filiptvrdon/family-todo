@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
 import { Drawer } from '@base-ui/react'
 import { toast } from 'sonner'
 import { Todo, Quest } from '@/lib/types'
@@ -272,7 +272,11 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
               />
             ) : (
               <p className="text-sm" style={{ color: todo.due_date ? 'var(--color-text)' : 'var(--color-text-disabled)' }}>
-                {todo.due_date ? format(new Date(todo.due_date + 'T00:00:00'), 'MMMM d, yyyy') : 'No due date'}
+                {(() => {
+                  if (!todo.due_date) return 'No due date'
+                  const date = parseISO(todo.due_date)
+                  return isValid(date) ? format(date, 'MMMM d, yyyy') : 'Invalid date'
+                })()}
               </p>
             )}
 

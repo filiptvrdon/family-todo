@@ -4,8 +4,9 @@ import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Minus, Check } from 'lucide-react'
 import { Habit } from '@/lib/types'
-import { useHabitStore, todayDate } from '@/stores/habit-store'
+import { useHabitStore } from '@/stores/habit-store'
 import { Progress } from '@/components/ui/progress'
+import { format } from 'date-fns'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -72,16 +73,17 @@ interface HabitCardProps {
   habit: Habit
   userId: string
   onEdit: (habit: Habit) => void
+  dayDate: Date
 }
 
-export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
-  const { logEntry, removeLastEntry, todayEntries, periodTotal } = useHabitStore()
+export default function HabitCard({ habit, userId, onEdit, dayDate }: HabitCardProps) {
+  const { logEntry, removeLastEntry, dateEntries, periodTotal } = useHabitStore()
 
-  const today = todayDate()
-  const todayEnts = todayEntries(habit.id)
-  const total = periodTotal(habit.id)
+  const dateStr = format(dayDate, 'yyyy-MM-dd')
+  const dayEnts = dateEntries(habit.id, dateStr)
+  const total = periodTotal(habit.id, dateStr)
   const atGoal = habit.goal_value !== null && total >= habit.goal_value
-  const booleanDone = habit.value_type === 'boolean' && todayEnts.some(e => e.value === 1)
+  const booleanDone = habit.value_type === 'boolean' && dayEnts.some(e => e.value === 1)
   const completed = atGoal || (booleanDone && habit.goal_period === 'daily')
 
   const [showCountPopover, setShowCountPopover] = useState(false)
@@ -102,7 +104,7 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
   function handlePlusClick() {
     if (didLongPress.current) return
     if (habit.value_type === 'count') {
-      logEntry({ habit_id: habit.id, user_id: userId, value: 1, period_date: today, note: null })
+      logEntry({ habit_id: habit.id, user_id: userId, value: 1, period_date: dateStr, note: null })
     } else {
       // time / freeform: open the detail form for logging
       onEdit(habit)
@@ -111,14 +113,14 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
 
   function handleBooleanToggle(e: React.MouseEvent) {
     e.stopPropagation()
-    if (booleanDone) removeLastEntry(habit.id)
-    else logEntry({ habit_id: habit.id, user_id: userId, value: 1, period_date: today, note: null })
+    if (booleanDone) removeLastEntry(habit.id, dateStr)
+    else logEntry({ habit_id: habit.id, user_id: userId, value: 1, period_date: dateStr, note: null })
   }
 
   function handleMinus(e: React.MouseEvent) {
     e.stopPropagation()
     if (total <= 0) return
-    removeLastEntry(habit.id)
+    removeLastEntry(habit.id, dateStr)
   }
 
   const progressPct = habit.goal_value && habit.value_type !== 'boolean'
@@ -223,7 +225,7 @@ export default function HabitCard({ habit, userId, onEdit }: HabitCardProps) {
                   {showCountPopover && (
                     <CountPopover
                       unitLabel={habit.unit_label}
-                      onLog={v => logEntry({ habit_id: habit.id, user_id: userId, value: v, period_date: today, note: null })}
+                      onLog={v => logEntry({ habit_id: habit.id, user_id: userId, value: v, period_date: dateStr, note: null })}
                       onClose={() => setShowCountPopover(false)}
                     />
                   )}

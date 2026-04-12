@@ -54,10 +54,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
     refetch()
 
-    const interval = setInterval(() => {
-      if (typeof document !== 'undefined' && !document.hidden) refetch()
-    }, 5000)
-
-    return () => clearInterval(interval)
+    return () => {}
   },
 }))
