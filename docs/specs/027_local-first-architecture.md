@@ -280,7 +280,7 @@ BACKUP_DEST=/Users/yourname/backups/family-todo # local backup path
 - [x] All writes persist locally and sync to server when reachable
 - [x] `GET /api/sync?since=` returns correct delta
 - [x] `POST /api/sync` applies client deltas server-side
-- [ ] Two-device scenario: changes made on device A appear on device B after reconnect
+- [ ] **[Manual test required]** Two-device scenario: changes made on device A appear on device B after reconnect — requires two enrolled Tailscale devices; cannot be verified in code
 - [x] `scripts/backup.sh` creates a valid SQL dump
 - [x] `npm run build && npm run lint` passes with no errors
 
