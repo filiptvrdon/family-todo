@@ -8,13 +8,15 @@ export async function fetchCalendarEvents(
   if (partnerId) {
     return sql<CalendarEvent[]>`
       SELECT * FROM calendar_events
-      WHERE user_id = ${userId} OR user_id = ${partnerId}
+      WHERE (user_id = ${userId} OR user_id = ${partnerId})
+        AND deleted_at IS NULL
       ORDER BY start_time
     `
   }
   return sql<CalendarEvent[]>`
     SELECT * FROM calendar_events
     WHERE user_id = ${userId}
+      AND deleted_at IS NULL
     ORDER BY start_time
   `
 }
@@ -33,5 +35,5 @@ export async function updateEvent(id: string, patch: Partial<CalendarEvent>): Pr
 }
 
 export async function deleteEvent(id: string): Promise<void> {
-  await sql`DELETE FROM calendar_events WHERE id = ${id}`
+  await sql`UPDATE calendar_events SET deleted_at = NOW() WHERE id = ${id}`
 }

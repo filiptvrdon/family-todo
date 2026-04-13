@@ -6,7 +6,9 @@ import { Habit, HabitTracking } from '@/lib/types'
 export async function fetchHabits(userId: string): Promise<Habit[]> {
   return sql<Habit[]>`
     SELECT * FROM habits
-    WHERE user_id = ${userId} AND is_archived = false
+    WHERE user_id = ${userId}
+      AND is_archived = false
+      AND deleted_at IS NULL
     ORDER BY index
   `
 }
@@ -28,7 +30,7 @@ export async function updateHabit(
 }
 
 export async function deleteHabit(id: string): Promise<void> {
-  await sql`DELETE FROM habits WHERE id = ${id}`
+  await sql`UPDATE habits SET deleted_at = NOW() WHERE id = ${id}`
 }
 
 // ── Habit Tracking ────────────────────────────────────────────────────────────
@@ -42,6 +44,7 @@ export async function fetchTrackingForPeriod(
     SELECT * FROM habit_tracking
     WHERE user_id = ${userId}
       AND period_date = ANY(${periodDates}::date[])
+      AND deleted_at IS NULL
     ORDER BY logged_at
   `
 }
@@ -52,5 +55,5 @@ export async function logEntry(entry: Omit<HabitTracking, 'id' | 'logged_at'>): 
 }
 
 export async function deleteEntry(id: string): Promise<void> {
-  await sql`DELETE FROM habit_tracking WHERE id = ${id}`
+  await sql`UPDATE habit_tracking SET deleted_at = NOW() WHERE id = ${id}`
 }

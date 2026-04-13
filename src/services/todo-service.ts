@@ -15,9 +15,10 @@ function parseTodo(row: Record<string, unknown>): Todo {
 export async function fetchTodos(userId: string): Promise<Todo[]> {
   const rows = await sql<Record<string, unknown>[]>`
     SELECT t.*,
-      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id)::int AS subtasks_count
+      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id AND deleted_at IS NULL)::int AS subtasks_count
     FROM todos t
     WHERE t.user_id = ${userId}
+      AND t.deleted_at IS NULL
     ORDER BY t.index
   `
   return rows.map(parseTodo)
@@ -26,10 +27,11 @@ export async function fetchTodos(userId: string): Promise<Todo[]> {
 export async function fetchTopLevelTodos(userId: string): Promise<Todo[]> {
   const rows = await sql<Record<string, unknown>[]>`
     SELECT t.*,
-      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id)::int AS subtasks_count
+      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id AND deleted_at IS NULL)::int AS subtasks_count
     FROM todos t
     WHERE t.user_id = ${userId}
       AND t.parent_id IS NULL
+      AND t.deleted_at IS NULL
     ORDER BY t.index
   `
   return rows.map(parseTodo)
@@ -38,9 +40,10 @@ export async function fetchTopLevelTodos(userId: string): Promise<Todo[]> {
 export async function fetchTodoById(id: string): Promise<Todo | null> {
   const rows = await sql<Record<string, unknown>[]>`
     SELECT t.*,
-      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id)::int AS subtasks_count
+      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id AND deleted_at IS NULL)::int AS subtasks_count
     FROM todos t
     WHERE t.id = ${id}
+      AND t.deleted_at IS NULL
   `
   return rows[0] ? parseTodo(rows[0]) : null
 }
@@ -48,9 +51,10 @@ export async function fetchTodoById(id: string): Promise<Todo | null> {
 export async function fetchSubtasks(parentId: string): Promise<Todo[]> {
   const rows = await sql<Record<string, unknown>[]>`
     SELECT t.*,
-      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id)::int AS subtasks_count
+      (SELECT COUNT(*) FROM todos WHERE parent_id = t.id AND deleted_at IS NULL)::int AS subtasks_count
     FROM todos t
     WHERE t.parent_id = ${parentId}
+      AND t.deleted_at IS NULL
     ORDER BY t.index
   `
   return rows.map(parseTodo)
@@ -78,7 +82,7 @@ export async function updateTodo(id: string, patch: Partial<Todo>): Promise<Todo
 }
 
 export async function deleteTodo(id: string): Promise<void> {
-  await sql`DELETE FROM todos WHERE id = ${id}`
+  await sql`UPDATE todos SET deleted_at = NOW() WHERE id = ${id}`
 }
 
 export async function toggleTodo(id: string, completed: boolean): Promise<Todo> {

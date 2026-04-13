@@ -178,7 +178,7 @@ Ask what else is on their mind — new tasks, thoughts, plans, anything.
 
     const deleteIds = await extractOverdueDecisions(messages, overdueTodos)
     if (deleteIds.length > 0) {
-      await sql`DELETE FROM todos WHERE id = ANY(${deleteIds}::uuid[])`
+      await sql`UPDATE todos SET deleted_at = NOW() WHERE id = ANY(${deleteIds}::uuid[])`
     }
 
     await maintainMomentum(user.id)

@@ -5,6 +5,7 @@ export async function fetchQuests(userId: string): Promise<Quest[]> {
   return sql<Quest[]>`
     SELECT * FROM quests
     WHERE user_id = ${userId}
+      AND deleted_at IS NULL
     ORDER BY pinned DESC, created_at DESC
   `
 }
@@ -25,7 +26,7 @@ export async function updateQuest(id: string, patch: Partial<Quest>): Promise<Qu
 }
 
 export async function deleteQuest(id: string): Promise<void> {
-  await sql`DELETE FROM quests WHERE id = ${id}`
+  await sql`UPDATE quests SET deleted_at = NOW() WHERE id = ${id}`
 }
 
 export async function fetchLinkedTasks(questId: string): Promise<{ id: string; title: string; completed: boolean }[]> {
@@ -34,12 +35,16 @@ export async function fetchLinkedTasks(questId: string): Promise<{ id: string; t
     FROM quest_tasks qt
     JOIN todos t ON t.id = qt.task_id
     WHERE qt.quest_id = ${questId}
+      AND qt.deleted_at IS NULL
+      AND t.deleted_at IS NULL
   `
 }
 
 export async function fetchQuestsForTask(taskId: string): Promise<string[]> {
   const rows = await sql<{ quest_id: string }[]>`
-    SELECT quest_id FROM quest_tasks WHERE task_id = ${taskId}
+    SELECT quest_id FROM quest_tasks
+    WHERE task_id = ${taskId}
+      AND deleted_at IS NULL
   `
   return rows.map(r => r.quest_id)
 }
@@ -56,6 +61,8 @@ export async function fetchQuestLinksForTasks(
     FROM quest_tasks qt
     JOIN quests q ON q.id = qt.quest_id
     WHERE qt.task_id = ANY(${validIds}::uuid[])
+      AND qt.deleted_at IS NULL
+      AND q.deleted_at IS NULL
   `
   const map: Record<string, { icon: string; name: string; status: string }[]> = {}
   for (const row of rows) {
@@ -68,10 +75,10 @@ export async function fetchQuestLinksForTasks(
 export async function linkTask(questId: string, taskId: string): Promise<void> {
   await sql`
     INSERT INTO quest_tasks (quest_id, task_id) VALUES (${questId}, ${taskId})
-    ON CONFLICT (quest_id, task_id) DO NOTHING
+    ON CONFLICT (quest_id, task_id) DO UPDATE SET deleted_at = NULL
   `
 }
 
 export async function unlinkTask(questId: string, taskId: string): Promise<void> {
-  await sql`DELETE FROM quest_tasks WHERE quest_id = ${questId} AND task_id = ${taskId}`
+  await sql`UPDATE quest_tasks SET deleted_at = NOW() WHERE quest_id = ${questId} AND task_id = ${taskId}`
 }

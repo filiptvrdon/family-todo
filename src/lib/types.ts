@@ -13,6 +13,9 @@ export interface User {
   last_momentum_increase: string
   last_momentum_decay: string | null
   last_momentum_nudge: string | null
+  created_at: string
+  updated_at?: string
+  deleted_at?: string | null
 }
 
 export interface Todo {
@@ -33,6 +36,8 @@ export interface Todo {
   energy_level: 'low' | 'medium' | 'high'
   momentum_contribution: number
   completed_at: string | null
+  updated_at?: string
+  deleted_at?: string | null
 }
 
 export interface QuestLink {
@@ -58,6 +63,8 @@ export interface Quest {
   last_momentum_decay: string | null
   last_momentum_nudge: string | null
   motivation_nudge: string | null
+  updated_at?: string
+  deleted_at?: string | null
 }
 
 export type HabitValueType = 'count' | 'time' | 'boolean' | 'freeform'
@@ -76,6 +83,8 @@ export interface Habit {
   index: string
   is_archived: boolean
   created_at: string
+  updated_at?: string
+  deleted_at?: string | null
 }
 
 export interface HabitTracking {
@@ -86,6 +95,8 @@ export interface HabitTracking {
   logged_at: string
   period_date: string           // YYYY-MM-DD local date
   note: string | null
+  updated_at?: string
+  deleted_at?: string | null
 }
 
 export interface CalendarEvent {
@@ -97,4 +108,6 @@ export interface CalendarEvent {
   end_time: string
   all_day: boolean
   created_at: string
+  updated_at?: string
+  deleted_at?: string | null
 }

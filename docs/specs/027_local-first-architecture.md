@@ -273,8 +273,8 @@ BACKUP_DEST=/Users/yourname/backups/family-todo # local backup path
 - [x] Tailscale ACLs and/or Device Approval are enabled to restrict access
 - [x] Server binds only to the Tailscale interface (not 0.0.0.0)
 - [x] Tailscale HTTPS is enabled and provides a valid certificate
-- [ ] All tables have `updated_at` (auto-updated) and `deleted_at` (soft delete) columns
-- [ ] No hard deletes remain in the service layer
+- [x] All tables have `updated_at` (auto-updated) and `deleted_at` (soft delete) columns
+- [x] No hard deletes remain in the service layer
 - [ ] Client SQLite initialises on app load and persists across page reloads
 - [ ] All reads go through local SQLite (app works when server is offline)
 - [ ] All writes persist locally and sync to server when reachable
@@ -290,7 +290,15 @@ BACKUP_DEST=/Users/yourname/backups/family-todo # local backup path
 - Offsite backup destination (Backblaze B2, NAS, etc.) — optional, developer's choice
 
 **Implementation notes**
-_Phase 1 (2026-04-13):_
+_Phase 2 — complete (2026-04-13):_
+- Added `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` and `deleted_at TIMESTAMPTZ` to all 7 tables (`users`, `todos`, `calendar_events`, `quests`, `quest_tasks`, `habits`, `habit_tracking`) via migration `20260413000000_phase2_soft_deletes_and_updated_at.sql`.
+- Created `set_updated_at()` trigger function, applied to all tables so every UPDATE auto-sets `updated_at`.
+- Converted all 7 hard deletes to soft deletes (`UPDATE ... SET deleted_at = NOW()`).
+- Added `AND deleted_at IS NULL` filters to all SELECT queries across the service layer.
+- `linkTask` updated to `ON CONFLICT DO UPDATE SET deleted_at = NULL` to handle re-linking a previously unlinked task.
+- TypeScript interfaces updated with optional `updated_at?` and `deleted_at?` fields (optional because the DB always sets them — callers never provide them on create).
+
+_Phase 1 — complete (2026-04-13):_
 - Implemented `GET /api/health`.
 - Added `dev:tailscale` script to `package.json`.
 - Created `.env.example` and updated `README.md` with Tailscale setup steps.
