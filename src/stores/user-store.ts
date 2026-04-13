@@ -1,5 +1,12 @@
 import { create } from 'zustand'
 import { User } from '@/lib/types'
+import {
+  initLocalDb,
+  localDbGetAll,
+  localDbUpsert,
+  persistLocalDb,
+  isOfflineError,
+} from '@/lib/local-db'
 
 interface UserStore {
   user: User | null
@@ -28,6 +35,8 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set(s => ({
       [key]: s[key as keyof typeof s] ? { ...(s[key as keyof typeof s] as User), ...patch } : null
     }))
+    localDbUpsert('users', { ...prev, ...patch } as unknown as Record<string, unknown>)
+    void persistLocalDb()
 
     try {
       await apiFetch('/api/users/me', {
@@ -37,23 +46,42 @@ export const useUserStore = create<UserStore>((set, get) => ({
       })
     } catch (err) {
       console.error('Failed to update user:', err)
-      set({ [key]: prev })
+      if (!isOfflineError(err)) {
+        set({ [key]: prev })
+        if (prev) {
+          localDbUpsert('users', prev as unknown as Record<string, unknown>)
+          void persistLocalDb()
+        }
+      }
     }
   },
 
-  subscribe: (_userId, _partnerId) => {
-    const refetch = async () => {
+  subscribe: (userId, partnerId) => {
+    const load = async () => {
+      await initLocalDb()
+
+      // Step 1: serve from local DB immediately
+      const local = localDbGetAll<User>('users')
+      const localUser = local.find(u => u.id === userId) ?? null
+      const localPartner = partnerId ? (local.find(u => u.id === partnerId) ?? null) : null
+      if (localUser) {
+        set({ user: localUser, partner: localPartner, loading: false })
+      }
+
+      // Step 2: background fetch from server
       try {
         const { user, partner } = await apiFetch('/api/users/me')
+        if (user) localDbUpsert('users', user as unknown as Record<string, unknown>)
+        if (partner) localDbUpsert('users', partner as unknown as Record<string, unknown>)
+        void persistLocalDb()
         set({ user, partner, loading: false })
       } catch (err) {
         console.error('[user-store] refetch failed:', err)
-        set({ loading: false })
+        if (!localUser) set({ loading: false })
       }
     }
 
-    refetch()
-
+    load()
     return () => {}
   },
 }))

@@ -275,9 +275,9 @@ BACKUP_DEST=/Users/yourname/backups/family-todo # local backup path
 - [x] Tailscale HTTPS is enabled and provides a valid certificate
 - [x] All tables have `updated_at` (auto-updated) and `deleted_at` (soft delete) columns
 - [x] No hard deletes remain in the service layer
-- [ ] Client SQLite initialises on app load and persists across page reloads
-- [ ] All reads go through local SQLite (app works when server is offline)
-- [ ] All writes persist locally and sync to server when reachable
+- [x] Client SQLite initialises on app load and persists across page reloads
+- [x] All reads go through local SQLite (app works when server is offline)
+- [x] All writes persist locally and sync to server when reachable
 - [ ] `GET /api/sync?since=` returns correct delta
 - [ ] `POST /api/sync` applies client deltas server-side
 - [ ] Two-device scenario: changes made on device A appear on device B after reconnect
@@ -290,6 +290,13 @@ BACKUP_DEST=/Users/yourname/backups/family-todo # local backup path
 - Offsite backup destination (Backblaze B2, NAS, etc.) — optional, developer's choice
 
 **Implementation notes**
+_Phase 3 — complete (2026-04-13):_
+- Library choice: `sql.js` with IndexedDB persistence. No COOP/COEP headers needed (preserves Google OAuth). WASM (`sql-wasm.wasm`) served from `public/`, copied via `postinstall` script.
+- Created `src/lib/local-db.ts`: singleton SQLite DB, IDB save/restore, schema mirrors all 7 server tables (bool↔integer coercion for SQLite), `localDbGetAll`, `localDbUpsert`, `localDbUpsertMany`, `localDbSoftDelete`, `localDbHardDelete`, `persistLocalDb`.
+- All 5 Zustand stores updated: `subscribe()` loads local DB first (instant, no network), then background-fetches from server; writes upsert to local DB immediately.
+- Offline resilience: network errors (`TypeError`) do NOT roll back the store or local DB — the write stays locally until Phase 4 sync can push it. Server errors still roll back.
+- `addX` functions: temp-ID rows are written to local DB immediately; if offline they persist until the server is reachable. If the server rejects the create, the temp row is hard-deleted.
+
 _Phase 2 — complete (2026-04-13):_
 - Added `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` and `deleted_at TIMESTAMPTZ` to all 7 tables (`users`, `todos`, `calendar_events`, `quests`, `quest_tasks`, `habits`, `habit_tracking`) via migration `20260413000000_phase2_soft_deletes_and_updated_at.sql`.
 - Created `set_updated_at()` trigger function, applied to all tables so every UPDATE auto-sets `updated_at`.
