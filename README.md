@@ -20,6 +20,43 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Local-First Development
+
+This project uses a local-first architecture. The backend runs on your laptop, and remote access is handled by Tailscale.
+
+### Prerequisites
+
+1.  **Tailscale:** Install on your laptop and client devices.
+2.  **Docker:** Required for the local PostgreSQL database.
+
+### Setup
+
+1.  **Tailscale:**
+    *   Join all devices to the same Tailscale account.
+    *   Enable **MagicDNS** and **HTTPS** in the Tailscale admin console.
+    *   On your laptop, run `tailscale cert` to generate certificates for your MagicDNS name.
+2.  **Environment:**
+    *   `cp .env.example .env.local`
+    *   Update `TAILSCALE_HOSTNAME` to `http://<your-hostname>.ts.net:3000` (or `https://<your-hostname>.ts.net` if using `tailscale serve`).
+3.  **Database:**
+    *   `docker-compose up -d` (ensure PostgreSQL is running)
+
+### Running the Server
+
+To bind to your Tailscale IP (making it reachable from other devices in your tailnet):
+
+```bash
+npm run dev:tailscale
+```
+
+Your app will be reachable at `http://<your-hostname>.ts.net:3000`.
+
+To enable HTTPS (the padlock) in your browser without complex configuration, run:
+```bash
+tailscale serve 3000
+```
+Then you can access the app at `https://<your-hostname>.ts.net` (no port needed).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

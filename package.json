@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "NODE_OPTIONS=--max-http-header-size=32768 next dev",
+    "dev:tailscale": "HOSTNAME=$(tailscale ip -4) npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

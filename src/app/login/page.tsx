@@ -26,16 +26,18 @@ function LoginForm() {
     setLoading(true)
     setSubmitError(null)
 
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    })
-
-    if (result?.error) {
-      setSubmitError('Invalid email or password.')
-    } else {
-      window.location.href = '/'
+    console.log('[login] submitting credentials for', email)
+    try {
+      // Use redirect: true to let Auth.js handle the server-side redirect, 
+      // which is more robust for cookie setting over proxies.
+      await signIn('credentials', {
+        email,
+        password,
+        redirectTo: '/',
+      })
+    } catch (err) {
+      console.error('[login] exception occurred:', err)
+      setSubmitError('An unexpected error occurred.')
     }
     setLoading(false)
   }

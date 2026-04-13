@@ -23,6 +23,8 @@ async function findUserByEmail(email: string) {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  debug: process.env.NODE_ENV === 'development',
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
@@ -30,16 +32,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        console.log('[auth] authorize attempt', { email: credentials?.email })
         const email = credentials?.email as string | undefined
         const password = credentials?.password as string | undefined
         if (!email || !password) return null
 
         const user = await findUserByEmail(email)
-        if (!user || !user.password_hash) return null
+        if (!user || !user.password_hash) {
+          console.log('[auth] user not found or no password hash', { email })
+          return null
+        }
 
         const valid = await bcrypt.compare(password, user.password_hash)
-        if (!valid) return null
+        if (!valid) {
+          console.log('[auth] invalid password', { email })
+          return null
+        }
 
+        console.log('[auth] authorize success', { email, userId: user.id })
         return { id: user.id, email: user.email }
       },
     }),
@@ -47,6 +57,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account }) {
+      console.log('[auth] signIn callback', { user: user.email, provider: account?.provider })
       if (account?.provider === 'google') {
         const email = user.email
         if (!email) return false
@@ -79,5 +90,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: '/login',
     error: '/login',
+  },
+  cookies: {
+    sessionToken: {
+      name: `authjs.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production', // Only require Secure in prod
+      },
+    },
+    callbackUrl: {
+      name: `authjs.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+    csrfToken: {
+      name: `authjs.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
   },
 })
