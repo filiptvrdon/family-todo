@@ -173,9 +173,9 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
       try {
         const { mine, theirs } = await apiFetch('/api/todos')
+        set({ myTodos: mine, partnerTodos: theirs ?? [], loading: false })
         localDbUpsertMany('todos', [...mine, ...(theirs ?? [])])
         void persistLocalDb()
-        set({ myTodos: mine, partnerTodos: theirs ?? [], loading: false })
       } catch (err) {
         console.error('[todo-store] refetch failed:', err)
         const local = localDbGetAll<Todo>('todos')

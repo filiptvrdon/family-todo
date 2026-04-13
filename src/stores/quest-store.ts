@@ -145,9 +145,9 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
 
       try {
         const quests = await apiFetch('/api/quests')
+        set({ quests, loading: false })
         localDbUpsertMany('quests', quests)
         void persistLocalDb()
-        set({ quests, loading: false })
       } catch (err) {
         console.error('[quest-store] refetch failed:', err)
         const local = localDbGetAll<Quest>('quests')

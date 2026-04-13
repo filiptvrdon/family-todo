@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS todos (
   title TEXT NOT NULL,
   description TEXT,
   completed INTEGER NOT NULL DEFAULT 0,
+  priority TEXT,
   due_date TEXT,
   recurrence TEXT,
   scheduled_time TEXT,
@@ -188,9 +189,10 @@ const BOOL_COLS: Record<string, string[]> = {
 }
 
 // Fields that exist on the JS type but are not DB columns — strip before insert.
+// Also includes server-only columns that shouldn't be stored in the local cache.
 const EXCLUDE_COLS: Record<string, Set<string>> = {
   todos: new Set(['subtasks_count']),
-  users: new Set(['avatar_data', 'google_refresh_token']),
+  users: new Set(['avatar_data', 'google_refresh_token', 'avatar_mime', 'password_hash']),
 }
 
 function toSQLite(table: string, row: Record<string, unknown>): Record<string, unknown> {
@@ -259,12 +261,21 @@ export function initLocalDb(): Promise<void> {
   return initPromise
 }
 
+// Migrations for columns added after the initial schema — applied to existing DBs.
+// SQLite doesn't support IF NOT EXISTS on ADD COLUMN, so we try/catch each one.
+const MIGRATIONS: string[] = [
+  `ALTER TABLE todos ADD COLUMN priority TEXT`,
+]
+
 async function _init(): Promise<void> {
   const initSqlJs = ((await import('sql.js')) as { default: (config?: object) => Promise<SqlJsStatic> }).default
   const SQL = await initSqlJs({ locateFile: () => '/sql-wasm.wasm' })
   const saved = await loadFromIDB()
   db = saved ? new SQL.Database(saved) : new SQL.Database()
   db.run(SCHEMA)
+  for (const migration of MIGRATIONS) {
+    try { db.run(migration) } catch { /* column already exists */ }
+  }
 }
 
 export function isLocalDbReady(): boolean {

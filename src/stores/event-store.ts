@@ -114,9 +114,9 @@ export const useEventStore = create<EventStore>((set, get) => ({
 
       try {
         const events = await apiFetch('/api/events')
+        set({ events, loading: false })
         localDbUpsertMany('calendar_events', events)
         void persistLocalDb()
-        set({ events, loading: false })
       } catch (err) {
         console.error('[event-store] refetch failed:', err)
         const local = localDbGetAll<CalendarEvent>('calendar_events').filter(

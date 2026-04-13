@@ -243,10 +243,10 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
           apiFetch('/api/habits'),
           apiFetch(`/api/habit-tracking?dates=${dates.join(',')}`),
         ])
+        set({ myHabits: habits, tracking, loading: false })
         localDbUpsertMany('habits', habits)
         localDbUpsertMany('habit_tracking', tracking)
         void persistLocalDb()
-        set({ myHabits: habits, tracking, loading: false })
       } catch (err) {
         console.error('[habit-store] refetch failed:', err)
         const localHabits = localDbGetAll<Habit>('habits').filter(h => h.user_id === userId)

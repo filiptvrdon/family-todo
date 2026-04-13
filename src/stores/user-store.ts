@@ -72,10 +72,10 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       try {
         const { user, partner } = await apiFetch('/api/users/me')
+        set({ user, partner, loading: false })
         if (user) localDbUpsert('users', user as unknown as Record<string, unknown>)
         if (partner) localDbUpsert('users', partner as unknown as Record<string, unknown>)
         void persistLocalDb()
-        set({ user, partner, loading: false })
       } catch (err) {
         console.error('[user-store] refetch failed:', err)
         const local = localDbGetAll<User>('users')
