@@ -463,7 +463,7 @@ export default function TodoList({
         surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > nextWeekEnd),
       },
     ]
-  }, [filteredTodos, parentId, today, tomorrow, thisWeekEnd, nextWeekEnd, surfacedSubtasks])
+  }, [filteredTodos, parentId, today, tomorrow, thisWeekEnd, nextWeekEnd, surfacedSubtasks, dayDate, isActuallyToday])
 
   const displayTodos = useMemo(() => {
     if (todoSections) return filteredTodos

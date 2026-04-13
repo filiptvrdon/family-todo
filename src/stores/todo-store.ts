@@ -4,6 +4,7 @@ import {
   initLocalDb,
   localDbGetAll,
   localDbUpsert,
+  localDbUpsertLocal,
   localDbUpsertMany,
   localDbSoftDelete,
   localDbHardDelete,
@@ -50,8 +51,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
       [key]: (s[key as keyof typeof s] as Todo[]).map(t => t.id === id ? { ...t, ...patch } : t)
     }))
 
-    const updated = { ...prev, ...patch } as Record<string, unknown>
-    localDbUpsert('todos', updated)
+    localDbUpsertLocal('todos', { ...prev, ...patch } as Record<string, unknown>)
     void persistLocalDb()
 
     try {
@@ -75,31 +75,28 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   },
 
   addTodo: async (todo) => {
-    const tempId = `temp-${Date.now()}`
-    const optimistic = { ...todo, id: tempId, created_at: new Date().toISOString() } as Todo
+    const id = crypto.randomUUID()
+    const optimistic = { ...todo, id, created_at: new Date().toISOString() } as Todo
     set(s => ({ myTodos: [...s.myTodos, optimistic] }))
-    localDbUpsert('todos', optimistic as unknown as Record<string, unknown>)
+    localDbUpsertLocal('todos', optimistic as unknown as Record<string, unknown>)
     void persistLocalDb()
 
     try {
       const created = await apiFetch('/api/todos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(todo),
+        body: JSON.stringify({ ...todo, id }),
       })
-      localDbHardDelete('todos', tempId)
       localDbUpsert('todos', created)
       void persistLocalDb()
-      set(s => ({ myTodos: s.myTodos.map(t => t.id === tempId ? created : t) }))
+      set(s => ({ myTodos: s.myTodos.map(t => t.id === id ? created : t) }))
     } catch (err) {
       console.error('Failed to add todo:', err)
       if (!isOfflineError(err)) {
-        // Server rejected — discard the temp row everywhere
-        localDbHardDelete('todos', tempId)
+        localDbHardDelete('todos', id)
         void persistLocalDb()
-        set(s => ({ myTodos: s.myTodos.filter(t => t.id !== tempId) }))
+        set(s => ({ myTodos: s.myTodos.filter(t => t.id !== id) }))
       }
-      // If offline: keep temp row in store + local DB; Phase 4 sync will push it
     }
   },
 
@@ -111,7 +108,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     set(s => ({
       [key]: (s[key as keyof typeof s] as Todo[]).map(t => t.id === id ? { ...t, ...patch } : t)
     }))
-    localDbUpsert('todos', { ...prev, ...patch } as unknown as Record<string, unknown>)
+    localDbUpsertLocal('todos', { ...prev, ...patch } as Record<string, unknown>)
     void persistLocalDb()
 
     try {
@@ -150,7 +147,6 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     } catch (err) {
       console.error('Failed to delete todo:', err)
       if (!isOfflineError(err) && prev) {
-        // Server rejected — restore
         set(s => ({
           [key]: [...(s[key as keyof typeof s] as Todo[]), prev]
         }))
@@ -161,20 +157,20 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   },
 
   subscribe: (userId, partnerId) => {
+    const loadFromLocal = () => {
+      const local = localDbGetAll<Todo>('todos')
+      if (local.length === 0) return
+      const mine = withSubtasksCounts(local.filter(t => t.user_id === userId))
+      const theirs = partnerId
+        ? withSubtasksCounts(local.filter(t => t.user_id === partnerId))
+        : []
+      set({ myTodos: mine, partnerTodos: theirs, loading: false })
+    }
+
     const load = async () => {
       await initLocalDb()
+      loadFromLocal()
 
-      // Step 1: serve from local DB immediately (no network required)
-      const local = localDbGetAll<Todo>('todos')
-      if (local.length > 0) {
-        const mine = withSubtasksCounts(local.filter(t => t.user_id === userId))
-        const theirs = partnerId
-          ? withSubtasksCounts(local.filter(t => t.user_id === partnerId))
-          : []
-        set({ myTodos: mine, partnerTodos: theirs, loading: false })
-      }
-
-      // Step 2: background fetch from server to get latest
       try {
         const { mine, theirs } = await apiFetch('/api/todos')
         localDbUpsertMany('todos', [...mine, ...(theirs ?? [])])
@@ -182,11 +178,15 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
         set({ myTodos: mine, partnerTodos: theirs ?? [], loading: false })
       } catch (err) {
         console.error('[todo-store] refetch failed:', err)
+        const local = localDbGetAll<Todo>('todos')
         if (local.length === 0) set({ loading: false })
       }
     }
 
     load()
-    return () => {}
+
+    const onSync = () => loadFromLocal()
+    window.addEventListener('sync-done', onSync)
+    return () => window.removeEventListener('sync-done', onSync)
   },
 }))

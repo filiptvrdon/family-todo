@@ -18,8 +18,8 @@ export async function createQuest(
 }
 
 export async function updateQuest(id: string, patch: Partial<Quest>): Promise<Quest> {
-  const { id: _, created_at, ...data } = patch as Record<string, unknown>
-  void id; void created_at
+  const { id: _id, created_at, ...data } = patch as Record<string, unknown>
+  void _id; void created_at
   const filtered = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined))
   const [row] = await sql<Quest[]>`UPDATE quests SET ${sql(filtered)} WHERE id = ${id} RETURNING *`
   return row

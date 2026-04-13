@@ -2,7 +2,6 @@ import postgres from 'postgres'
 
 // Singleton to avoid connection pool proliferation in Next.js dev (hot-reload).
 declare global {
-  // eslint-disable-next-line no-var
   var __db: ReturnType<typeof postgres> | undefined
 }
 

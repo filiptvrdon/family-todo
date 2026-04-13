@@ -2,14 +2,25 @@
  * Client-side SQLite store backed by IndexedDB for persistence.
  * Browser-only — never import this from server components or API routes.
  *
- * Usage:
- *   await initLocalDb()          — call once on app startup (safe to call multiple times)
- *   localDbGetAll<T>('todos')    — returns all non-deleted rows, coercing types
- *   localDbUpsert('todos', row)  — insert or replace a single row
- *   localDbUpsertMany('todos', rows) — bulk upsert
- *   localDbSoftDelete('todos', id)   — sets deleted_at = now
- *   localDbHardDelete('todos', id)   — removes row entirely (for discarding temp items)
- *   await persistLocalDb()       — serialises DB to IndexedDB
+ * Core API:
+ *   initLocalDb()                       — init once on app startup (idempotent)
+ *   localDbGetAll<T>(table)             — all non-deleted rows, JS types restored
+ *   localDbGetById<T>(table, id)        — single row by id (includes deleted)
+ *   localDbGetSince<T>(table, since)    — all rows updated after timestamp (incl. deleted)
+ *   localDbGetQuestTask(qId, tId)       — quest_tasks row by composite key
+ *   localDbUpsert(table, row)           — insert or replace (preserves updated_at)
+ *   localDbUpsertLocal(table, row)      — insert or replace + set updated_at=NOW() + mark pending
+ *   localDbUpsertMany(table, rows)      — bulk upsert (for server data coming in)
+ *   localDbSoftDelete(table, id)        — sets deleted_at + updated_at = NOW() + mark pending
+ *   localDbSoftDeleteQuestTask(qId,tId) — soft-delete quest_tasks composite row
+ *   localDbHardDelete(table, id)        — removes row + clears from pending queue
+ *   persistLocalDb()                    — serialise DB to IndexedDB
+ *   isOfflineError(err)                 — true if error is a network failure
+ *
+ * Pending queue (localStorage):
+ *   markPending(table, id)              — add to pending-sync queue
+ *   getPendingItems()                   — list of {table, id} to push next sync
+ *   clearPendingItem(table, id)         — remove after successful server push
  */
 
 import type { SqlJsStatic, Database } from 'sql.js'
@@ -165,8 +176,6 @@ CREATE TABLE IF NOT EXISTS users (
 `
 
 // ── Type coercions ────────────────────────────────────────────────────────────
-// SQLite stores booleans as 0/1 integers. These maps define which columns
-// need JS boolean ↔ SQLite integer coercion per table.
 
 const BOOL_COLS: Record<string, string[]> = {
   todos: ['completed'],
@@ -202,6 +211,40 @@ function fromSQLite(table: string, row: Record<string, unknown>): Record<string,
   return out
 }
 
+// ── Pending queue (localStorage) ──────────────────────────────────────────────
+// Tracks which rows were written locally and need to be pushed to the server.
+// quest_tasks are excluded (composite PK) — synced via localDbGetSince instead.
+
+const PENDING_KEY = 'sync:pending'
+const SYNCABLE = new Set(['todos', 'quests', 'habits', 'habit_tracking', 'calendar_events'])
+
+export interface PendingItem { table: string; id: string }
+
+export function markPending(table: string, id: string): void {
+  if (typeof window === 'undefined' || !SYNCABLE.has(table)) return
+  const items = getPendingItems()
+  const key = `${table}:${id}`
+  if (!items.some(i => `${i.table}:${i.id}` === key)) {
+    items.push({ table, id })
+    localStorage.setItem(PENDING_KEY, JSON.stringify(items))
+  }
+}
+
+export function getPendingItems(): PendingItem[] {
+  if (typeof window === 'undefined') return []
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_KEY) ?? '[]') as PendingItem[]
+  } catch {
+    return []
+  }
+}
+
+export function clearPendingItem(table: string, id: string): void {
+  if (typeof window === 'undefined') return
+  const items = getPendingItems().filter(i => !(i.table === table && i.id === id))
+  localStorage.setItem(PENDING_KEY, JSON.stringify(items))
+}
+
 // ── Singleton state ───────────────────────────────────────────────────────────
 
 let db: Database | null = null
@@ -209,7 +252,6 @@ let initPromise: Promise<void> | null = null
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-/** Initialise the local SQLite DB. Safe to call multiple times — initialises once. */
 export function initLocalDb(): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve()
   if (initPromise) return initPromise
@@ -229,7 +271,7 @@ export function isLocalDbReady(): boolean {
   return db !== null
 }
 
-/** Returns all non-deleted rows from a table, with JS types restored. */
+/** All non-deleted rows from a table, with JS types restored. */
 export function localDbGetAll<T>(table: string): T[] {
   if (!db) return []
   const stmt = db.prepare(`SELECT * FROM "${table}" WHERE deleted_at IS NULL`)
@@ -241,7 +283,49 @@ export function localDbGetAll<T>(table: string): T[] {
   return rows
 }
 
-/** Insert or replace a single row. Strips non-column fields automatically. */
+/** Single row by id (includes soft-deleted rows). */
+export function localDbGetById<T>(table: string, id: string): T | null {
+  if (!db) return null
+  const stmt = db.prepare(`SELECT * FROM "${table}" WHERE id = ?`)
+  stmt.bind([id])
+  if (stmt.step()) {
+    const row = fromSQLite(table, stmt.getAsObject() as Record<string, unknown>) as T
+    stmt.free()
+    return row
+  }
+  stmt.free()
+  return null
+}
+
+/** All rows updated after `since` ISO timestamp, including soft-deleted ones.
+ *  Used by the sync engine to find local changes to push, and to merge pulls. */
+export function localDbGetSince<T>(table: string, since: string): T[] {
+  if (!db) return []
+  const stmt = db.prepare(`SELECT * FROM "${table}" WHERE updated_at > ?`)
+  stmt.bind([since])
+  const rows: T[] = []
+  while (stmt.step()) {
+    rows.push(fromSQLite(table, stmt.getAsObject() as Record<string, unknown>) as T)
+  }
+  stmt.free()
+  return rows
+}
+
+/** quest_tasks row by composite primary key (includes soft-deleted). */
+export function localDbGetQuestTask(questId: string, taskId: string): { updated_at?: string; deleted_at?: string | null } | null {
+  if (!db) return null
+  const stmt = db.prepare(`SELECT * FROM quest_tasks WHERE quest_id = ? AND task_id = ?`)
+  stmt.bind([questId, taskId])
+  if (stmt.step()) {
+    const row = stmt.getAsObject()
+    stmt.free()
+    return row as { updated_at?: string; deleted_at?: string | null }
+  }
+  stmt.free()
+  return null
+}
+
+/** Insert or replace a single row. Strips non-column fields. Does NOT mark pending. */
 export function localDbUpsert(table: string, row: Record<string, unknown>): void {
   if (!db) return
   const converted = toSQLite(table, row)
@@ -252,24 +336,44 @@ export function localDbUpsert(table: string, row: Record<string, unknown>): void
   db.run(sql, cols.map(c => converted[c] as string | number | null))
 }
 
-/** Bulk upsert — calls localDbUpsert for each row. */
+/** Local write: upsert with updated_at = NOW() and mark row as pending sync. */
+export function localDbUpsertLocal(table: string, row: Record<string, unknown>): void {
+  localDbUpsert(table, { ...row, updated_at: new Date().toISOString() })
+  if (row.id) markPending(table, row.id as string)
+}
+
+/** Bulk upsert (server data coming in — preserves server updated_at, not pending). */
 export function localDbUpsertMany(table: string, rows: Record<string, unknown>[]): void {
   for (const row of rows) localDbUpsert(table, row)
 }
 
-/** Soft-delete: sets deleted_at = now. Used for normal deletes. */
+/** Soft-delete: sets deleted_at + updated_at = NOW(), marks row as pending. */
 export function localDbSoftDelete(table: string, id: string): void {
   if (!db) return
-  db.run(`UPDATE "${table}" SET deleted_at = ? WHERE id = ?`, [new Date().toISOString(), id])
+  const now = new Date().toISOString()
+  db.run(`UPDATE "${table}" SET deleted_at = ?, updated_at = ? WHERE id = ?`, [now, now, id])
+  markPending(table, id)
 }
 
-/** Hard-delete: removes the row entirely. Used to discard temp-ID rows on server error. */
+/** Soft-delete for quest_tasks (composite PK). Not tracked in pending queue —
+ *  synced via localDbGetSince on next push. */
+export function localDbSoftDeleteQuestTask(questId: string, taskId: string): void {
+  if (!db) return
+  const now = new Date().toISOString()
+  db.run(
+    `UPDATE quest_tasks SET deleted_at = ?, updated_at = ? WHERE quest_id = ? AND task_id = ?`,
+    [now, now, questId, taskId]
+  )
+}
+
+/** Hard-delete: removes the row and clears it from the pending queue. */
 export function localDbHardDelete(table: string, id: string): void {
   if (!db) return
   db.run(`DELETE FROM "${table}" WHERE id = ?`, [id])
+  clearPendingItem(table, id)
 }
 
-/** Serialise and save the current DB to IndexedDB. Call after writes. */
+/** Serialise and save the current DB to IndexedDB. */
 export async function persistLocalDb(): Promise<void> {
   if (!db) return
   const data = db.export()

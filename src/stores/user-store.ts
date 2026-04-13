@@ -7,6 +7,7 @@ import {
   persistLocalDb,
   isOfflineError,
 } from '@/lib/local-db'
+import { startSync } from '@/lib/sync'
 
 interface UserStore {
   user: User | null
@@ -57,18 +58,18 @@ export const useUserStore = create<UserStore>((set, get) => ({
   },
 
   subscribe: (userId, partnerId) => {
-    const load = async () => {
-      await initLocalDb()
-
-      // Step 1: serve from local DB immediately
+    const loadFromLocal = () => {
       const local = localDbGetAll<User>('users')
       const localUser = local.find(u => u.id === userId) ?? null
       const localPartner = partnerId ? (local.find(u => u.id === partnerId) ?? null) : null
-      if (localUser) {
-        set({ user: localUser, partner: localPartner, loading: false })
-      }
+      if (!localUser) return
+      set({ user: localUser, partner: localPartner, loading: false })
+    }
 
-      // Step 2: background fetch from server
+    const load = async () => {
+      await initLocalDb()
+      loadFromLocal()
+
       try {
         const { user, partner } = await apiFetch('/api/users/me')
         if (user) localDbUpsert('users', user as unknown as Record<string, unknown>)
@@ -77,11 +78,19 @@ export const useUserStore = create<UserStore>((set, get) => ({
         set({ user, partner, loading: false })
       } catch (err) {
         console.error('[user-store] refetch failed:', err)
-        if (!localUser) set({ loading: false })
+        const local = localDbGetAll<User>('users')
+        if (!local.find(u => u.id === userId)) set({ loading: false })
       }
     }
 
     load()
-    return () => {}
+
+    const stopSync = startSync(userId, partnerId)
+    const onSync = () => loadFromLocal()
+    window.addEventListener('sync-done', onSync)
+    return () => {
+      stopSync()
+      window.removeEventListener('sync-done', onSync)
+    }
   },
 }))

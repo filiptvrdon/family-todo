@@ -34,8 +34,8 @@ export async function upsertUser(id: string, email: string): Promise<User> {
 
 export async function updateUser(id: string, patch: Partial<User>): Promise<User> {
   // Strip fields that aren't real columns or shouldn't be updated directly
-  const { id: _, created_at, avatar_data, ...data } = patch as Record<string, unknown>
-  void id; void created_at; void avatar_data
+  const { id: _id, created_at, avatar_data, ...data } = patch as Record<string, unknown>
+  void _id; void created_at; void avatar_data
   const filtered = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined))
   if (Object.keys(filtered).length === 0) {
     const existing = await fetchUser(id)

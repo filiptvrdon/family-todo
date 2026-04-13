@@ -4,6 +4,7 @@ import {
   initLocalDb,
   localDbGetAll,
   localDbUpsert,
+  localDbUpsertLocal,
   localDbUpsertMany,
   localDbSoftDelete,
   localDbHardDelete,
@@ -31,28 +32,27 @@ export const useEventStore = create<EventStore>((set, get) => ({
   loading: true,
 
   addEvent: async (event) => {
-    const tempId = `temp-${Date.now()}`
-    const optimistic = { ...event, id: tempId, created_at: new Date().toISOString() } as CalendarEvent
+    const id = crypto.randomUUID()
+    const optimistic = { ...event, id, created_at: new Date().toISOString() } as CalendarEvent
     set(s => ({ events: [...s.events, optimistic] }))
-    localDbUpsert('calendar_events', optimistic as unknown as Record<string, unknown>)
+    localDbUpsertLocal('calendar_events', optimistic as unknown as Record<string, unknown>)
     void persistLocalDb()
 
     try {
       const created = await apiFetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(event),
+        body: JSON.stringify({ ...event, id }),
       })
-      localDbHardDelete('calendar_events', tempId)
       localDbUpsert('calendar_events', created)
       void persistLocalDb()
-      set(s => ({ events: s.events.map(e => e.id === tempId ? created : e) }))
+      set(s => ({ events: s.events.map(e => e.id === id ? created : e) }))
     } catch (err) {
       console.error('Failed to add event:', err)
       if (!isOfflineError(err)) {
-        localDbHardDelete('calendar_events', tempId)
+        localDbHardDelete('calendar_events', id)
         void persistLocalDb()
-        set(s => ({ events: s.events.filter(e => e.id !== tempId) }))
+        set(s => ({ events: s.events.filter(e => e.id !== id) }))
       }
     }
   },
@@ -60,7 +60,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
   updateEvent: async (id, patch) => {
     const prev = get().events.find(e => e.id === id)
     set(s => ({ events: s.events.map(e => e.id === id ? { ...e, ...patch } : e) }))
-    localDbUpsert('calendar_events', { ...prev, ...patch } as unknown as Record<string, unknown>)
+    localDbUpsertLocal('calendar_events', { ...prev, ...patch } as Record<string, unknown>)
     void persistLocalDb()
 
     try {
@@ -100,18 +100,18 @@ export const useEventStore = create<EventStore>((set, get) => ({
   },
 
   subscribe: (userId, partnerId) => {
-    const load = async () => {
-      await initLocalDb()
-
-      // Step 1: serve from local DB immediately
+    const loadFromLocal = () => {
       const local = localDbGetAll<CalendarEvent>('calendar_events').filter(
         e => e.user_id === userId || (partnerId ? e.user_id === partnerId : false)
       )
-      if (local.length > 0) {
-        set({ events: local, loading: false })
-      }
+      if (local.length === 0) return
+      set({ events: local, loading: false })
+    }
 
-      // Step 2: background fetch from server
+    const load = async () => {
+      await initLocalDb()
+      loadFromLocal()
+
       try {
         const events = await apiFetch('/api/events')
         localDbUpsertMany('calendar_events', events)
@@ -119,11 +119,17 @@ export const useEventStore = create<EventStore>((set, get) => ({
         set({ events, loading: false })
       } catch (err) {
         console.error('[event-store] refetch failed:', err)
+        const local = localDbGetAll<CalendarEvent>('calendar_events').filter(
+          e => e.user_id === userId || (partnerId ? e.user_id === partnerId : false)
+        )
         if (local.length === 0) set({ loading: false })
       }
     }
 
     load()
-    return () => {}
+
+    const onSync = () => loadFromLocal()
+    window.addEventListener('sync-done', onSync)
+    return () => window.removeEventListener('sync-done', onSync)
   },
 }))

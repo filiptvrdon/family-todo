@@ -27,8 +27,8 @@ export async function createEvent(event: Omit<CalendarEvent, 'id' | 'created_at'
 }
 
 export async function updateEvent(id: string, patch: Partial<CalendarEvent>): Promise<CalendarEvent> {
-  const { id: _, created_at, ...data } = patch as Record<string, unknown>
-  void id; void created_at
+  const { id: _id, created_at, ...data } = patch as Record<string, unknown>
+  void _id; void created_at
   const filtered = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined))
   const [row] = await sql<CalendarEvent[]>`UPDATE calendar_events SET ${sql(filtered)} WHERE id = ${id} RETURNING *`
   return row

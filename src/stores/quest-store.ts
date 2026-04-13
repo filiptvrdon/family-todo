@@ -4,8 +4,10 @@ import {
   initLocalDb,
   localDbGetAll,
   localDbUpsert,
+  localDbUpsertLocal,
   localDbUpsertMany,
   localDbSoftDelete,
+  localDbSoftDeleteQuestTask,
   localDbHardDelete,
   persistLocalDb,
   isOfflineError,
@@ -33,10 +35,10 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
   loading: true,
 
   addQuest: async (quest) => {
-    const tempId = `temp-${Date.now()}`
+    const id = crypto.randomUUID()
     const optimistic = {
       ...quest,
-      id: tempId,
+      id,
       created_at: new Date().toISOString(),
       momentum: 0,
       day_start_momentum: 0,
@@ -46,25 +48,24 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
       motivation_nudge: null,
     } as Quest
     set(s => ({ quests: [optimistic, ...s.quests] }))
-    localDbUpsert('quests', optimistic as unknown as Record<string, unknown>)
+    localDbUpsertLocal('quests', optimistic as unknown as Record<string, unknown>)
     void persistLocalDb()
 
     try {
       const created = await apiFetch('/api/quests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quest),
+        body: JSON.stringify({ ...quest, id }),
       })
-      localDbHardDelete('quests', tempId)
       localDbUpsert('quests', created)
       void persistLocalDb()
-      set(s => ({ quests: s.quests.map(q => q.id === tempId ? created : q) }))
+      set(s => ({ quests: s.quests.map(q => q.id === id ? created : q) }))
     } catch (err) {
       console.error('Failed to add quest:', err)
       if (!isOfflineError(err)) {
-        localDbHardDelete('quests', tempId)
+        localDbHardDelete('quests', id)
         void persistLocalDb()
-        set(s => ({ quests: s.quests.filter(q => q.id !== tempId) }))
+        set(s => ({ quests: s.quests.filter(q => q.id !== id) }))
       }
     }
   },
@@ -72,7 +73,7 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
   updateQuest: async (id, patch) => {
     const prev = get().quests.find(q => q.id === id)
     set(s => ({ quests: s.quests.map(q => q.id === id ? { ...q, ...patch } : q) }))
-    localDbUpsert('quests', { ...prev, ...patch } as unknown as Record<string, unknown>)
+    localDbUpsertLocal('quests', { ...prev, ...patch } as Record<string, unknown>)
     void persistLocalDb()
 
     try {
@@ -112,31 +113,36 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
   },
 
   linkTask: async (questId, taskId) => {
-    localDbUpsert('quest_tasks', { quest_id: questId, task_id: taskId, deleted_at: null })
+    localDbUpsert('quest_tasks', {
+      quest_id: questId,
+      task_id: taskId,
+      deleted_at: null,
+      updated_at: new Date().toISOString(),
+    })
     void persistLocalDb()
     await apiFetch(`/api/quests/${questId}/tasks/${taskId}`, { method: 'PUT' })
   },
 
   unlinkTask: async (questId, taskId) => {
-    localDbSoftDelete('quest_tasks', taskId) // Note: quest_tasks uses composite PK; soft-delete by task_id is imprecise here — Phase 4 will handle this properly
+    localDbSoftDeleteQuestTask(questId, taskId)
     void persistLocalDb()
     await apiFetch(`/api/quests/${questId}/tasks/${taskId}`, { method: 'DELETE' })
   },
 
   subscribe: (userId) => {
+    const loadFromLocal = () => {
+      const local = localDbGetAll<Quest>('quests')
+      if (local.length === 0) return
+      const mine = local
+        .filter(q => q.user_id === userId)
+        .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+      set({ quests: mine, loading: false })
+    }
+
     const load = async () => {
       await initLocalDb()
+      loadFromLocal()
 
-      // Step 1: serve from local DB immediately
-      const local = localDbGetAll<Quest>('quests')
-      if (local.length > 0) {
-        const mine = local
-          .filter(q => q.user_id === userId)
-          .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
-        set({ quests: mine, loading: false })
-      }
-
-      // Step 2: background fetch from server
       try {
         const quests = await apiFetch('/api/quests')
         localDbUpsertMany('quests', quests)
@@ -144,11 +150,15 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
         set({ quests, loading: false })
       } catch (err) {
         console.error('[quest-store] refetch failed:', err)
+        const local = localDbGetAll<Quest>('quests')
         if (local.length === 0) set({ loading: false })
       }
     }
 
     load()
-    return () => {}
+
+    const onSync = () => loadFromLocal()
+    window.addEventListener('sync-done', onSync)
+    return () => window.removeEventListener('sync-done', onSync)
   },
 }))

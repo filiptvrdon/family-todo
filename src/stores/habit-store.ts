@@ -4,6 +4,7 @@ import {
   initLocalDb,
   localDbGetAll,
   localDbUpsert,
+  localDbUpsertLocal,
   localDbUpsertMany,
   localDbSoftDelete,
   localDbHardDelete,
@@ -90,28 +91,27 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   },
 
   addHabit: async (habit) => {
-    const tempId = `temp-${Date.now()}`
-    const optimistic: Habit = { ...habit, id: tempId, created_at: new Date().toISOString() }
+    const id = crypto.randomUUID()
+    const optimistic: Habit = { ...habit, id, created_at: new Date().toISOString() }
     set(s => ({ myHabits: [...s.myHabits, optimistic] }))
-    localDbUpsert('habits', optimistic as unknown as Record<string, unknown>)
+    localDbUpsertLocal('habits', optimistic as unknown as Record<string, unknown>)
     void persistLocalDb()
 
     try {
       const created = await apiFetch('/api/habits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(habit),
+        body: JSON.stringify({ ...habit, id }),
       })
-      localDbHardDelete('habits', tempId)
       localDbUpsert('habits', created)
       void persistLocalDb()
-      set(s => ({ myHabits: s.myHabits.map(h => h.id === tempId ? created : h) }))
+      set(s => ({ myHabits: s.myHabits.map(h => h.id === id ? created : h) }))
     } catch (err) {
       console.error('Failed to add habit:', err)
       if (!isOfflineError(err)) {
-        localDbHardDelete('habits', tempId)
+        localDbHardDelete('habits', id)
         void persistLocalDb()
-        set(s => ({ myHabits: s.myHabits.filter(h => h.id !== tempId) }))
+        set(s => ({ myHabits: s.myHabits.filter(h => h.id !== id) }))
       }
     }
   },
@@ -119,7 +119,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   updateHabit: async (id, patch) => {
     const prev = get().myHabits.find(h => h.id === id)
     set(s => ({ myHabits: s.myHabits.map(h => h.id === id ? { ...h, ...patch } : h) }))
-    localDbUpsert('habits', { ...prev, ...patch } as unknown as Record<string, unknown>)
+    localDbUpsertLocal('habits', { ...prev, ...patch } as Record<string, unknown>)
     void persistLocalDb()
 
     try {
@@ -159,28 +159,27 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   },
 
   logEntry: async (entry) => {
-    const tempId = `temp-${Date.now()}`
-    const optimistic: HabitTracking = { ...entry, id: tempId, logged_at: new Date().toISOString() }
+    const id = crypto.randomUUID()
+    const optimistic: HabitTracking = { ...entry, id, logged_at: new Date().toISOString() }
     set(s => ({ tracking: [...s.tracking, optimistic] }))
-    localDbUpsert('habit_tracking', optimistic as unknown as Record<string, unknown>)
+    localDbUpsertLocal('habit_tracking', optimistic as unknown as Record<string, unknown>)
     void persistLocalDb()
 
     try {
       const created = await apiFetch('/api/habit-tracking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry),
+        body: JSON.stringify({ ...entry, id }),
       })
-      localDbHardDelete('habit_tracking', tempId)
       localDbUpsert('habit_tracking', created)
       void persistLocalDb()
-      set(s => ({ tracking: s.tracking.map(e => e.id === tempId ? created : e) }))
+      set(s => ({ tracking: s.tracking.map(e => e.id === id ? created : e) }))
     } catch (err) {
       console.error('Failed to log habit entry:', err)
       if (!isOfflineError(err)) {
-        localDbHardDelete('habit_tracking', tempId)
+        localDbHardDelete('habit_tracking', id)
         void persistLocalDb()
-        set(s => ({ tracking: s.tracking.filter(e => e.id !== tempId) }))
+        set(s => ({ tracking: s.tracking.filter(e => e.id !== id) }))
       }
     }
   },
@@ -227,17 +226,17 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   },
 
   subscribe: (userId) => {
-    const load = async () => {
-      await initLocalDb()
-
-      // Step 1: serve from local DB immediately
+    const loadFromLocal = () => {
       const localHabits = localDbGetAll<Habit>('habits').filter(h => h.user_id === userId && !h.is_archived)
       const localTracking = localDbGetAll<HabitTracking>('habit_tracking').filter(e => e.user_id === userId)
-      if (localHabits.length > 0 || localTracking.length > 0) {
-        set({ myHabits: localHabits, tracking: localTracking, loading: false })
-      }
+      if (localHabits.length === 0 && localTracking.length === 0) return
+      set({ myHabits: localHabits, tracking: localTracking, loading: false })
+    }
 
-      // Step 2: background fetch from server
+    const load = async () => {
+      await initLocalDb()
+      loadFromLocal()
+
       try {
         const dates = weekDates()
         const [habits, tracking] = await Promise.all([
@@ -250,11 +249,15 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
         set({ myHabits: habits, tracking, loading: false })
       } catch (err) {
         console.error('[habit-store] refetch failed:', err)
-        if (localHabits.length === 0 && localTracking.length === 0) set({ loading: false })
+        const localHabits = localDbGetAll<Habit>('habits').filter(h => h.user_id === userId)
+        if (localHabits.length === 0) set({ loading: false })
       }
     }
 
     load()
-    return () => {}
+
+    const onSync = () => loadFromLocal()
+    window.addEventListener('sync-done', onSync)
+    return () => window.removeEventListener('sync-done', onSync)
   },
 }))

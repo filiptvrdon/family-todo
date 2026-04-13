@@ -1,7 +1,7 @@
 # Feature: Local-First Architecture
 
 > **File:** `027_local-first-architecture.md`
-> **Status:** in-progress
+> **Status:** done
 
 ## What & Why
 
@@ -278,11 +278,11 @@ BACKUP_DEST=/Users/yourname/backups/family-todo # local backup path
 - [x] Client SQLite initialises on app load and persists across page reloads
 - [x] All reads go through local SQLite (app works when server is offline)
 - [x] All writes persist locally and sync to server when reachable
-- [ ] `GET /api/sync?since=` returns correct delta
-- [ ] `POST /api/sync` applies client deltas server-side
+- [x] `GET /api/sync?since=` returns correct delta
+- [x] `POST /api/sync` applies client deltas server-side
 - [ ] Two-device scenario: changes made on device A appear on device B after reconnect
-- [ ] `scripts/backup.sh` creates a valid SQL dump
-- [ ] `npm run build && npm run lint` passes with no errors
+- [x] `scripts/backup.sh` creates a valid SQL dump
+- [x] `npm run build && npm run lint` passes with no errors
 
 **Open questions**
 - `wa-sqlite` vs `sql.js` vs `Electric SQL` — confirm library choice before Phase 3
@@ -290,6 +290,18 @@ BACKUP_DEST=/Users/yourname/backups/family-todo # local backup path
 - Offsite backup destination (Backblaze B2, NAS, etc.) — optional, developer's choice
 
 **Implementation notes**
+_Phase 5 — complete (2026-04-13):_
+- Created `scripts/backup.sh`: dumps local Postgres to a timestamped `.sql` file in `./backups/`, retains 30 most recent, configurable via env vars (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`). Includes inline cron setup docs.
+- Added `/backups/*.sql` to `.gitignore`; tracking `backups/.gitkeep` to preserve the directory.
+
+_Phase 4 — complete (2026-04-13):_
+- Created `src/lib/sync.ts`: full push+pull sync engine. `runSync()` checks reachability, pushes pending items via `POST /api/sync`, pulls server changes via `GET /api/sync?since=`, merges with last-write-wins, persists to IDB, saves watermark to `localStorage`, dispatches `sync-done`.
+- `startSync(userId, partnerId)`: runs sync once then re-runs on `window.online`. Called from `user-store.ts` after user loads.
+- Created `src/app/api/sync/route.ts`: `GET` returns delta rows for user+partner since watermark; `POST` applies client deltas with last-write-wins security (`user_id` check per delta, quest ownership check for `quest_tasks`).
+- Updated all 5 stores to Phase 4: `crypto.randomUUID()` for client-generated IDs; `localDbUpsertLocal` for all writes (sets `updated_at`, marks pending); `subscribe()` returns proper cleanup; `sync-done` listener reloads from local DB on each sync cycle.
+- Smart `set_updated_at()` trigger: only auto-sets `updated_at` when the caller didn't explicitly change it — prevents server trigger from overwriting client-provided `updated_at` during sync push.
+- `quest_tasks` composite PK handled specially: excluded from the pending queue, synced via `localDbGetSince` in push logic; `localDbSoftDeleteQuestTask` added for correct composite-key soft delete.
+
 _Phase 3 — complete (2026-04-13):_
 - Library choice: `sql.js` with IndexedDB persistence. No COOP/COEP headers needed (preserves Google OAuth). WASM (`sql-wasm.wasm`) served from `public/`, copied via `postinstall` script.
 - Created `src/lib/local-db.ts`: singleton SQLite DB, IDB save/restore, schema mirrors all 7 server tables (bool↔integer coercion for SQLite), `localDbGetAll`, `localDbUpsert`, `localDbUpsertMany`, `localDbSoftDelete`, `localDbHardDelete`, `persistLocalDb`.
