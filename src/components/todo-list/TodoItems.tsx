@@ -8,7 +8,6 @@ import TodoCard from '@/components/TodoCard'
 interface Section {
   label: string
   todos: Todo[]
-  surfacedSubtasks?: Todo[]
 }
 
 interface TodoItemsProps {
@@ -98,8 +97,7 @@ export function TodoItems({
       {sections ? (
         <div className="flex flex-col gap-4">
           {sections.map(section => {
-            const hasSurfaced = (section.surfacedSubtasks?.length ?? 0) > 0
-            if (section.todos.length === 0 && !hasSurfaced) return null
+            if (section.todos.length === 0) return null
             return (
               <div key={section.label} className="flex flex-col" style={{ gap }}>
                 <p className="text-xs font-semibold uppercase tracking-wide px-1"
@@ -107,13 +105,8 @@ export function TodoItems({
                   {section.label}
                 </p>
                 <AnimatePresence initial={false}>
-                  {section.todos.map(todo => renderTodo(todo, false))}
+                  {section.todos.map(todo => renderTodo(todo, !!(parentTitleMap && parentTitleMap[todo.id])))}
                 </AnimatePresence>
-                {hasSurfaced && (
-                  <AnimatePresence initial={false}>
-                    {section.surfacedSubtasks!.map(todo => renderTodo(todo, true))}
-                  </AnimatePresence>
-                )}
               </div>
             )
           })}

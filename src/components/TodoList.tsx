@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { QuestLink, Todo } from '@/lib/types'
 import { useTodoStore } from '@/stores/todo-store'
 import { useQuestStore } from '@/stores/quest-store'
-import { format, addDays, isToday } from 'date-fns'
+import { format, addDays, endOfWeek } from 'date-fns'
 import {
   DndContext,
   DragEndEvent,
@@ -81,30 +81,20 @@ export default function TodoList({
   const storeTodos = isOwner ? storeMyTodos : storePartnerTodos
   
   const viewDateStr = useMemo(() => dayDate ? format(dayDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), [dayDate])
-  const isActuallyToday = useMemo(() => dayDate ? isToday(dayDate) : true, [dayDate])
 
   const localTodos = useMemo(() => {
     let filtered = storeTodos.filter(t => t.parent_id === parentId)
 
     if (dayDate && !parentId) {
       filtered = filtered.filter(t => {
-        // 1. Task is explicitly due on this date
+        // 1. Task is uncompleted -> should be visible (to be grouped into Today, Tomorrow, etc.)
+        if (!t.completed) return true
+
+        // 2. Task was due on this specific date (regardless of completion)
         if (t.due_date === viewDateStr) return true
 
-        // 2. Task was completed on this date
+        // 3. Task was completed on this date
         if (t.completed_at && t.completed_at.startsWith(viewDateStr)) return true
-
-        // 3. Task is uncompleted and should be visible today:
-        if (!t.completed) {
-          // a) It's overdue
-          if (t.due_date && t.due_date < viewDateStr) return true
-
-          // b) It's an Inbox task (no due date) that existed on this date
-          if (!t.due_date) {
-            const createdDateStr = format(new Date(t.created_at), 'yyyy-MM-dd')
-            if (createdDateStr <= viewDateStr) return true
-          }
-        }
 
         return false
       })
@@ -395,35 +385,19 @@ export default function TodoList({
     setIsDraggingActive(false)
   }
 
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd')
-  const thisWeekEnd = format(addDays(new Date(), 7), 'yyyy-MM-dd')
-  const nextWeekEnd = format(addDays(new Date(), 14), 'yyyy-MM-dd')
-
   const filteredTodos = useMemo(() => {
-    const list = parentId
-      ? localTodos
-      : localTodos.filter(todo => !todo.completed || todo.due_date === viewDateStr || (todo.completed_at && todo.completed_at.startsWith(viewDateStr)))
-
-    const filtered = energyFilter !== 'all' ? list.filter(t => t.energy_level === energyFilter) : list
+    const filtered = energyFilter !== 'all' ? localTodos.filter(t => t.energy_level === energyFilter) : localTodos
     return parentId ? filtered : [...filtered].sort(sortByDateTime)
-  }, [localTodos, parentId, viewDateStr, energyFilter])
+  }, [localTodos, parentId, energyFilter])
 
   // Subtasks with a due_date surface in the main list under the correct time-bucket
   const surfacedSubtasks = useMemo(() => {
     if (parentId) return []
-    let filtered = storeTodos.filter(t => t.parent_id !== null && t.due_date !== null && !t.completed)
-
-    if (dayDate) {
-      filtered = filtered.filter(t => {
-        if (t.due_date === viewDateStr) return true
-        if (t.due_date! < viewDateStr) return true
-        return false
-      })
-    }
+    // Surfaced subtasks are incomplete subtasks with a due date
+    const filtered = storeTodos.filter(t => t.parent_id !== null && t.due_date !== null && !t.completed)
 
     return [...filtered].sort(sortByDateTime)
-  }, [storeTodos, parentId, dayDate, viewDateStr])
+  }, [storeTodos, parentId])
 
   const parentTitleMap = useMemo(() => {
     const map: Record<string, string> = {}
@@ -435,41 +409,60 @@ export default function TodoList({
   }, [surfacedSubtasks, storeTodos])
 
   const todoSections = useMemo(() => {
-    if (parentId || (dayDate && !isActuallyToday)) return undefined
+    if (parentId || !dayDate) return undefined
+
+    const refDate = dayDate
+    const refDateStr = format(refDate, 'yyyy-MM-dd')
+    const tomorrowStr = format(addDays(refDate, 1), 'yyyy-MM-dd')
+    const endOfThisWeek = endOfWeek(refDate, { weekStartsOn: 1 })
+    const endOfThisWeekStr = format(endOfThisWeek, 'yyyy-MM-dd')
+    const endOfNextWeekStr = format(addDays(endOfThisWeek, 7), 'yyyy-MM-dd')
+
+    const mergeAndSort = (t: Todo[], s: Todo[]) => [...t, ...s].sort(sortByDateTime)
+
     return [
       {
         label: 'Today',
-        todos: filteredTodos.filter(t => t.due_date && t.due_date <= today),
-        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! <= today),
+        todos: mergeAndSort(
+          filteredTodos.filter(t => t.due_date && t.due_date <= refDateStr),
+          surfacedSubtasks.filter(t => t.due_date! <= refDateStr)
+        ),
       },
       {
         label: 'Tomorrow',
-        todos: filteredTodos.filter(t => t.due_date === tomorrow),
-        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date === tomorrow),
+        todos: mergeAndSort(
+          filteredTodos.filter(t => t.due_date === tomorrowStr),
+          surfacedSubtasks.filter(t => t.due_date === tomorrowStr)
+        ),
       },
       {
         label: 'This Week',
-        todos: filteredTodos.filter(t => t.due_date && t.due_date > tomorrow && t.due_date <= thisWeekEnd),
-        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > tomorrow && t.due_date! <= thisWeekEnd),
+        todos: mergeAndSort(
+          filteredTodos.filter(t => t.due_date && t.due_date > tomorrowStr && t.due_date <= endOfThisWeekStr),
+          surfacedSubtasks.filter(t => t.due_date! > tomorrowStr && t.due_date! <= endOfThisWeekStr)
+        ),
       },
       {
         label: 'Next Week',
-        todos: filteredTodos.filter(t => t.due_date && t.due_date > thisWeekEnd && t.due_date <= nextWeekEnd),
-        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > thisWeekEnd && t.due_date! <= nextWeekEnd),
+        todos: mergeAndSort(
+          filteredTodos.filter(t => t.due_date && t.due_date > endOfThisWeekStr && t.due_date <= endOfNextWeekStr),
+          surfacedSubtasks.filter(t => t.due_date! > endOfThisWeekStr && t.due_date! <= endOfNextWeekStr)
+        ),
       },
       {
         label: 'Later',
-        todos: filteredTodos.filter(t => !t.due_date || t.due_date > nextWeekEnd),
-        surfacedSubtasks: surfacedSubtasks.filter(t => t.due_date! > nextWeekEnd),
+        todos: mergeAndSort(
+          filteredTodos.filter(t => !t.due_date || t.due_date > endOfNextWeekStr),
+          surfacedSubtasks.filter(t => t.due_date! > endOfNextWeekStr)
+        ),
       },
     ]
-  }, [filteredTodos, parentId, today, tomorrow, thisWeekEnd, nextWeekEnd, surfacedSubtasks, dayDate, isActuallyToday])
+  }, [filteredTodos, parentId, surfacedSubtasks, dayDate])
 
   const displayTodos = useMemo(() => {
-    if (todoSections) return filteredTodos
     if (parentId) return filteredTodos
     return [...filteredTodos, ...surfacedSubtasks].sort(sortByDateTime)
-  }, [filteredTodos, surfacedSubtasks, todoSections, parentId])
+  }, [filteredTodos, surfacedSubtasks, parentId])
 
   const completedCount = localTodos.filter(t => t.completed).length
   const totalCount = localTodos.length
