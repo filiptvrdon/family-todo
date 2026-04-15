@@ -5,6 +5,7 @@ import { Calendar } from 'lucide-react'
 import { format, parseISO, startOfDay, isBefore, isValid } from 'date-fns'
 import { QuestIcon } from '@/lib/questIcons'
 import { Todo, QuestLink } from '@/lib/types'
+import { DifficultyIndicator } from '../DifficultyIndicator'
 
 interface Props {
   todo: Todo
@@ -33,13 +34,8 @@ export function TodoMetadata({ todo, quests }: Props) {
           ))}
         </div>
       )}
-      {todo.energy_level && todo.energy_level !== 'low' && (
-        <span 
-          className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded"
-          style={{ background: 'var(--color-foam)', color: 'var(--color-text-secondary)' }}
-        >
-          {todo.energy_level}
-        </span>
+      {todo.energy_level && (
+        <DifficultyIndicator level={todo.energy_level} />
       )}
       {todo.recurrence && (
         <span className="text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-foam)', color: 'var(--color-accent)' }}>

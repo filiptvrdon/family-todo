@@ -11,9 +11,6 @@ create table public.users (
   avatar_url text,
   partner_id uuid references public.users(id) on delete set null,
   google_refresh_token text,
-  momentum integer default 0,
-  last_momentum_increase timestamp with time zone default now(),
-  day_start_momentum integer default 0,
   created_at timestamptz default now()
 );
 
@@ -32,7 +29,6 @@ create table public.todos (
   motivation_nudge text,
   completion_nudge text,
   energy_level text check (energy_level in ('low', 'medium', 'high')) default 'medium',
-  momentum_contribution integer default 0,
   created_at timestamptz default now()
 );
 
@@ -45,9 +41,6 @@ create table public.quests (
   description text,
   status text not null default 'active' check (status in ('active', 'completed')),
   pinned boolean not null default false,
-  momentum integer default 0,
-  last_momentum_increase timestamp with time zone default now(),
-  day_start_momentum integer default 0,
   completed_at timestamptz,
   created_at timestamptz default now()
 );
@@ -121,65 +114,3 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
-
--- Momentum updates on task completion
-create or replace function public.handle_todo_completion_momentum()
-returns trigger as $$
-begin
-  if new.completed = true and (old.completed = false or old.completed is null) then
-    -- Increase user momentum
-    update public.users
-    set momentum = momentum + new.momentum_contribution,
-        last_momentum_increase = now()
-    where id = new.user_id;
-
-    -- Increase quest momentum for linked quests
-    update public.quests
-    set momentum = momentum + new.momentum_contribution,
-        last_momentum_increase = now()
-    where id in (
-      select quest_id from public.quest_tasks where task_id = new.id
-    );
-  elsif new.completed = false and old.completed = true then
-    -- Decrease user momentum
-    update public.users
-    set momentum = greatest(0, momentum - new.momentum_contribution)
-    where id = new.user_id;
-
-    -- Decrease quest momentum
-    update public.quests
-    set momentum = greatest(0, momentum - new.momentum_contribution)
-    where id in (
-      select quest_id from public.quest_tasks where task_id = new.id
-    );
-  end if;
-  return new;
-end;
-$$ language plpgsql security definer;
-
-create trigger on_todo_completed_momentum
-  after update on public.todos
-  for each row execute procedure public.handle_todo_completion_momentum();
-
--- Daily decay function (should be scheduled)
-create or replace function public.process_daily_momentum()
-returns void as $$
-begin
-  -- Apply decay to users
-  update public.users
-  set momentum = greatest(0, momentum - greatest(1, floor(momentum * 0.01)))
-  where last_momentum_increase < now() - interval '24 hours'
-    and momentum > 0;
-
-  -- Apply decay to quests
-  update public.quests
-  set momentum = greatest(0, momentum - greatest(1, floor(momentum * 0.01)))
-  where last_momentum_increase < now() - interval '24 hours'
-    and momentum > 0
-    and status = 'active';
-
-  -- Update day start momentum
-  update public.users set day_start_momentum = momentum;
-  update public.quests set day_start_momentum = momentum;
-end;
-$$ language plpgsql security definer;

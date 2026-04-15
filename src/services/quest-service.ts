@@ -29,9 +29,9 @@ export async function deleteQuest(id: string): Promise<void> {
   await sql`UPDATE quests SET deleted_at = NOW() WHERE id = ${id}`
 }
 
-export async function fetchLinkedTasks(questId: string): Promise<{ id: string; title: string; completed: boolean }[]> {
-  return sql<{ id: string; title: string; completed: boolean }[]>`
-    SELECT t.id, t.title, t.completed
+export async function fetchLinkedTasks(questId: string): Promise<{ id: string; title: string; completed: boolean; energy_level: string; completed_at: string | null }[]> {
+  return sql<{ id: string; title: string; completed: boolean; energy_level: string; completed_at: string | null }[]>`
+    SELECT t.id, t.title, t.completed, t.energy_level, t.completed_at
     FROM quest_tasks qt
     JOIN todos t ON t.id = qt.task_id
     WHERE qt.quest_id = ${questId}

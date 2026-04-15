@@ -8,6 +8,8 @@ import { useTodoStore } from '@/stores/todo-store'
 import { useUserStore } from '@/stores/user-store'
 import { useEventStore } from '@/stores/event-store'
 import { User, Todo, CalendarEvent } from '@/lib/types'
+import { useDailyAchievementSummary } from '@/hooks/useDailyAchievementSummary'
+import { AchievementSummary } from '@/components/AchievementSummary'
 import CheckIn, { hasCheckedInToday } from '@/components/CheckIn'
 import UserModal from '@/components/UserModal'
 import QuestPanel from '@/components/QuestPanel'
@@ -70,6 +72,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
   const [showQuests, setShowQuests] = useState(false)
   const [questPanelInitialId, setQuestPanelInitialId] = useState<string | null>(null)
   const [topView, setTopView] = useState<'dashboard' | 'calendar'>('dashboard')
+  const achievementSummary = useDailyAchievementSummary(user.id, dayDate)
 
   const { isDark, toggle: toggleTheme } = useTheme()
   const router = useRouter()
@@ -249,10 +252,8 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-foam/50 border border-foam">
-                <span className="text-xs font-bold text-foreground">{user.momentum || 0}</span>
-                {user.momentum - user.day_start_momentum > 0 && <span className="text-[10px]" style={{ color: 'var(--color-completion)' }}>↑</span>}
-                {user.momentum - user.day_start_momentum < 0 && <span className="text-[10px]" style={{ color: 'var(--color-alert)' }}>↓</span>}
+              <div className="flex items-center px-3 py-1.5 rounded-xl bg-foam/40 border border-foam/60 shadow-sm">
+                <AchievementSummary summary={achievementSummary} compact />
               </div>
               <button
                 onClick={toggleTheme}

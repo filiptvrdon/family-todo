@@ -25,7 +25,6 @@ import { triggerAiMetadata } from '@/lib/ai-metadata'
 import { OnARollBadge } from './todo-list/OnARollBadge'
 import { TodoListProgress } from './todo-list/TodoListProgress'
 import { AddTodoInput } from './todo-list/AddTodoInput'
-import { EnergyFilter } from './todo-list/EnergyFilter'
 import { TodoItems } from './todo-list/TodoItems'
 import { DndMonitor } from './todo-list/DndMonitor'
 
@@ -106,7 +105,6 @@ export default function TodoList({
   const [title, setTitle] = useState('')
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
-  const [energyFilter, setEnergyFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all')
   const [questLinkMap, setQuestLinkMap] = useState<Record<string, QuestLink[]>>({})
   const prevIdsRef = useRef<string>('')
   const [streamingNudges, setStreamingNudges] = useState<Map<string, string>>(new Map())
@@ -216,7 +214,6 @@ export default function TodoList({
       motivation_nudge: null,
       completion_nudge: null,
       energy_level: 'low' as const,
-      momentum_contribution: 0,
       completed_at: null,
     }
 
@@ -386,9 +383,8 @@ export default function TodoList({
   }
 
   const filteredTodos = useMemo(() => {
-    const filtered = energyFilter !== 'all' ? localTodos.filter(t => t.energy_level === energyFilter) : localTodos
-    return parentId ? filtered : [...filtered].sort(sortByDateTime)
-  }, [localTodos, parentId, energyFilter])
+    return parentId ? localTodos : [...localTodos].sort(sortByDateTime)
+  }, [localTodos, parentId])
 
   // Subtasks with a due_date surface in the main list under the correct time-bucket
   const surfacedSubtasks = useMemo(() => {
@@ -473,11 +469,6 @@ export default function TodoList({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
-      />
-      <EnergyFilter
-        activeFilter={energyFilter}
-        onFilterChange={setEnergyFilter}
-        isVisible={!parentId}
       />
       <TodoItems
         todos={displayTodos}

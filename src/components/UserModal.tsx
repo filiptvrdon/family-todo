@@ -3,6 +3,8 @@
 import { useRef, useState } from 'react'
 import { useUserStore } from '@/stores/user-store'
 import { User } from '@/lib/types'
+import { useDailyAchievementSummary } from '@/hooks/useDailyAchievementSummary'
+import { AchievementSummary } from '@/components/AchievementSummary'
 import { X, User as UserIcon, Camera, CalendarDays, Loader2, LogOut } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -16,6 +18,7 @@ interface Props {
 
 export default function UserModal({ user, googleConnected, onClose, onGoogleDisconnected, onSignOut }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const achievementSummary = useDailyAchievementSummary(user.id)
 
   const [displayName, setDisplayName] = useState(user.display_name || '')
   const [username, setUsername] = useState(user.username || '')
@@ -96,9 +99,8 @@ export default function UserModal({ user, googleConnected, onClose, onGoogleDisc
             <UserIcon size={20} className="text-primary" />
             <h2 className="font-semibold text-foreground text-lg">Your profile</h2>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-foam border border-foam">
-            <span className="text-xs font-bold text-foreground">{user.momentum || 0}</span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">Momentum</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-foam border border-foam">
+            <AchievementSummary summary={achievementSummary} compact />
           </div>
           <button onClick={onClose} className="text-text-disabled transition hover:opacity-70">
             <X size={20} />

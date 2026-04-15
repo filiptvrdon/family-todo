@@ -8,11 +8,6 @@ export interface User {
   avatar_data: boolean | null  // true if DB has avatar bytes; actual bytes served via /api/avatar/[userId]
   partner_id: string | null
   google_refresh_token: string | null
-  momentum: number
-  day_start_momentum: number
-  last_momentum_increase: string
-  last_momentum_decay: string | null
-  last_momentum_nudge: string | null
   created_at: string
   updated_at?: string
   deleted_at?: string | null
@@ -34,7 +29,6 @@ export interface Todo {
   motivation_nudge: string | null
   completion_nudge: string | null
   energy_level: 'low' | 'medium' | 'high'
-  momentum_contribution: number
   completed_at: string | null
   updated_at?: string
   deleted_at?: string | null
@@ -57,11 +51,6 @@ export interface Quest {
   pinned: boolean
   completed_at: string | null
   created_at: string
-  momentum: number
-  day_start_momentum: number
-  last_momentum_increase: string
-  last_momentum_decay: string | null
-  last_momentum_nudge: string | null
   motivation_nudge: string | null
   updated_at?: string
   deleted_at?: string | null

@@ -16,7 +16,7 @@ import {
 interface QuestStore {
   quests: Quest[]
   loading: boolean
-  addQuest: (quest: Omit<Quest, 'id' | 'created_at' | 'momentum' | 'day_start_momentum' | 'last_momentum_increase' | 'last_momentum_decay' | 'last_momentum_nudge' | 'motivation_nudge'>) => Promise<void>
+  addQuest: (quest: Omit<Quest, 'id' | 'created_at' | 'motivation_nudge'>) => Promise<void>
   updateQuest: (id: string, patch: Partial<Quest>) => Promise<void>
   deleteQuest: (id: string) => Promise<void>
   linkTask: (questId: string, taskId: string) => Promise<void>
@@ -40,11 +40,6 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
       ...quest,
       id,
       created_at: new Date().toISOString(),
-      momentum: 0,
-      day_start_momentum: 0,
-      last_momentum_increase: new Date().toISOString(),
-      last_momentum_decay: null,
-      last_momentum_nudge: null,
       motivation_nudge: null,
     } as Quest
     set(s => ({ quests: [optimistic, ...s.quests] }))

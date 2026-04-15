@@ -3,14 +3,23 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { QuestIcon } from '@/lib/questIcons'
 import { QuestLink } from '@/lib/types'
+import { DifficultyIndicator } from '../DifficultyIndicator'
 
 interface Props {
-  momentum: number
+  energyLevel: 'low' | 'medium' | 'high'
   activeQuest?: QuestLink
   isVisible: boolean
 }
 
-export function CompletionReward({ momentum, activeQuest, isVisible }: Props) {
+export function CompletionReward({ energyLevel, activeQuest, isVisible }: Props) {
+  const labelMap = {
+    low: 'gentle',
+    medium: 'moderate',
+    high: 'involved'
+  }
+  const label = labelMap[energyLevel]
+  const displayLabel = label.charAt(0).toUpperCase() + label.slice(1)
+  
   return (
     <AnimatePresence>
       {isVisible && (
@@ -21,11 +30,16 @@ export function CompletionReward({ momentum, activeQuest, isVisible }: Props) {
           className="absolute -top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap"
         >
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-[11px] font-bold text-completion">
-              +{momentum} Momentum
-            </span>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-completion text-white shadow-sm">
+              <div className="text-[8px] leading-none text-white/90">
+                <DifficultyIndicator level={energyLevel} />
+              </div>
+              <span className="text-[10px] font-bold">
+                {displayLabel} Completed!
+              </span>
+            </div>
             {activeQuest && (
-              <div className="flex items-center gap-1 text-[10px] text-primary-dark font-medium">
+              <div className="flex items-center gap-1 text-[10px] text-primary-dark font-medium bg-white/80 px-1.5 py-0.5 rounded-full backdrop-blur-sm shadow-xs mt-0.5">
                 <QuestIcon name={activeQuest.icon} size={10} />
                 {activeQuest.name}
               </div>

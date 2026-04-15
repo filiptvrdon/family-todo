@@ -133,7 +133,7 @@ export default function TodoCard({
       }`}
     >
       <CompletionReward 
-        momentum={todo.momentum_contribution || 0} 
+        energyLevel={todo.energy_level || 'low'} 
         activeQuest={quests?.[0]} 
         isVisible={completing} 
       />

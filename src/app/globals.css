@@ -82,6 +82,11 @@
   --chart-4: #DEC9A8;
   --chart-5: #FF9F7F;
 
+  /* --- Difficulty levels (aligned with Coastal palette) --- */
+  --color-difficulty-gentle:   #10BBAA; /* Ocean Teal (Completion) */
+  --color-difficulty-moderate: #FF9F7F; /* Warm Sand (Accent) */
+  --color-difficulty-involved: #8B5CF6; /* Violet-500 */
+
   /* Sidebar (mapped conservatively) */
   --sidebar:                    #ffffff;
   --sidebar-foreground:         #1A1A2E;
@@ -143,6 +148,9 @@
   --color-foam:          #1A3040; /* deep teal-navy */
   --color-completion:    #0E9E8F;
   --color-alert:         #FF9F7F; /* Coral stays */
+  --color-difficulty-gentle:   #0E9E8F;
+  --color-difficulty-moderate: #FF9F7F;
+  --color-difficulty-involved: #A78BFA;
   --shadow-card:         0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-elevated:     0 4px 16px rgba(0, 0, 0, 0.4);
   --overlay-bg:          rgba(0, 0, 0, 0.6);

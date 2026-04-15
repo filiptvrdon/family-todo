@@ -43,7 +43,6 @@ export default function TaskBoard({ user, myTodos, onRefresh, isSubtaskMode, day
       motivation_nudge: null,
       completion_nudge: null,
       energy_level: 'low',
-      momentum_contribution: 0,
       completed_at: null,
     })
     setTitle('')

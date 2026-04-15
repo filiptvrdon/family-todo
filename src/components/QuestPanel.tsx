@@ -1,18 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { isSameDay, parseISO } from 'date-fns'
 import { X, ArrowLeft, Pin, PinOff, Plus, CheckCircle2, Pencil } from 'lucide-react'
 import { Drawer } from '@base-ui/react'
 import { toast } from 'sonner'
 import { Quest } from '@/lib/types'
 import { useQuestStore } from '@/stores/quest-store'
 import { QUEST_ICONS, QuestIcon } from '@/lib/questIcons'
+import { AchievementSummary } from './AchievementSummary'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface LinkedTask {
   id: string
   title: string
   completed: boolean
+  energy_level: 'low' | 'medium' | 'high'
+  completed_at: string | null
 }
 
 interface Props {
@@ -25,25 +29,27 @@ interface Props {
 
 type View = 'list' | 'detail' | 'create'
 
-function MomentumBadge({ current, start }: { current: number, start: number }) {
-  const diff = current - start
-  if (current === 0 && diff === 0) return null
-  
-  return (
-    <div className="flex items-center gap-1 text-xs font-medium">
-      <span className="text-foreground">{current}</span>
-      {diff > 0 && <span style={{ color: 'var(--color-completion)' }}>↑</span>}
-      {diff < 0 && <span style={{ color: 'var(--color-alert)' }}>↓</span>}
-    </div>
-  )
-}
-
 export default function QuestPanel({ open, userId, initialQuestId, onClose, onQuestsChanged }: Props) {
   const [view, setView] = useState<View>('list')
   const quests = useQuestStore(s => s.quests)
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null)
   const [linkedTasks, setLinkedTasks] = useState<LinkedTask[]>([])
   const [loadingTasks, setLoadingTasks] = useState(false)
+
+  const questAchievementSummary = useMemo(() => {
+    const now = new Date()
+    const completedToday = linkedTasks.filter(t => 
+      t.completed && 
+      t.completed_at && 
+      isSameDay(parseISO(t.completed_at), now)
+    )
+    return {
+      low: completedToday.filter(t => t.energy_level === 'low').length,
+      medium: completedToday.filter(t => t.energy_level === 'medium').length,
+      high: completedToday.filter(t => t.energy_level === 'high').length,
+      total: completedToday.length
+    }
+  }, [linkedTasks])
 
   // Create form state
   const [newName, setNewName] = useState('')
@@ -237,19 +243,11 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                           onClick={() => openDetail(quest)}
                           className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
                         >
-                          <motion.span
-                            key={quest.momentum}
-                            className="shrink-0 text-primary"
-                            whileHover={{ scale: 1.1 }}
-                            initial={quest.momentum > (quest.day_start_momentum || 0) ? { scale: 1 } : false}
-                            animate={quest.momentum > (quest.day_start_momentum || 0) ? { scale: [1, 1.15, 1] } : {}}
-                            transition={{ duration: 0.45, ease: 'easeOut' }}
-                          >
+                          <span className="shrink-0 text-primary">
                             <QuestIcon name={quest.icon} size={18} />
-                          </motion.span>
+                          </span>
                           <div className="flex flex-col items-start min-w-0">
                             <span className="text-sm font-medium text-foreground truncate w-full">{quest.name}</span>
-                            <MomentumBadge current={quest.momentum || 0} start={quest.day_start_momentum || 0} />
                           </div>
                         </button>
                         <button
@@ -501,6 +499,11 @@ export default function QuestPanel({ open, userId, initialQuestId, onClose, onQu
                     {selectedQuest.description && (
                       <p className="text-sm text-text-secondary">{selectedQuest.description}</p>
                     )}
+
+                    <div className="flex flex-col gap-2 p-3 rounded-2xl bg-foam/30 border border-foam/50">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Today&apos;s Achievement</p>
+                      <AchievementSummary summary={questAchievementSummary} />
+                    </div>
 
                     <p
                       className="text-sm font-medium px-4 py-3 rounded-xl"

@@ -6,6 +6,7 @@ import { Drawer } from '@base-ui/react'
 import { toast } from 'sonner'
 import { Todo, Quest } from '@/lib/types'
 import { triggerAiMetadata } from '@/lib/ai-metadata'
+import { DifficultyIndicator } from './DifficultyIndicator'
 import { useTodoStore } from '@/stores/todo-store'
 import { useQuestStore } from '@/stores/quest-store'
 import { QuestIcon } from '@/lib/questIcons'
@@ -307,9 +308,9 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
               )}
             </div>
 
-            {/* Energy Level */}
+            {/* Task Difficulty */}
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Energy</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Difficulty</p>
               {isOwner ? (
                 <div className="flex gap-2 flex-wrap">
                   {(['low', 'medium', 'high'] as const).map(val => (
@@ -317,21 +318,20 @@ export default function TodoDetailPanel({ todo, open, isOwner, onClose, onRefres
                       key={val}
                       type="button"
                       onClick={() => setEditEnergyLevel(val)}
-                      className="px-3 py-1.5 rounded-full text-sm font-medium transition min-h-[36px]"
-                      style={{
-                        background: editEnergyLevel === val ? 'var(--color-primary)' : 'var(--color-foam)',
-                        color: editEnergyLevel === val ? '#fff' : 'var(--color-text-secondary)',
-                        border: editEnergyLevel === val ? '1.5px solid var(--color-primary)' : '1.5px solid var(--color-border)',
-                      }}
+                      className="transition-all duration-200"
                     >
-                      {val.charAt(0).toUpperCase() + val.slice(1)}
+                      <DifficultyIndicator 
+                        level={val} 
+                        showLabel 
+                        className={editEnergyLevel === val ? 'ring-2 ring-primary ring-offset-1 scale-105 opacity-100' : 'opacity-50 grayscale-[0.5] hover:opacity-100 hover:grayscale-0'} 
+                      />
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm">
-                  {((todo.energy_level || 'low') as string).charAt(0).toUpperCase() + ((todo.energy_level || 'low') as string).slice(1)}
-                </p>
+                <div className="text-primary">
+                  <DifficultyIndicator level={todo.energy_level || 'low'} showLabel />
+                </div>
               )}
             </div>
 
