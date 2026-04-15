@@ -377,7 +377,7 @@ export default function DayTimeline({ events, todos, onTodoComplete, expand = fa
 
         {/* Scheduled todos positioned at their time */}
         {todos
-          .filter(t => t.scheduled_time && (!t.due_date || t.due_date === dateKey))
+          .filter(t => t.scheduled_time && (t.due_date === dateKey))
           .map(t => {
             const [hh, mm = 0] = (t.scheduled_time ?? '00:00').split(':').map(Number)
             const top = Math.max(0, (hh * 60 + mm - START_HOUR * 60) * PX_PER_MIN)
