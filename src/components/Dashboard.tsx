@@ -74,7 +74,7 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
   const [topView, setTopView] = useState<'dashboard' | 'calendar'>('dashboard')
   const achievementSummary = useDailyAchievementSummary(user.id, dayDate)
 
-  const { isDark, toggle: toggleTheme, mounted } = useTheme()
+  const { isDark, toggle: toggleTheme } = useTheme()
   const router = useRouter()
 
 
@@ -258,9 +258,9 @@ export default function Dashboard({ user: initialUser, partner: initialPartner, 
               <button
                 onClick={toggleTheme}
                 className="transition hover:opacity-80 text-muted-foreground"
-                title={!mounted ? 'Theme' : isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
               >
-                {!mounted ? <div className="size-[18px]" /> : isDark ? <Sun size={18} /> : <Moon size={18} />}
+                {isDark ? <Sun size={18} /> : <Moon size={18} />}
               </button>
               <button
                 onClick={() => setShowProfile(true)}

@@ -1,7 +1,7 @@
 # Feature: Refined Dark Mode (Grey Scale)
 
 > **File:** `029_dark-mode-refinement.md`
-> **Status:** done
+> **Status:** in progress
 
 ## What & Why
 
@@ -71,6 +71,3 @@ While most components use the semantic tokens (e.g., `bg-card`, `border-border`)
 - [x] All blue-tinted variables (`--background`, `--card`, `--border`, `--color-foam`) are migrated to neutral grey equivalents.
 - [x] Scrollbars are customized to match the new palette (subtle grey thumbs, transparent tracks).
 - [x] Manual toggle still works as expected and state persists correctly.
-- [x] Theme initialization is robust (FOUC prevention via `theme-init.js`).
-- [x] Hydration mismatches are resolved (Syncing state in `useTheme` on mount).
-- [x] Theme selection is synchronized across the entire application (including Login page).
