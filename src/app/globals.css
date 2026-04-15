@@ -111,58 +111,58 @@
    sync via the variables they reference.
    ============================================================ */
 .dark {
-  --background:          #0D1B2A; /* Deep Ocean */
-  --foreground:          #E8EDF5;
+  --background:          #09090b; /* Zinc-950 */
+  --foreground:          #fafafa; /* Zinc-50 */
 
-  --card:                #162335;
-  --card-foreground:     #E8EDF5;
-  --popover:             #162335;
-  --popover-foreground:  #E8EDF5;
+  --card:                #18181b; /* Zinc-900 */
+  --card-foreground:     #fafafa;
+  --popover:             #18181b;
+  --popover-foreground:  #fafafa;
 
   --primary:             #00C8DC; /* slightly brighter for dark backgrounds */
-  --primary-foreground:  #0D1B2A;
+  --primary-foreground:  #09090b;
 
-  --secondary:           #1A3040; /* deep seafoam */
-  --secondary-foreground:#E8EDF5;
+  --secondary:           #27272a; /* Zinc-800 */
+  --secondary-foreground:#fafafa;
 
-  --muted:               #1A3040;
-  --muted-foreground:    #8A9BB0;
+  --muted:               #27272a;
+  --muted-foreground:    #a1a1aa; /* Zinc-400 */
 
-  --accent:              #1E3D52;
-  --accent-foreground:   #E8EDF5;
+  --accent:              #27272a;
+  --accent-foreground:   #fafafa;
 
   --destructive:         #FF9F7F; /* Sunset Coral stays — still no red */
 
-  --border:              #2A3F52;
-  --input:               #1E3040;
+  --border:              #27272a;
+  --input:               #27272a;
   --ring:                #00C8DC;
 
   /* Custom design tokens — dark variants */
   --color-primary:       #00C8DC;
   --color-primary-light: #5EC8C4;
   --color-primary-dark:  #00A8BA;
-  --color-text:          #E8EDF5;
-  --color-text-secondary:#8A9BB0;
-  --color-text-disabled: #4A5568;
-  --color-sand:          #3D2E1E; /* muted warm for dark */
-  --color-foam:          #1A3040; /* deep teal-navy */
+  --color-text:          #fafafa;
+  --color-text-secondary:#a1a1aa;
+  --color-text-disabled: #52525b; /* Zinc-600 */
+  --color-sand:          #3f3f46; /* Zinc-700 (neutral warm) */
+  --color-foam:          #27272a; /* Zinc-800 (neutral deep) */
   --color-completion:    #0E9E8F;
   --color-alert:         #FF9F7F; /* Coral stays */
   --color-difficulty-gentle:   #0E9E8F;
   --color-difficulty-moderate: #FF9F7F;
   --color-difficulty-involved: #A78BFA;
-  --shadow-card:         0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-elevated:     0 4px 16px rgba(0, 0, 0, 0.4);
-  --overlay-bg:          rgba(0, 0, 0, 0.6);
+  --shadow-card:         0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-elevated:     0 4px 16px rgba(0, 0, 0, 0.6);
+  --overlay-bg:          rgba(0, 0, 0, 0.7);
 
   /* Sidebar */
-  --sidebar:                    #162335;
-  --sidebar-foreground:         #E8EDF5;
+  --sidebar:                    #18181b;
+  --sidebar-foreground:         #fafafa;
   --sidebar-primary:            #00C8DC;
-  --sidebar-primary-foreground: #0D1B2A;
-  --sidebar-accent:             #1A3040;
-  --sidebar-accent-foreground:  #E8EDF5;
-  --sidebar-border:             #2A3F52;
+  --sidebar-primary-foreground: #09090b;
+  --sidebar-accent:             #27272a;
+  --sidebar-accent-foreground:  #fafafa;
+  --sidebar-border:             #27272a;
   --sidebar-ring:               #00C8DC;
 }
 
@@ -295,7 +295,29 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-text-disabled) transparent;
   }
+
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-text-disabled);
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);

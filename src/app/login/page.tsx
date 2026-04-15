@@ -54,7 +54,7 @@ function LoginForm() {
     padding: '10px 14px',
     fontSize: '0.875rem',
     color: 'var(--color-text)',
-    background: '#fff',
+    background: 'var(--color-card)',
     outline: 'none',
     minHeight: '44px',
   }
