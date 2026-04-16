@@ -1,30 +1,27 @@
-import { useState } from 'react'
+import { useTheme as useNextTheme } from 'next-themes'
+import { useEffect, useState } from 'react'
 
 /**
  * Manages the manual dark mode toggle.
+ * Wrapped next-themes for compatibility and to handle hydration safety.
  * Dark mode is class-based (.dark on <html>) — NOT prefers-color-scheme.
  * Per design guidelines: no auto dark mode switch (reduces predictability for ADHD users).
  */
 export function useTheme() {
-  // Initialise from DOM so the state matches the FOUC-prevention script immediately
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof document !== 'undefined') {
-      return document.documentElement.classList.contains('dark')
-    }
-    return false
-  })
+  const { setTheme, resolvedTheme } = useNextTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // Ensure we are mounted on the client to avoid hydration mismatch when reading resolvedTheme
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+
+  const isDark = mounted ? (resolvedTheme === 'dark') : false
 
   function toggle() {
-    const next = !isDark
-    setIsDark(next)
-    if (next) {
-      document.documentElement.classList.add('dark')
-      localStorage.setItem('theme', 'dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-      localStorage.setItem('theme', 'light')
-    }
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
   }
 
-  return { isDark, toggle }
+  return { isDark, toggle, mounted }
 }

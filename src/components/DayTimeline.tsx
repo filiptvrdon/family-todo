@@ -93,7 +93,7 @@ function DraggableTimelineTodo({
           height: 14,
           border: `1.5px solid ${todo.completed ? 'var(--color-completion)' : 'var(--color-border)'}`,
           borderRadius: 3,
-          background: todo.completed ? 'var(--color-completion)' : '#fff',
+          background: todo.completed ? 'var(--color-completion)' : 'var(--color-card)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

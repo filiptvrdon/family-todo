@@ -56,7 +56,7 @@ function DraggableTodoItem({ todo, isOverdue, onCheck }: DraggableTodoItemProps)
           height: 20,
           border: `1.5px solid ${isOverdue ? 'var(--color-alert)' : 'var(--color-border)'}`,
           borderRadius: 4,
-          background: '#fff',
+          background: 'var(--color-card)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
